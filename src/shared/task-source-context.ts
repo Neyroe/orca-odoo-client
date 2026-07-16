@@ -8,7 +8,7 @@ import {
 } from './execution-host'
 import type { GlobalSettings, ProjectProviderIdentity, Repo } from './types'
 
-export type TaskProvider = 'github' | 'gitlab' | 'linear' | 'jira'
+export type TaskProvider = 'github' | 'gitlab' | 'linear' | 'jira' | 'odoo'
 
 export type GitHubTaskProviderIdentity = ProjectProviderIdentity & {
   provider: 'github'
@@ -37,11 +37,21 @@ export type JiraTaskProviderIdentity = {
   projectKey?: string | null
 }
 
+export type OdooTaskProviderIdentity = {
+  provider: 'odoo'
+  instanceId?: string | null
+  serverUrl?: string | null
+  // Odoo servers host several databases, so the identity is only unique with it.
+  database?: string | null
+  projectId?: number | null
+}
+
 export type TaskProviderIdentity =
   | GitHubTaskProviderIdentity
   | GitLabTaskProviderIdentity
   | LinearTaskProviderIdentity
   | JiraTaskProviderIdentity
+  | OdooTaskProviderIdentity
 
 export type TaskSourceContext = {
   kind: 'task-source'
@@ -182,6 +192,7 @@ function normalizeTaskProvider(value: string): TaskProvider | null {
     case 'gitlab':
     case 'linear':
     case 'jira':
+    case 'odoo':
       return value
     default:
       return null
@@ -216,6 +227,10 @@ function providerIdentityCachePart(identity: TaskProviderIdentity | null | undef
       return [identity.workspaceId, identity.teamId ?? identity.teamKey].filter(Boolean).join('/')
     case 'jira':
       return [identity.siteId ?? identity.siteUrl, identity.projectKey].filter(Boolean).join('/')
+    case 'odoo':
+      return [identity.instanceId ?? identity.serverUrl, identity.database, identity.projectId]
+        .filter(Boolean)
+        .join('/')
   }
 }
 
