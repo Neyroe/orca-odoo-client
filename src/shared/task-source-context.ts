@@ -21,6 +21,7 @@ export type {
   GitLabTaskProviderIdentity,
   JiraTaskProviderIdentity,
   LinearTaskProviderIdentity,
+  OdooTaskProviderIdentity,
   TaskProviderIdentity
 } from './task-provider-identity'
 export type { TaskProvider } from './task-providers'

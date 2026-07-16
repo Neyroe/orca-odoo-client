@@ -8865,6 +8865,9 @@ export default function TaskPage(): React.JSX.Element {
     hasGitHubDetail: Boolean(dialogWorkItem),
     hasGitLabDetail: Boolean(gitlabDialogItem),
     hasJiraDetail: Boolean(selectedJiraIssue),
+    // TODO(odoo): swap for the selected-ticket state once the Odoo detail pane
+    // lands; the Odoo source has no detail view to hide the list chrome for yet.
+    hasOdooDetail: false,
     hasLinearIssueDetail: Boolean(selectedLinearIssue),
     hasLinearProjectContext: Boolean(selectedLinearProject),
     hasLinearViewContext: Boolean(selectedLinearCustomView)

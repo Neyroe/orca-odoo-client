@@ -1992,6 +1992,85 @@ const api = {
     }): Promise<JiraProjectStatusOrder> => ipcRenderer.invoke('jira:getProjectStatusOrder', args)
   },
 
+  odoo: {
+    connect: (args: {
+      serverUrl: string
+      database: string
+      login: string
+      apiKey: string
+    }): Promise<{ ok: true; viewer: unknown } | { ok: false; error: string }> =>
+      ipcRenderer.invoke('odoo:connect', args),
+
+    disconnect: (args?: { instanceId?: string }): Promise<void> =>
+      ipcRenderer.invoke('odoo:disconnect', args),
+
+    selectInstance: (args: { instanceId: string }): Promise<unknown> =>
+      ipcRenderer.invoke('odoo:selectInstance', args),
+
+    status: (): Promise<unknown> => ipcRenderer.invoke('odoo:status'),
+
+    testConnection: (args?: {
+      instanceId?: string
+    }): Promise<{ ok: true; viewer: unknown } | { ok: false; error: string }> =>
+      ipcRenderer.invoke('odoo:testConnection', args),
+
+    listTickets: (args?: {
+      filter?: 'assigned' | 'reported' | 'all' | 'done'
+      limit?: number
+      instanceId?: string
+    }): Promise<unknown[]> => ipcRenderer.invoke('odoo:listTickets', args),
+
+    searchTickets: (args: {
+      domain: unknown[]
+      limit?: number
+      instanceId?: string
+    }): Promise<unknown[]> => ipcRenderer.invoke('odoo:searchTickets', args),
+
+    getTicket: (args: { id: number; instanceId?: string }): Promise<unknown> =>
+      ipcRenderer.invoke('odoo:getTicket', args),
+
+    createTicket: (args: {
+      instanceId?: string
+      projectId: number
+      title: string
+      description?: string
+      priority?: string
+      stageId?: number
+      assigneeIds?: number[]
+    }): Promise<
+      { ok: true; id: number; ref: string; url: string } | { ok: false; error: string }
+    > => ipcRenderer.invoke('odoo:createTicket', args),
+
+    updateTicket: (args: {
+      id: number
+      updates: unknown
+      instanceId?: string
+    }): Promise<{ ok: true } | { ok: false; error: string }> =>
+      ipcRenderer.invoke('odoo:updateTicket', args),
+
+    addTicketComment: (args: {
+      id: number
+      body: string
+      instanceId?: string
+    }): Promise<{ ok: true } | { ok: false; error: string }> =>
+      ipcRenderer.invoke('odoo:addTicketComment', args),
+
+    ticketComments: (args: { id: number; instanceId?: string }): Promise<unknown[]> =>
+      ipcRenderer.invoke('odoo:ticketComments', args),
+
+    listProjects: (args?: { instanceId?: string }): Promise<unknown[]> =>
+      ipcRenderer.invoke('odoo:listProjects', args),
+
+    listStages: (args: { projectId: number; instanceId?: string }): Promise<unknown[]> =>
+      ipcRenderer.invoke('odoo:listStages', args),
+
+    listTags: (args?: { instanceId?: string }): Promise<unknown[]> =>
+      ipcRenderer.invoke('odoo:listTags', args),
+
+    listAssignableUsers: (args?: { query?: string; instanceId?: string }): Promise<unknown[]> =>
+      ipcRenderer.invoke('odoo:listAssignableUsers', args)
+  },
+
   starNag: {
     onShow: (
       callback: (payload?: { mode?: 'gh' | 'web'; surface?: 'card' | 'toast' }) => void

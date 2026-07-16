@@ -363,7 +363,7 @@ export type FolderWorkspace = {
 }
 
 export type WorkspaceLinkedItem = {
-  provider: 'github' | 'gitlab' | 'linear' | 'jira'
+  provider: 'github' | 'gitlab' | 'linear' | 'jira' | 'odoo'
   type: 'issue' | 'pr' | 'mr'
   number: number
   title: string
@@ -2069,6 +2069,28 @@ export type {
   JiraUser,
   JiraViewer
 } from './jira-types'
+
+export type {
+  OdooComment,
+  OdooConnectArgs,
+  OdooConnectionStatus,
+  OdooCreateTicketArgs,
+  OdooCreateTicketResult,
+  OdooInstance,
+  OdooInstanceSelection,
+  OdooMutationResult,
+  OdooPriority,
+  OdooProject,
+  OdooStage,
+  OdooTag,
+  OdooTicket,
+  OdooTicketFilter,
+  OdooTicketState,
+  OdooTicketUpdate,
+  OdooUser,
+  OdooViewer
+} from './odoo-types'
+export { ODOO_CLOSED_STATES, ODOO_PRIORITIES } from './odoo-types'
 
 /**
  * GitHub API rate-limit buckets surfaced in the TaskPage header so users can

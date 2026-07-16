@@ -208,6 +208,19 @@ import type {
   JiraIssueFilter,
   JiraIssueType,
   JiraProjectStatusOrder,
+  OdooComment,
+  OdooConnectionStatus,
+  OdooCreateTicketResult,
+  OdooMutationResult,
+  OdooPriority,
+  OdooProject,
+  OdooStage,
+  OdooTag,
+  OdooTicket,
+  OdooTicketFilter,
+  OdooTicketUpdate,
+  OdooUser,
+  OdooViewer,
   JiraIssueUpdate,
   JiraPriority,
   JiraProject,
@@ -2326,6 +2339,55 @@ export type PreloadApi = {
       projectKey: string
       siteId?: string
     }) => Promise<JiraProjectStatusOrder>
+  }
+  odoo: {
+    connect: (args: {
+      serverUrl: string
+      database: string
+      login: string
+      apiKey: string
+    }) => Promise<{ ok: true; viewer: OdooViewer } | { ok: false; error: string }>
+    disconnect: (args?: { instanceId?: string }) => Promise<void>
+    selectInstance: (args: { instanceId: string }) => Promise<OdooConnectionStatus>
+    status: () => Promise<OdooConnectionStatus>
+    testConnection: (args?: {
+      instanceId?: string
+    }) => Promise<{ ok: true; viewer: OdooViewer } | { ok: false; error: string }>
+    listTickets: (args?: {
+      filter?: OdooTicketFilter
+      limit?: number
+      instanceId?: string
+    }) => Promise<OdooTicket[]>
+    searchTickets: (args: {
+      domain: unknown[]
+      limit?: number
+      instanceId?: string
+    }) => Promise<OdooTicket[]>
+    getTicket: (args: { id: number; instanceId?: string }) => Promise<OdooTicket | null>
+    createTicket: (args: {
+      instanceId?: string
+      projectId: number
+      title: string
+      description?: string
+      priority?: OdooPriority
+      stageId?: number
+      assigneeIds?: number[]
+    }) => Promise<OdooCreateTicketResult>
+    updateTicket: (args: {
+      id: number
+      updates: OdooTicketUpdate
+      instanceId?: string
+    }) => Promise<OdooMutationResult>
+    addTicketComment: (args: {
+      id: number
+      body: string
+      instanceId?: string
+    }) => Promise<OdooMutationResult>
+    ticketComments: (args: { id: number; instanceId?: string }) => Promise<OdooComment[]>
+    listProjects: (args?: { instanceId?: string }) => Promise<OdooProject[]>
+    listStages: (args: { projectId: number; instanceId?: string }) => Promise<OdooStage[]>
+    listTags: (args?: { instanceId?: string }) => Promise<OdooTag[]>
+    listAssignableUsers: (args?: { query?: string; instanceId?: string }) => Promise<OdooUser[]>
   }
   starNag: {
     onShow: (
