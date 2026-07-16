@@ -7,6 +7,7 @@ import {
 } from '../../../../shared/task-providers'
 import { cn } from '@/lib/utils'
 import { JiraIcon } from '@/components/icons/JiraIcon'
+import { OdooIcon } from '@/components/icons/OdooIcon'
 import { LinearIcon } from '@/components/icons/LinearIcon'
 import { Label } from '../ui/label'
 import { SearchableSetting } from './SearchableSetting'
@@ -75,6 +76,19 @@ const TASK_PROVIDER_OPTIONS: readonly {
       )
     },
     Icon: ({ className }) => <JiraIcon className={className} />
+  },
+  {
+    id: 'odoo',
+    get label() {
+      return translate('auto.components.settings.TasksPane.874f075d00', 'Odoo')
+    },
+    get description() {
+      return translate(
+        'auto.components.settings.TasksPane.cde88ace5c',
+        'Show Odoo in the Tasks source picker and sidebar shortcuts.'
+      )
+    },
+    Icon: ({ className }) => <OdooIcon className={className} />
   }
 ]
 

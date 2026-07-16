@@ -286,6 +286,9 @@
             "f518e89aa5": "프로젝트가 해당 프로필에 이미 있습니다",
             "f03ae7f27b": "프로젝트를 전송하지 못했습니다"
           }
+        },
+        "odoo": {
+          "superseded": "Odoo connection was superseded by a newer request."
         }
       }
     },
@@ -4683,6 +4686,9 @@
           "cancel": "취소",
           "forget": "Orca에서 제거",
           "reconnectAndDelete": "재연결 후 삭제"
+        },
+        "SidebarTaskNavButton": {
+          "844abd8a27": "Open Odoo tasks"
         }
       },
       "shared": {
@@ -6615,7 +6621,9 @@
           "dd67a1b6e1": "작업 소스 선택기 및 사이드바 바로가기에 GitLab을 표시합니다.",
           "7c5d7fdc20": "GitLab",
           "1db47236cd": "작업 소스 선택기 및 사이드바 바로가기에 GitHub를 표시합니다.",
-          "e14063e727": "GitHub"
+          "e14063e727": "GitHub",
+          "874f075d00": "Odoo",
+          "cde88ace5c": "Show Odoo in the Tasks source picker and sidebar shortcuts."
         },
         "TerminalAppearanceSection": {
           "a14a427ae4": "창 구분선의 두께입니다.",
@@ -8242,7 +8250,8 @@
             "cf0e3e0c2f": "공급자",
             "2ec54bee51": "작업",
             "765f0c544d": "작업 페이지와 사이드바 바로가기에 표시할 작업 제공자를 선택합니다.",
-            "5b8e4aace5": "작업 제공자"
+            "5b8e4aace5": "작업 제공자",
+            "f622cdc65f": "odoo"
           }
         },
         "terminal": {
@@ -12825,6 +12834,29 @@
               "chooseSource": "작업 소스 선택"
             }
           }
+        },
+        "page": {
+          "localized": {
+            "options": {
+              "d92da69eb7": "Odoo"
+            }
+          },
+          "odoo": {
+            "panel": {
+              "36a83d1d90": "Connect your Odoo server",
+              "c172248418": "Browse, edit, and comment on Odoo tickets directly from here.",
+              "d0e1575687": "Connect Odoo",
+              "546376384c": "Hide Odoo",
+              "93d245553c": "Odoo tickets",
+              "42b63f8760": "shown",
+              "f5975fc3d1": "No tickets found",
+              "7bb7235cda": "Try a different filter or search.",
+              "a0b20f5246": "Search tickets by title…",
+              "56db121047": "Refresh",
+              "85e1148843": "Failed to switch Odoo instance.",
+              "83d54e0f6a": "All instances"
+            }
+          }
         }
       },
       "taskPageEmptyState": {
@@ -13079,6 +13111,48 @@
           },
           "undo": "실행 취소",
           "widthOption": "{{value0}} px"
+        }
+      },
+      "odoo": {
+        "connect": {
+          "dialog": {
+            "e4c06861c0": "Connect Odoo server",
+            "79831c1057": "Use your Odoo server URL, database, login, and API key to browse tickets.",
+            "a0859126fa": "Odoo server URL",
+            "b9ff33a00d": "https://odoo.example.com",
+            "458a5cd247": "Database",
+            "17acc54e0a": "mycompany",
+            "8568d8d7ee": "Login",
+            "0dc046475d": "you@example.com",
+            "11fb0827ed": "API key",
+            "c24a2b6fe2": "Odoo API key",
+            "38baf57dd9": "Create an API key in Odoo under Preferences and Account Security.",
+            "d722ded40b": "Cancel",
+            "ceb0150103": "Connect",
+            "b8d4744f56": "Verifying…"
+          }
+        },
+        "ticket": {
+          "workspace": {
+            "8229d636d2": "Stage",
+            "9809e7ba90": "Priority",
+            "4f1a1c9e6c": "Assignees",
+            "795c4960cb": "Description",
+            "425ca8bd04": "No description",
+            "c4a1981a5a": "Comments",
+            "c87b4521ce": "No comments yet",
+            "1b5eaa43b5": "Add a comment…",
+            "e74a44677f": "Comment",
+            "2c5256318d": "Open in Odoo",
+            "4411a54695": "Low",
+            "bcaea799c1": "Medium",
+            "2f1f13a17c": "High",
+            "1000c20873": "Urgent",
+            "9311b4efd0": "Could not update the ticket.",
+            "c243d3a215": "Could not post the comment.",
+            "57e34ae785": "Ticket updated.",
+            "8b2db83b43": "Comment posted."
+          }
         }
       }
     },

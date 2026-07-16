@@ -90,6 +90,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import TaskProjectSourceCombobox from '@/components/task-project-source-combobox'
 import { JiraConnectDialog } from '@/components/jira-connect-dialog'
+import { TaskPageOdooPanel } from '@/components/task-page-odoo-panel'
 import { LinearApiKeyDialog } from '@/components/linear-api-key-dialog'
 import { LinearScopeSelector } from '@/components/linear-scope-selector'
 import RepoBadgeLabel from '@/components/repo/RepoBadgeLabel'
@@ -3619,7 +3620,7 @@ export default function TaskPage(): React.JSX.Element {
       providerLabel,
       repoContexts: taskSourceRepoContexts,
       hostAvailability:
-        taskSource === 'linear' || taskSource === 'jira'
+        taskSource === 'linear' || taskSource === 'jira' || taskSource === 'odoo'
           ? accountBackedTaskSourceHostAvailability
           : taskSourceHostAvailability,
       accountHostId: accountBackedTaskSourceHostId,
@@ -3647,11 +3648,11 @@ export default function TaskPage(): React.JSX.Element {
     return getTaskSourceAvailabilityNotice({
       providerLabel,
       sourceCount:
-        taskSource === 'linear' || taskSource === 'jira'
+        taskSource === 'linear' || taskSource === 'jira' || taskSource === 'odoo'
           ? 1
           : Math.max(1, taskSourceRepoContexts.length),
       hostAvailability:
-        taskSource === 'linear' || taskSource === 'jira'
+        taskSource === 'linear' || taskSource === 'jira' || taskSource === 'odoo'
           ? accountBackedTaskSourceHostAvailability
           : taskSourceHostAvailability,
       hostLabelById
@@ -10152,6 +10153,8 @@ export default function TaskPage(): React.JSX.Element {
                 />
               </div>
             )
+          ) : taskSource === 'odoo' ? (
+            <TaskPageOdooPanel onHide={() => hideTaskSource('odoo', 'Odoo')} />
           ) : taskSource === 'linear' && selectedLinearIssue ? (
             <LinearIssueWorkspace
               issue={selectedLinearIssue}
