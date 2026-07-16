@@ -7,6 +7,7 @@ import {
   resolveVisibleTaskProvider
 } from '../../../../shared/task-providers'
 import { JiraIcon } from '@/components/icons/JiraIcon'
+import { OdooIcon } from '@/components/icons/OdooIcon'
 import { LinearIcon } from '@/components/icons/LinearIcon'
 import { Button } from '@/components/ui/button'
 import { useAppStore } from '@/store'
@@ -88,6 +89,19 @@ const PROVIDER_META: Record<
       )
     },
     Icon: ({ className }) => <JiraIcon className={className} />
+  },
+  {
+    id: 'odoo',
+    get label() {
+      return translate('auto.components.settings.TasksPane.874f075d00', 'Odoo')
+    },
+    get description() {
+      return translate(
+        'auto.components.settings.TasksPane.cde88ace5c',
+        'Show Odoo in the Tasks source picker and sidebar shortcuts.'
+      )
+    },
+    Icon: ({ className }) => <OdooIcon className={className} />
   }
 }
 

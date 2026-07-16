@@ -2,6 +2,7 @@ import React from 'react'
 import { Github, Gitlab, LayoutGrid, List } from 'lucide-react'
 
 import { JiraIcon } from '@/components/icons/JiraIcon'
+import { OdooIcon } from '@/components/icons/OdooIcon'
 import { createLocalizedCatalog } from '@/i18n/localized-catalog'
 import { translate } from '@/i18n/i18n'
 import {
@@ -130,6 +131,11 @@ export const getSourceOptions = createLocalizedCatalog((): SourceOption[] => [
     id: 'jira',
     label: translate('auto.components.TaskPage.9cd11ba218', 'Jira'),
     Icon: ({ className }) => <JiraIcon className={className} />
+  },
+  {
+    id: 'odoo',
+    label: translate('auto.components.task.page.localized.options.d92da69eb7', 'Odoo'),
+    Icon: ({ className }) => <OdooIcon className={className} />
   }
 ])
 
@@ -139,6 +145,10 @@ export const getJiraPresets = createLocalizedCatalog((): JiraPreset[] => [
   { id: 'all', label: translate('auto.components.TaskPage.4b6e40e42c', 'All Open') },
   { id: 'done', label: translate('auto.components.TaskPage.18451e99df', 'Done') }
 ])
+
+// Odoo shares Jira's filter vocabulary (assigned/reported/all/done), so the
+// preset catalog is reused rather than duplicated per provider.
+export const getOdooPresets: () => JiraPreset[] = getJiraPresets
 
 export const getGitHubModeButtons = createLocalizedCatalog((): GitHubModeButton[] => [
   { id: 'issues', label: translate('auto.components.TaskPage.dfc0c79bd8', 'Issues') },
