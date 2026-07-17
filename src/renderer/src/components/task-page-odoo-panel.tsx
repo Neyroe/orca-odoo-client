@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { LoaderCircle, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -115,6 +115,8 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   const [refreshNonce, setRefreshNonce] = useState(0)
   const [connectOpen, setConnectOpen] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<OdooTicket | null>(null)
+  // The Refresh button sets this so the next read bypasses the cache TTL.
+  const forceNextReadRef = useRef(false)
 
   const presets = getOdooPresets()
   const instances = odooStatus.instances ?? []
@@ -131,9 +133,11 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
     let cancelled = false
     setLoading(true)
     setError(null)
+    const forceRefresh = forceNextReadRef.current
+    forceNextReadRef.current = false
     const read = appliedSearch
-      ? searchOdooTickets([['name', 'ilike', appliedSearch]], 50)
-      : listOdooTickets(preset, 50)
+      ? searchOdooTickets([['name', 'ilike', appliedSearch]], 50, { forceRefresh })
+      : listOdooTickets(preset, 50, { forceRefresh })
     read
       .then((result) => {
         if (!cancelled) {
@@ -155,6 +159,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
     }
   }, [
     odooStatus.connected,
+    selectedInstanceId,
     preset,
     appliedSearch,
     refreshNonce,
@@ -286,7 +291,10 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
                 variant="ghost"
                 size="icon"
                 className="size-7"
-                onClick={() => setRefreshNonce((n) => n + 1)}
+                onClick={() => {
+                  forceNextReadRef.current = true
+                  setRefreshNonce((n) => n + 1)
+                }}
               >
                 <RefreshCw className={cn('size-3.5', loading && 'animate-spin')} />
               </Button>

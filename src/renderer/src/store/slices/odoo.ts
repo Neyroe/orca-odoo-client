@@ -26,7 +26,7 @@ import {
   type OdooReadScope
 } from './odoo-read-coordination'
 
-type OdooReadOptions = { sourceContext?: TaskSourceContext | null }
+type OdooReadOptions = { sourceContext?: TaskSourceContext | null; forceRefresh?: boolean }
 type OdooPatchOptions = { sourceContext?: TaskSourceContext | null }
 
 const inflightTicketRequests = new Map<string, InflightOdooRead<OdooTicket | null>>()
@@ -86,6 +86,7 @@ export type OdooSlice = {
   ) => Promise<OdooTicket[]>
   patchOdooTicket: (
     ticketId: number,
+    instanceId: string | null | undefined,
     patch: Partial<OdooTicket>,
     options?: OdooPatchOptions
   ) => void
@@ -97,10 +98,11 @@ export const createOdooSlice: StateCreator<AppState, [], [], OdooSlice> = (set, 
     cacheKey: string,
     scope: OdooReadScope,
     instanceId: OdooInstanceSelection | null,
+    forceRefresh: boolean,
     fetch: () => Promise<OdooTicket[]>
   ): Promise<OdooTicket[]> => {
     const cached = get().odooTicketListCache[cacheKey]
-    if (isFresh(cached)) {
+    if (!forceRefresh && isFresh(cached)) {
       return Promise.resolve(cached.data ?? [])
     }
     return executeOdooRead({
@@ -170,8 +172,13 @@ export const createOdooSlice: StateCreator<AppState, [], [], OdooSlice> = (set, 
         scope,
         `${instanceId ?? 'default'}::search::${JSON.stringify(domain)}::${limit}`
       )
-      return runListRead(inflightSearchRequests, cacheKey, scope, instanceId, () =>
-        odooSearchTickets(scope.settings, domain, limit, instanceId)
+      return runListRead(
+        inflightSearchRequests,
+        cacheKey,
+        scope,
+        instanceId,
+        options?.forceRefresh ?? false,
+        () => odooSearchTickets(scope.settings, domain, limit, instanceId)
       )
     },
 
@@ -182,23 +189,34 @@ export const createOdooSlice: StateCreator<AppState, [], [], OdooSlice> = (set, 
         scope,
         `${instanceId ?? 'default'}::list::${filter}::${limit}`
       )
-      return runListRead(inflightListRequests, cacheKey, scope, instanceId, () =>
-        odooListTickets(scope.settings, filter, limit, instanceId)
+      return runListRead(
+        inflightListRequests,
+        cacheKey,
+        scope,
+        instanceId,
+        options?.forceRefresh ?? false,
+        () => odooListTickets(scope.settings, filter, limit, instanceId)
       )
     },
 
-    patchOdooTicket: (ticketId, patch, options) => {
+    patchOdooTicket: (ticketId, instanceId, patch, options) => {
       const sourceScope =
         options?.sourceContext?.provider === 'odoo'
           ? getTaskSourceCacheScope(options.sourceContext)
           : null
       const canPatchCacheKey = (key: string): boolean =>
         sourceScope === null || key.startsWith(`${sourceScope}::`)
+      // Numeric ids collide across instances, so an 'All instances' cache must
+      // match the instance too; single-instance tickets omit instanceId and
+      // still match by id alone.
+      const matchesTicket = (ticket: OdooTicket): boolean =>
+        ticket.id === ticketId &&
+        (instanceId == null || ticket.instanceId == null || ticket.instanceId === instanceId)
       set((s) => {
         let changed = false
         const nextTicketCache = { ...s.odooTicketCache }
         for (const [key, entry] of Object.entries(nextTicketCache)) {
-          if (!canPatchCacheKey(key) || entry?.data?.id !== ticketId) {
+          if (!canPatchCacheKey(key) || !entry?.data || !matchesTicket(entry.data)) {
             continue
           }
           nextTicketCache[key] = { ...entry, data: { ...entry.data, ...patch }, fetchedAt: 0 }
@@ -210,7 +228,7 @@ export const createOdooSlice: StateCreator<AppState, [], [], OdooSlice> = (set, 
           if (!canPatchCacheKey(key) || !entry?.data) {
             continue
           }
-          const index = entry.data.findIndex((ticket) => ticket.id === ticketId)
+          const index = entry.data.findIndex(matchesTicket)
           if (index === -1) {
             continue
           }
