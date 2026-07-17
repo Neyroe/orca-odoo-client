@@ -3526,7 +3526,7 @@ export default function TaskPage(): React.JSX.Element {
     ? getTaskSourceCacheScope(jiraTaskSourceContext)
     : providerRuntimeContextKey
   const accountBackedTaskSourceHostAvailability = useMemo<TaskSourceHostAvailability[]>(() => {
-    if (taskSource !== 'linear' && taskSource !== 'jira') {
+    if (taskSource !== 'linear' && taskSource !== 'jira' && taskSource !== 'odoo') {
       return []
     }
     const host = hostRegistryById.get(accountBackedTaskSourceHostId)
@@ -3612,6 +3612,18 @@ export default function TaskPage(): React.JSX.Element {
     selectedRepos,
     sourceOptions
   ])
+  const odooStatus = useAppStore((s) => s.odooStatus)
+  const odooInstanceName = useMemo(() => {
+    const instances = odooStatus.instances ?? []
+    const selected = odooStatus.selectedInstanceId ?? odooStatus.activeInstanceId ?? null
+    if (selected === 'all') {
+      return instances.length > 1
+        ? translate('auto.components.task.page.odoo.allInstances', 'All instances')
+        : null
+    }
+    const match = instances.find((instance) => instance.id === selected)
+    return match?.database ?? match?.displayName ?? odooStatus.viewer?.login ?? null
+  }, [odooStatus])
   const taskSourceContextSummary = useMemo(() => {
     const providerLabel =
       sourceOptions.find((source) => source.id === taskSource)?.label ?? taskSource
@@ -3628,7 +3640,8 @@ export default function TaskPage(): React.JSX.Element {
       selectedRepoCount: selectedRepos.length,
       linearWorkspaceName:
         selectedLinearWorkspace?.organizationName ?? selectedLinearWorkspace?.id ?? null,
-      jiraSiteName: selectedJiraSite?.displayName ?? selectedJiraSite?.siteUrl ?? null
+      jiraSiteName: selectedJiraSite?.displayName ?? selectedJiraSite?.siteUrl ?? null,
+      odooInstanceName
     })
   }, [
     selectedJiraSite,
@@ -3639,6 +3652,7 @@ export default function TaskPage(): React.JSX.Element {
     accountBackedTaskSourceHostAvailability,
     accountBackedTaskSourceHostId,
     hostLabelById,
+    odooInstanceName,
     taskSourceHostAvailability,
     taskSourceRepoContexts
   ])
@@ -8115,8 +8129,8 @@ export default function TaskPage(): React.JSX.Element {
     hasGitHubDetail: Boolean(dialogWorkItem),
     hasGitLabDetail: Boolean(gitlabDialogItem),
     hasJiraDetail: Boolean(selectedJiraIssue),
-    // TODO(odoo): swap for the selected-ticket state once the Odoo detail pane
-    // lands; the Odoo source has no detail view to hide the list chrome for yet.
+    // Odoo's detail is a Sheet overlay that slides over the list instead of
+    // replacing it, so the list chrome stays visible and is never hidden.
     hasOdooDetail: false,
     hasLinearIssueDetail: Boolean(selectedLinearIssue),
     hasLinearProjectContext: Boolean(selectedLinearProject),

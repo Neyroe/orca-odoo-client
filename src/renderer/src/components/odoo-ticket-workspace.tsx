@@ -13,6 +13,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
+import { getProviderRuntimeContextKey } from '@/lib/provider-runtime-context'
 import { useAppStore } from '@/store'
 import {
   odooAddTicketComment,
@@ -100,9 +101,13 @@ function OdooTicketDetail({
   const projectId = ticket.project?.id ?? null
   const instanceId = ticket.instanceId ?? null
 
+  // Depend on the runtime target's identity, not the whole settings object, so
+  // unrelated settings writes don't refetch comments/stages while open.
+  const runtimeContextKey = getProviderRuntimeContextKey(settings)
   useEffect(() => {
     let cancelled = false
-    void odooTicketComments(settings, ticketId, instanceId)
+    const activeSettings = useAppStore.getState().settings
+    void odooTicketComments(activeSettings, ticketId, instanceId)
       .then((rows) => {
         if (!cancelled) {
           setComments(rows)
@@ -115,7 +120,7 @@ function OdooTicketDetail({
         }
       })
     if (projectId !== null) {
-      void odooListStages(settings, projectId, instanceId)
+      void odooListStages(activeSettings, projectId, instanceId)
         .then((rows) => {
           if (!cancelled) {
             setStages(rows)
@@ -126,7 +131,7 @@ function OdooTicketDetail({
     return () => {
       cancelled = true
     }
-  }, [ticketId, projectId, instanceId, settings])
+  }, [ticketId, projectId, instanceId, runtimeContextKey])
 
   const applyUpdate = async (
     updates: OdooTicketUpdate,
@@ -139,7 +144,7 @@ function OdooTicketDetail({
         toast.error(result.error)
         return
       }
-      patchOdooTicket(ticket.id, patch)
+      patchOdooTicket(ticket.id, ticket.instanceId ?? null, patch)
       onTicketPatched(ticket.id, patch)
       toast.success(
         translate('auto.components.odoo.ticket.workspace.57e34ae785', 'Ticket updated.')
@@ -329,6 +334,16 @@ function OdooTicketDetail({
           )}
           rows={2}
           disabled={commentPosting}
+          onKeyDown={(event) => {
+            // Cross-platform submit: ⌘⏎ on Mac, Ctrl+Enter elsewhere.
+            const submitModifier = navigator.userAgent.includes('Mac')
+              ? event.metaKey
+              : event.ctrlKey
+            if (submitModifier && event.key === 'Enter') {
+              event.preventDefault()
+              void postComment()
+            }
+          }}
           className="min-h-10 flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
         />
         <div className="flex justify-end">
