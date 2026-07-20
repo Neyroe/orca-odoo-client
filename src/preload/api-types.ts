@@ -2381,6 +2381,7 @@ export type PreloadApi = {
     addTicketComment: (args: {
       id: number
       body: string
+      isNote?: boolean
       instanceId?: string
     }) => Promise<OdooMutationResult>
     ticketComments: (args: { id: number; instanceId?: string }) => Promise<OdooComment[]>

@@ -90,8 +90,7 @@ const PROVIDER_META: Record<
     },
     Icon: ({ className }) => <JiraIcon className={className} />
   },
-  {
-    id: 'odoo',
+  odoo: {
     get label() {
       return translate('auto.components.settings.TasksPane.874f075d00', 'Odoo')
     },

@@ -2051,6 +2051,7 @@ const api = {
     addTicketComment: (args: {
       id: number
       body: string
+      isNote?: boolean
       instanceId?: string
     }): Promise<{ ok: true } | { ok: false; error: string }> =>
       ipcRenderer.invoke('odoo:addTicketComment', args),

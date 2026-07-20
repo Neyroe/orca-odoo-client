@@ -1,11 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { LoaderCircle, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { OdooIcon } from '@/components/icons/OdooIcon'
 import { OdooConnectDialog } from '@/components/odoo-connect-dialog'
 import { OdooTicketWorkspace } from '@/components/odoo-ticket-workspace'
-import { getOdooPresets } from '@/components/task-page-localized-options'
+import { OdooTicketRow } from '@/components/task-page-odoo-ticket-row'
+import { getOdooPresets, getOdooPriorityLabels } from '@/components/task-page-localized-options'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -19,84 +20,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
-import type { OdooTicket, OdooTicketFilter } from '../../../shared/types'
-
-const PRIORITY_TONES: Record<string, string> = {
-  '0': 'bg-muted-foreground/40',
-  '1': 'bg-sky-500/80',
-  '2': 'bg-amber-500/80',
-  '3': 'bg-red-500/80'
-}
-
-function formatUpdatedAt(updatedAt: string): string {
-  const elapsed = Date.now() - new Date(updatedAt).getTime()
-  const minutes = Math.round(elapsed / 60_000)
-  if (minutes < 60) {
-    return `${Math.max(1, minutes)}m`
-  }
-  const hours = Math.round(minutes / 60)
-  if (hours < 24) {
-    return `${hours}h`
-  }
-  return `${Math.round(hours / 24)}d`
-}
-
-function OdooTicketRow({
-  onOpen,
-  selected,
-  showInstanceContext,
-  ticket
-}: {
-  onOpen: (ticket: OdooTicket) => void
-  selected: boolean
-  showInstanceContext: boolean
-  ticket: OdooTicket
-}): React.JSX.Element {
-  const contextLabel = [showInstanceContext ? ticket.instanceName : null, ticket.project?.name]
-    .filter(Boolean)
-    .join(' / ')
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      aria-current={selected ? 'true' : undefined}
-      onClick={() => onOpen(ticket)}
-      onKeyDown={(event) => {
-        if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
-          event.preventDefault()
-          onOpen(ticket)
-        }
-      }}
-      className={cn(
-        'flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-left transition hover:bg-muted/50',
-        selected && 'bg-muted/60'
-      )}
-    >
-      <span
-        aria-hidden
-        className={cn(
-          'size-2 shrink-0 rounded-full',
-          PRIORITY_TONES[ticket.priority] ?? PRIORITY_TONES['0']
-        )}
-      />
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm text-foreground">{ticket.title}</div>
-        <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
-          <span className="shrink-0">{ticket.ref}</span>
-          {contextLabel ? <span className="truncate">{contextLabel}</span> : null}
-        </div>
-      </div>
-      {ticket.stage ? (
-        <span className="shrink-0 rounded-full border border-border/50 bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground">
-          {ticket.stage.name}
-        </span>
-      ) : null}
-      <span className="w-8 shrink-0 text-right text-[11px] text-muted-foreground">
-        {formatUpdatedAt(ticket.updatedAt)}
-      </span>
-    </div>
-  )
-}
+import { ODOO_PRIORITIES } from '../../../shared/odoo-types'
+import type { OdooPriority, OdooTicket, OdooTicketFilter } from '../../../shared/types'
 
 export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JSX.Element {
   const odooStatus = useAppStore((s) => s.odooStatus)
@@ -115,12 +40,39 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   const [refreshNonce, setRefreshNonce] = useState(0)
   const [connectOpen, setConnectOpen] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<OdooTicket | null>(null)
+  // Client-side narrowing of the loaded set — instant and instance-agnostic.
+  const [stageFilter, setStageFilter] = useState<string>('all')
+  const [priorityFilter, setPriorityFilter] = useState<OdooPriority | 'all'>('all')
   // The Refresh button sets this so the next read bypasses the cache TTL.
   const forceNextReadRef = useRef(false)
 
   const presets = getOdooPresets()
+  const priorityLabels = getOdooPriorityLabels()
   const instances = odooStatus.instances ?? []
   const selectedInstanceId = odooStatus.selectedInstanceId ?? odooStatus.activeInstanceId ?? null
+
+  const resetFilters = (): void => {
+    setStageFilter('all')
+    setPriorityFilter('all')
+  }
+  const stageOptions = useMemo(() => {
+    const names = new Set<string>()
+    for (const ticket of tickets) {
+      if (ticket.stage) {
+        names.add(ticket.stage.name)
+      }
+    }
+    return [...names].sort((a, b) => a.localeCompare(b))
+  }, [tickets])
+  const visibleTickets = useMemo(
+    () =>
+      tickets.filter(
+        (ticket) =>
+          (stageFilter === 'all' || ticket.stage?.name === stageFilter) &&
+          (priorityFilter === 'all' || ticket.priority === priorityFilter)
+      ),
+    [tickets, stageFilter, priorityFilter]
+  )
 
   useEffect(() => {
     void checkOdooConnection()
@@ -224,6 +176,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
                   setSearchInput('')
                   setAppliedSearch('')
                   setPreset(entry.id)
+                  resetFilters()
                 }}
                 className={cn(
                   'rounded-md border px-2 py-1 text-xs transition',
@@ -244,6 +197,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
               onValueChange={(value) => {
                 setSelectedTicket(null)
                 setTickets([])
+                resetFilters()
                 void selectOdooInstance(value).catch(() => {
                   toast.error(
                     translate(
@@ -269,10 +223,46 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
               </SelectContent>
             </Select>
           ) : null}
+          {stageOptions.length > 0 ? (
+            <Select value={stageFilter} onValueChange={setStageFilter}>
+              <SelectTrigger className="h-7 w-32 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  {translate('auto.components.task.page.odoo.panel.all_stages', 'All stages')}
+                </SelectItem>
+                {stageOptions.map((name) => (
+                  <SelectItem key={name} value={name}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : null}
+          <Select
+            value={priorityFilter}
+            onValueChange={(value) => setPriorityFilter(value as OdooPriority | 'all')}
+          >
+            <SelectTrigger className="h-7 w-28 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">
+                {translate('auto.components.task.page.odoo.panel.all_priorities', 'All priorities')}
+              </SelectItem>
+              {ODOO_PRIORITIES.map((priority) => (
+                <SelectItem key={priority} value={priority}>
+                  {priorityLabels[priority]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <form
             onSubmit={(event) => {
               event.preventDefault()
               setAppliedSearch(searchInput.trim())
+              resetFilters()
             }}
           >
             <Input
@@ -311,7 +301,8 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
           {translate('auto.components.task.page.odoo.panel.93d245553c', 'Odoo tickets')}
         </div>
         <div className="shrink-0 text-[11px] text-muted-foreground">
-          {tickets.length} {translate('auto.components.task.page.odoo.panel.42b63f8760', 'shown')}
+          {visibleTickets.length}{' '}
+          {translate('auto.components.task.page.odoo.panel.42b63f8760', 'shown')}
         </div>
       </div>
 
@@ -339,7 +330,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
           </div>
         ) : null}
 
-        {!loading && tickets.length === 0 && !error && !odooStatus.credentialError ? (
+        {!loading && visibleTickets.length === 0 && !error && !odooStatus.credentialError ? (
           <div className="px-4 py-10 text-center">
             <p className="text-sm font-medium text-foreground">
               {translate('auto.components.task.page.odoo.panel.f5975fc3d1', 'No tickets found')}
@@ -354,7 +345,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
         ) : null}
 
         <div className="divide-y divide-border/50">
-          {tickets.map((ticket) => (
+          {visibleTickets.map((ticket) => (
             <OdooTicketRow
               key={`${ticket.instanceId ?? ''}:${ticket.id}`}
               ticket={ticket}
