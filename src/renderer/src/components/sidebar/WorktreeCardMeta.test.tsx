@@ -34,6 +34,7 @@ describe('WorktreeCardDetailsHover', () => {
         workspaceTitle="[Bug]: Hold-to-talk speech-to-text option no longer works"
         issue={null}
         linearIssue={null}
+        odooTicket={null}
         review={null}
         comment={null}
         onEditIssue={vi.fn()}
@@ -55,6 +56,7 @@ describe('WorktreeCardDetailsHover', () => {
         workspaceTitle="Fix stale GH PR"
         issue={null}
         linearIssue={null}
+        odooTicket={null}
         review={{
           provider: 'github',
           number: 456,
@@ -91,6 +93,7 @@ describe('WorktreeCardDetailsHover', () => {
           labels: []
         }}
         linearIssue={null}
+        odooTicket={null}
         review={null}
         comment={null}
         onRenameWorkspaceTitle={vi.fn()}
@@ -116,6 +119,7 @@ describe('WorktreeCardDetailsHover', () => {
       <WorktreeCardDetailsHover
         issue={null}
         linearIssue={null}
+        odooTicket={null}
         review={{
           provider: 'github',
           number: 456,
@@ -161,6 +165,7 @@ describe('WorktreeCardDetailsHover', () => {
           labels: []
         }}
         linearIssue={null}
+        odooTicket={null}
         review={null}
         comment={null}
         onEditIssue={vi.fn()}
@@ -191,6 +196,7 @@ describe('WorktreeCardDetailsHover', () => {
       <WorktreeCardDetailsHover
         issue={null}
         linearIssue={null}
+        odooTicket={null}
         review={{
           provider: 'gitlab',
           number: 77,
@@ -224,6 +230,7 @@ describe('WorktreeCardDetailsHover', () => {
           stateName: 'In Progress',
           labels: ['feature', 'ui']
         }}
+        odooTicket={null}
         review={null}
         comment={null}
         onEditIssue={vi.fn()}
@@ -283,6 +290,7 @@ describe('WorktreeCardDetailsHover', () => {
           identifier: 'ENG-123',
           title: 'Loading Linear issue...'
         }}
+        odooTicket={null}
         review={null}
         comment={null}
         onEditIssue={vi.fn()}
@@ -306,6 +314,7 @@ describe('WorktreeCardDetailsHover', () => {
           title: 'Loading Linear issue...',
           url: 'https://linear.app/acme/issue/ENG-123'
         }}
+        odooTicket={null}
         review={null}
         comment={null}
         onEditIssue={vi.fn()}

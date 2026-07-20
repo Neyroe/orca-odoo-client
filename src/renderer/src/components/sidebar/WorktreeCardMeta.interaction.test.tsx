@@ -124,6 +124,7 @@ describe('WorktreeCardDetailsHover interactions', () => {
         <WorktreeCardDetailsHover
           issue={null}
           linearIssue={null}
+          odooTicket={null}
           review={reviewFixture}
           comment={null}
           onEditIssue={vi.fn()}
@@ -146,6 +147,7 @@ describe('WorktreeCardDetailsHover interactions', () => {
         <WorktreeCardDetailsHover
           issue={null}
           linearIssue={null}
+          odooTicket={null}
           review={null}
           comment={null}
           workspaceTitle="Editable hover title"

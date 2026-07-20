@@ -11,6 +11,7 @@ export const TASK_WORKTREE_CARD_PROPERTIES: WorktreeCardProperty[] = [
   'issue',
   'linear-issue',
   'jira-issue'
+  'odoo-ticket'
 ]
 
 export const DEFAULT_WORKTREE_CARD_PROPERTIES: WorktreeCardProperty[] = [
@@ -53,6 +54,7 @@ export const WORKTREE_CARD_PROPERTIES = [
   'issue',
   'linear-issue',
   'jira-issue',
+  'odoo-ticket',
   'pr',
   'automation',
   'cli',

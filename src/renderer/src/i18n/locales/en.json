@@ -4562,6 +4562,8 @@
           "backToAll": "All hosts"
         },
         "SidebarWorkspaceOptionsMenu": {
+          "odooTicketOption": "Odoo ticket",
+          "odooTicketsOption": "Odoo tickets",
           "hosts": "Hosts",
           "showSection": "Show",
           "allHostsDetail": "Show every host",
@@ -4661,6 +4663,7 @@
           "ccbd1e2c69": "Customize {{value0}} appearance"
         },
         "WorktreeCard": {
+          "odooTicketLoading": "Loading Odoo ticket...",
           "a88c92d0e3": "{{value0}}/{{value1}} already exists.",
           "6f09f58541": "Delete workspace",
           "0777de5970": "Primary worktree (original clone directory)",
@@ -4697,6 +4700,9 @@
           "reviewHeader": "{{value0}} #{{value1}}"
         },
         "WorktreeCardMeta": {
+          "odooTicketLinked": "Linked Odoo ticket {{value0}}",
+          "odooTicketDetail": "Odoo ticket {{value0}}",
+          "odooTicketView": "View on Odoo",
           "3e65e11cc6": "Workspace metadata",
           "c7fa72ead0": "Edit notes",
           "93cbea12c2": "Notes",

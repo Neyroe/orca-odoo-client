@@ -26,6 +26,11 @@ export const PROPERTY_OPTIONS: { id: WorktreeCardProperty; label: string }[] = [
       return translate(
         'auto.components.sidebar.SidebarWorkspaceOptionsMenu.jiraIssue',
         'Jira issue'
+    id: 'odoo-ticket',
+    get label() {
+      return translate(
+        'auto.components.sidebar.SidebarWorkspaceOptionsMenu.odooTicketOption',
+        'Odoo ticket'
       )
     }
   },

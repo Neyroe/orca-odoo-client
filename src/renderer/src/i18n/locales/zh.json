@@ -4341,6 +4341,8 @@
           "keepDefaultBranchAria": "隐藏休眠工作区时仍显示默认分支"
         },
         "SidebarWorkspaceOptionsMenu": {
+          "odooTicketOption": "Odoo ticket",
+          "odooTicketsOption": "Odoo tickets",
           "95c9754653": "智能体活动布局",
           "3d4b9c4997": "悬停",
           "ba87080fb7": "显示属性",
@@ -4440,6 +4442,7 @@
           "ccbd1e2c69": "自定义 {{value0}} 外观"
         },
         "WorktreeCard": {
+          "odooTicketLoading": "Loading Odoo ticket...",
           "a88c92d0e3": "{{value0}}/{{value1}} 已存在。",
           "6f09f58541": "删除工作区",
           "0777de5970": "主工作树（原始克隆目录）",
@@ -4476,6 +4479,9 @@
           "copyLink": "复制链接"
         },
         "WorktreeCardMeta": {
+          "odooTicketLinked": "Linked Odoo ticket {{value0}}",
+          "odooTicketDetail": "Odoo ticket {{value0}}",
+          "odooTicketView": "View on Odoo",
           "3e65e11cc6": "工作区元数据",
           "c7fa72ead0": "编辑笔记",
           "93cbea12c2": "笔记",

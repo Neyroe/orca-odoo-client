@@ -4329,6 +4329,8 @@
           "keepDefaultBranchAria": "슬립 중인 워크스페이스를 숨겨도 기본 브랜치는 계속 표시"
         },
         "SidebarWorkspaceOptionsMenu": {
+          "odooTicketOption": "Odoo ticket",
+          "odooTicketsOption": "Odoo tickets",
           "95c9754653": "Agent 활동 레이아웃",
           "3d4b9c4997": "호버",
           "ba87080fb7": "속성 표시",
@@ -4428,6 +4430,7 @@
           "ccbd1e2c69": "{{value0}} 모양 맞춤설정"
         },
         "WorktreeCard": {
+          "odooTicketLoading": "Loading Odoo ticket...",
           "a88c92d0e3": "{{value0}}/{{value1}}이(가) 이미 있습니다.",
           "6f09f58541": "워크스페이스 삭제",
           "0777de5970": "기본 워크트리(원래 복제 디렉터리)",
@@ -4464,6 +4467,9 @@
           "copyLink": "링크 복사"
         },
         "WorktreeCardMeta": {
+          "odooTicketLinked": "Linked Odoo ticket {{value0}}",
+          "odooTicketDetail": "Odoo ticket {{value0}}",
+          "odooTicketView": "View on Odoo",
           "3e65e11cc6": "워크스페이스 메타데이터",
           "c7fa72ead0": "메모 편집",
           "93cbea12c2": "메모",
