@@ -26,6 +26,19 @@ const TASK_PROVIDER_OPTIONS: readonly {
   Icon: (props: { className?: string }) => React.JSX.Element
 }[] = [
   {
+    id: 'odoo',
+    get label() {
+      return translate('auto.components.settings.TasksPane.874f075d00', 'Odoo')
+    },
+    get description() {
+      return translate(
+        'auto.components.settings.TasksPane.cde88ace5c',
+        'Show Odoo in the Tasks source picker and sidebar shortcuts.'
+      )
+    },
+    Icon: ({ className }) => <OdooIcon className={className} />
+  },
+  {
     id: 'github',
     get label() {
       return translate('auto.components.settings.TasksPane.e14063e727', 'GitHub')
@@ -76,19 +89,6 @@ const TASK_PROVIDER_OPTIONS: readonly {
       )
     },
     Icon: ({ className }) => <JiraIcon className={className} />
-  },
-  {
-    id: 'odoo',
-    get label() {
-      return translate('auto.components.settings.TasksPane.874f075d00', 'Odoo')
-    },
-    get description() {
-      return translate(
-        'auto.components.settings.TasksPane.cde88ace5c',
-        'Show Odoo in the Tasks source picker and sidebar shortcuts.'
-      )
-    },
-    Icon: ({ className }) => <OdooIcon className={className} />
   }
 ]
 

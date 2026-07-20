@@ -25222,9 +25222,10 @@ export class OrcaRuntimeService {
   odooAddTicketComment(
     id: number,
     body: string,
+    isNote?: boolean,
     instanceId?: string
   ): ReturnType<typeof addOdooTicketComment> {
-    return addOdooTicketComment(id, body, instanceId)
+    return addOdooTicketComment(id, body, isNote, instanceId)
   }
 
   odooTicketComments(id: number, instanceId?: string): ReturnType<typeof getOdooTicketComments> {

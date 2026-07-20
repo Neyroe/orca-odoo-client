@@ -19,6 +19,7 @@ export const TICKET_FIELDS = [
   'state',
   'stage_id',
   'project_id',
+  'partner_id',
   'user_ids',
   'tag_ids',
   'create_uid',
@@ -41,6 +42,26 @@ export function readIdList(value: unknown): number[] {
 
 export function readString(value: unknown): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined
+}
+
+/**
+ * Wraps an Odoo base64 image field (`avatar_128`, …) as a data URI. Odoo serves
+ * generated placeholders as SVG, so the container is sniffed from the base64
+ * prefix — mislabeling an SVG as PNG makes the browser refuse to render it.
+ */
+export function base64ImageDataUri(value: unknown): string | undefined {
+  if (typeof value !== 'string' || value.length === 0) {
+    return undefined
+  }
+  const mime =
+    value.startsWith('PHN2') || value.startsWith('PD94')
+      ? 'image/svg+xml'
+      : value.startsWith('/9j/')
+        ? 'image/jpeg'
+        : value.startsWith('R0lGOD')
+          ? 'image/gif'
+          : 'image/png'
+  return `data:${mime};base64,${value}`
 }
 
 function readPriority(value: unknown): OdooPriority {
@@ -83,7 +104,8 @@ export function mapUser(raw: OdooRecord): OdooUser {
   return {
     id: raw.id as number,
     displayName: readString(raw.name) ?? String(raw.id),
-    login: readString(raw.login)
+    login: readString(raw.login),
+    avatarUrl: base64ImageDataUri(raw.avatar_128)
   }
 }
 
@@ -100,7 +122,8 @@ export function mapStage(raw: OdooRecord): OdooStage {
     id: raw.id as number,
     name: readString(raw.name) ?? String(raw.id),
     sequence: typeof raw.sequence === 'number' ? raw.sequence : 0,
-    fold: raw.fold === true
+    fold: raw.fold === true,
+    color: typeof raw.color === 'number' ? raw.color : undefined
   }
 }
 
@@ -139,7 +162,7 @@ export async function loadLookups(
   const [users, tags, stages] = await Promise.all([
     userIds.size > 0
       ? executeKw<OdooRecord[]>(client, 'res.users', 'read', [[...userIds]], {
-          fields: ['name', 'login']
+          fields: ['name', 'login', 'avatar_128']
         })
       : Promise.resolve([]),
     tagIds.size > 0
@@ -149,7 +172,7 @@ export async function loadLookups(
       : Promise.resolve([]),
     stageIds.size > 0
       ? executeKw<OdooRecord[]>(client, 'project.task.type', 'read', [[...stageIds]], {
-          fields: ['name', 'sequence', 'fold']
+          fields: ['name', 'sequence', 'fold', 'color']
         })
       : Promise.resolve([])
   ])
@@ -169,6 +192,7 @@ export function mapTicket(
   const { instance } = client
   const id = typeof raw.id === 'number' ? raw.id : 0
   const project = readMany2One(raw.project_id)
+  const customer = readMany2One(raw.partner_id)
   const stageRef = readMany2One(raw.stage_id)
   const creator = readMany2One(raw.create_uid)
   const description = readString(raw.description)
@@ -189,6 +213,7 @@ export function mapTicket(
           instanceName: instance.displayName
         }
       : undefined,
+    customer: customer ? { id: customer.id, name: customer.name } : undefined,
     stage: stageRef
       ? (lookups.stagesById.get(stageRef.id) ?? {
           id: stageRef.id,

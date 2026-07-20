@@ -216,7 +216,7 @@ export function registerOdooHandlers(): void {
 
   ipcMain.handle(
     'odoo:addTicketComment',
-    async (_event, args: { id: number; body: string; instanceId?: string }) => {
+    async (_event, args: { id: number; body: string; isNote?: boolean; instanceId?: string }) => {
       const id = normalizeRecordId(args?.id)
       if (id === null) {
         return { ok: false, error: 'Ticket ID is required.' }
@@ -224,7 +224,12 @@ export function registerOdooHandlers(): void {
       if (typeof args?.body !== 'string' || !args.body.trim()) {
         return { ok: false, error: 'Comment body is required.' }
       }
-      return addTicketComment(id, args.body.trim(), normalizeInstanceId(args.instanceId))
+      return addTicketComment(
+        id,
+        args.body.trim(),
+        args.isNote,
+        normalizeInstanceId(args.instanceId)
+      )
     }
   )
 

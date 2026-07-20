@@ -84,6 +84,7 @@ const UpdateTicket = z.object({
 const TicketComment = z.object({
   id: z.number().int().positive(),
   body: requiredString('Comment body is required'),
+  isNote: z.boolean().optional(),
   instanceId: OptionalString
 })
 
@@ -170,7 +171,7 @@ export const ODOO_METHODS: RpcMethod[] = [
     name: 'odoo.addTicketComment',
     params: TicketComment,
     handler: async (params, { runtime }) =>
-      runtime.odooAddTicketComment(params.id, params.body.trim(), params.instanceId)
+      runtime.odooAddTicketComment(params.id, params.body.trim(), params.isNote, params.instanceId)
   }),
   defineMethod({
     name: 'odoo.ticketComments',

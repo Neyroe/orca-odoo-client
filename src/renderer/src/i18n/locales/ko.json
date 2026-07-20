@@ -5630,7 +5630,9 @@
           "3ba07f933b": "Orca가 작업을 탐색하고 연결된 컨텍스트로 워크스페이스를 시작하는 데 사용할 이슈 트래커를 연결합니다.",
           "70e885705b": "작업 제공자",
           "1683acbac4": "Orca가 PR, MR, 체크, 리뷰 상태에 사용할 소스 호스트를 연결합니다.",
-          "298c65ecac": "리뷰 제공자"
+          "298c65ecac": "리뷰 제공자",
+          "odooTitle": "Odoo",
+          "odooDescription": "Connect your Odoo server to browse, edit, and comment on project tasks without leaving Orca."
         },
         "KagiSessionLinkForm": {
           "92f0b4e472": "지우기",
@@ -7800,7 +7802,9 @@
             "41ccade05c": "gh",
             "b79c21bd42": "GitHub",
             "7166b9090c": "gh CLI를 통한 GitHub 인증.",
-            "f16e41cc72": "GitHub 연동"
+            "f16e41cc72": "GitHub 연동",
+            "odooTitle": "Odoo Integration",
+            "odooDescription": "Connect an Odoo server to browse and edit project tasks."
           }
         },
         "jira": {
@@ -9100,6 +9104,20 @@
           "availability": "이용 가능:",
           "testFlight": "TestFlight",
           "androidApk": "Android APK"
+        },
+        "odoo": {
+          "integration": {
+            "card": {
+              "credentialRemote": "Connect an Odoo server with its URL, database, login, and API key. Credentials are sent to the selected remote runtime and stored there with runtime-supported encryption.",
+              "credentialLocal": "Connect an Odoo server with its URL, database, login, and API key. Credentials are stored locally and encrypted when local runtime storage supports it.",
+              "connectedSummary": "{{value0}} instance{{value1}} connected",
+              "checking": "Checking Odoo access before showing setup actions.",
+              "tagline": "Browse, edit, and comment on Odoo project tasks.",
+              "addInstance": "Add Odoo instance",
+              "instanceNote": "Each connected Odoo instance stores one API key with the active runtime.",
+              "connectedNoInstances": "Odoo is connected for this runtime. Re-check if the connected instance list looks stale."
+            }
+          }
         }
       },
       "right": {
@@ -10294,7 +10312,7 @@
           "c767ab7061": "스킬 설정"
         },
         "IntegrationsStep": {
-          "277f30eb34": "Linear, GitLab, Bitbucket, Azure DevOps, Gitea 및 Jira는 설정 > 연동에 있습니다.",
+          "277f30eb34": "Odoo, Linear, GitLab, Bitbucket, Azure DevOps, Gitea 및 Jira는 설정 > 연동에 있습니다.",
           "3a3e360289": "더 많은 작업 소스",
           "80e3ce0bc9": "재확인",
           "04ef416712": "Linear 연결 추가",
@@ -12854,7 +12872,9 @@
               "a0b20f5246": "Search tickets by title…",
               "56db121047": "Refresh",
               "85e1148843": "Failed to switch Odoo instance.",
-              "83d54e0f6a": "All instances"
+              "83d54e0f6a": "All instances",
+              "all_stages": "All stages",
+              "all_priorities": "All priorities"
             },
             "allInstances": "All instances"
           }
@@ -13152,7 +13172,16 @@
             "9311b4efd0": "Could not update the ticket.",
             "c243d3a215": "Could not post the comment.",
             "57e34ae785": "Ticket updated.",
-            "8b2db83b43": "Comment posted."
+            "8b2db83b43": "Comment posted.",
+            "note_posted": "Note logged.",
+            "customer": "Customer",
+            "note_label": "Note",
+            "message_label": "Message",
+            "compose_message": "Message",
+            "compose_note": "Log note",
+            "note_placeholder": "Log an internal note…",
+            "log_note_button": "Log note",
+            "send_message_button": "Send message"
           }
         }
       }

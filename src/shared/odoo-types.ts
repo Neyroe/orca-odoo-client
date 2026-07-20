@@ -65,13 +65,22 @@ export type OdooStage = {
   sequence: number
   /** Folded stages are Odoo's collapsed/closed kanban columns. */
   fold: boolean
+  /** Odoo kanban color index (0-11); drives the stage badge tint. */
+  color?: number
 }
 
 export type OdooUser = {
   id: number
   displayName: string
   login?: string
+  /** Data URI built from Odoo's `avatar_128`; absent when the record has none. */
   avatarUrl?: string
+}
+
+/** A ticket's `partner_id` (Customer); Odoo shows it in the chatter header. */
+export type OdooPartner = {
+  id: number
+  name: string
 }
 
 export type OdooTag = {
@@ -91,6 +100,8 @@ export type OdooTicket = {
   url: string
   /** Absent for private todos (`project_todo`), which carry no project. */
   project?: OdooProject
+  /** `partner_id`: the ticket's Customer, when set. */
+  customer?: OdooPartner
   stage?: OdooStage
   state: OdooTicketState
   priority: OdooPriority
@@ -109,6 +120,8 @@ export type OdooComment = {
   body: string
   createdAt: string
   author?: OdooUser
+  /** True when the message's subtype is internal (Odoo "Log note"). */
+  isNote: boolean
 }
 
 export type OdooTicketUpdate = {

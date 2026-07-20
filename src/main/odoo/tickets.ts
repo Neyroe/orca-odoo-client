@@ -238,7 +238,7 @@ export async function listStages(
       'project.task.type',
       'search_read',
       [[['project_ids', 'in', [projectId]]]],
-      { fields: ['id', 'name', 'sequence', 'fold'], order: 'sequence asc' }
+      { fields: ['id', 'name', 'sequence', 'fold', 'color'], order: 'sequence asc' }
     )
     return rows.map(mapStage)
   } finally {

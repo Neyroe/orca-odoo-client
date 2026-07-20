@@ -175,10 +175,11 @@ export async function odooAddTicketComment(
   settings: RuntimeOdooSettings,
   id: number,
   body: string,
+  isNote?: boolean,
   instanceId?: string | null
 ): Promise<OdooMutationResult> {
   const target = getOdooRuntimeTarget(settings)
-  const args = { id, body, instanceId: instanceId ?? undefined }
+  const args = { id, body, isNote, instanceId: instanceId ?? undefined }
   return target.kind === 'environment'
     ? callRuntimeRpc<OdooMutationResult>(target, 'odoo.addTicketComment', args, {
         timeoutMs: 30_000

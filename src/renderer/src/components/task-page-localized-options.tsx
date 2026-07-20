@@ -144,6 +144,17 @@ export const getJiraPresets = createLocalizedCatalog((): JiraPreset[] => [
 // preset catalog is reused rather than duplicated per provider.
 export const getOdooPresets: () => JiraPreset[] = getJiraPresets
 
+// Reuses the ticket-workspace priority keys so the list filter and the detail
+// selector always read the same labels.
+export const getOdooPriorityLabels = createLocalizedCatalog(
+  (): Record<string, string> => ({
+    '0': translate('auto.components.odoo.ticket.workspace.4411a54695', 'Low'),
+    '1': translate('auto.components.odoo.ticket.workspace.bcaea799c1', 'Medium'),
+    '2': translate('auto.components.odoo.ticket.workspace.2f1f13a17c', 'High'),
+    '3': translate('auto.components.odoo.ticket.workspace.1000c20873', 'Urgent')
+  })
+)
+
 export const getGitHubModeButtons = createLocalizedCatalog((): GitHubModeButton[] => [
   { id: 'issues', label: translate('auto.components.TaskPage.dfc0c79bd8', 'Issues') },
   { id: 'prs', label: translate('auto.components.TaskPage.137e2a8a01', 'PRs') },
