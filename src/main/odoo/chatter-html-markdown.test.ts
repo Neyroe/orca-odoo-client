@@ -35,6 +35,23 @@ describe('chatterHtmlToMarkdown', () => {
   it('returns empty string for empty input', () => {
     expect(chatterHtmlToMarkdown('')).toBe('')
   })
+
+  it('renders a table with a <thead> as a GFM table', () => {
+    const html =
+      '<table><thead><tr><th>Titre</th><th>Heures</th></tr></thead>' +
+      '<tbody><tr><td>RG_01</td><td>1,5h</td></tr>' +
+      '<tr><td>RG_02</td><td>0,5h</td></tr></tbody></table>'
+    expect(chatterHtmlToMarkdown(html)).toBe(
+      '| Titre | Heures |\n| --- | --- |\n| RG\\_01 | 1,5h |\n| RG\\_02 | 0,5h |'
+    )
+  })
+
+  it('flattens multi-line cells and escapes pipes', () => {
+    const html =
+      '<table><tr><th>Tests</th></tr>' +
+      '<tr><td>TU_02<br>TU_03</td></tr><tr><td>a | b</td></tr></table>'
+    expect(chatterHtmlToMarkdown(html)).toBe('| Tests |\n| --- |\n| TU\\_02 TU\\_03 |\n| a \\| b |')
+  })
 })
 
 describe('markdownToChatterHtml', () => {

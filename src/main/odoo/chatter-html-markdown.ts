@@ -53,6 +53,43 @@ function collapseBlankLines(value: string): string {
 
 type ListFrame = { ordered: boolean; index: number }
 
+type TableState = {
+  rows: string[][]
+  // First row that carries <th> (or lives in <thead>); GFM needs a header row.
+  headerRowIndex: number
+}
+
+/** Flattens converted cell content to a single GFM-table-safe line. */
+function flattenTableCell(parts: string[]): string {
+  return parts.join('').replace(/\s+/g, ' ').trim().replace(/\|/g, '\\|')
+}
+
+/** Renders accumulated rows as a GitHub-flavored markdown table. */
+function renderGfmTable(table: TableState): string {
+  if (table.rows.length === 0) {
+    return ''
+  }
+  const headerIndex = table.headerRowIndex >= 0 ? table.headerRowIndex : 0
+  const columns = Math.max(...table.rows.map((row) => row.length))
+  const toLine = (row: string[]): string => {
+    const cells = [...row]
+    while (cells.length < columns) {
+      cells.push('')
+    }
+    return `| ${cells.join(' | ')} |`
+  }
+  const lines = [
+    toLine(table.rows[headerIndex] ?? []),
+    `| ${Array.from({ length: columns }, () => '---').join(' | ')} |`
+  ]
+  table.rows.forEach((row, index) => {
+    if (index !== headerIndex) {
+      lines.push(toLine(row))
+    }
+  })
+  return lines.join('\n')
+}
+
 /**
  * Converts an Odoo chatter/description HTML body to markdown.
  *
@@ -72,24 +109,47 @@ export function chatterHtmlToMarkdown(html: string): string {
   let pendingLink: string | null = null
   let inPre = false
   let cursor = 0
+  // Table capture: inline/text writes redirect into the active cell so its
+  // content can be flattened onto one GFM row when </td>/</th> closes.
+  let table: TableState | null = null
+  let tableRow: string[] | null = null
+  let tableCell: string[] | null = null
+  let inThead = false
+  let rowHasHeaderCell = false
 
   const tagPattern = /<\/?([a-z][a-z0-9]*)\b([^>]*)>/gi
   let match: RegExpExecArray | null
+
+  // Inline/text goes to the open cell when capturing a table, otherwise to out.
+  const sink = (): string[] => tableCell ?? out
+  // Block separators must not break a GFM row: collapse to a space inside a cell.
+  const blockBreak = (value: string): void => {
+    if (tableCell) {
+      tableCell.push(' ')
+    } else {
+      out.push(value)
+    }
+  }
 
   const pushText = (raw: string): void => {
     if (!raw) {
       return
     }
+    // Whitespace between table structural tags is not cell content.
+    if (table && !tableCell) {
+      return
+    }
+    const target = sink()
     if (inPre) {
-      out.push(decodeEntities(raw))
+      target.push(decodeEntities(raw))
       return
     }
     // Outside <pre>, HTML whitespace is not significant.
     const text = decodeEntities(raw).replace(/\s+/g, ' ')
-    if (text.trim() === '' && (out.length === 0 || /\s$/.test(out.at(-1) ?? ''))) {
+    if (text.trim() === '' && (target.length === 0 || /\s$/.test(target.at(-1) ?? ''))) {
       return
     }
-    out.push(escapeMarkdown(text))
+    target.push(escapeMarkdown(text))
   }
 
   while ((match = tagPattern.exec(source)) !== null) {
@@ -102,12 +162,12 @@ export function chatterHtmlToMarkdown(html: string): string {
 
     switch (name) {
       case 'br':
-        out.push('\n')
+        blockBreak('\n')
         break
       case 'p':
       case 'div':
       case 'section':
-        out.push('\n\n')
+        blockBreak('\n\n')
         break
       case 'h1':
       case 'h2':
@@ -115,19 +175,23 @@ export function chatterHtmlToMarkdown(html: string): string {
       case 'h4':
       case 'h5':
       case 'h6':
-        out.push(closing ? '\n\n' : `\n\n${'#'.repeat(Number(name[1]))} `)
+        if (tableCell) {
+          tableCell.push(' ')
+        } else {
+          out.push(closing ? '\n\n' : `\n\n${'#'.repeat(Number(name[1]))} `)
+        }
         break
       case 'strong':
       case 'b':
-        out.push('**')
+        sink().push('**')
         break
       case 'em':
       case 'i':
-        out.push('*')
+        sink().push('*')
         break
       case 'code':
         if (!inPre) {
-          out.push('`')
+          sink().push('`')
         }
         break
       case 'pre':
@@ -137,6 +201,60 @@ export function chatterHtmlToMarkdown(html: string): string {
       case 'blockquote':
         // Prefix applied on the assembled text below.
         out.push(closing ? '\n\n' : '\n\n> ')
+        break
+      case 'table':
+        if (closing) {
+          if (table) {
+            out.push(`\n\n${renderGfmTable(table)}\n\n`)
+          }
+          table = null
+          tableRow = null
+          tableCell = null
+          inThead = false
+        } else {
+          table = { rows: [], headerRowIndex: -1 }
+        }
+        break
+      case 'thead':
+        inThead = !closing
+        break
+      case 'tbody':
+      case 'tfoot':
+        break
+      case 'tr':
+        if (!table) {
+          break
+        }
+        if (closing) {
+          if (tableRow) {
+            const index = table.rows.push(tableRow) - 1
+            if ((inThead || rowHasHeaderCell) && table.headerRowIndex === -1) {
+              table.headerRowIndex = index
+            }
+          }
+          tableRow = null
+          rowHasHeaderCell = false
+        } else {
+          tableRow = []
+          rowHasHeaderCell = false
+        }
+        break
+      case 'th':
+      case 'td':
+        if (!table) {
+          break
+        }
+        if (closing) {
+          if (tableCell && tableRow) {
+            tableRow.push(flattenTableCell(tableCell))
+          }
+          tableCell = null
+        } else {
+          tableCell = []
+          if (name === 'th') {
+            rowHasHeaderCell = true
+          }
+        }
         break
       case 'ul':
       case 'ol':
@@ -163,13 +281,13 @@ export function chatterHtmlToMarkdown(html: string): string {
       }
       case 'a':
         if (closing) {
-          out.push(pendingLink ? `](${pendingLink})` : '')
+          sink().push(pendingLink ? `](${pendingLink})` : '')
           pendingLink = null
         } else {
           const href = attribute(full, 'href')
           pendingLink = href
           if (href) {
-            out.push('[')
+            sink().push('[')
           }
         }
         break
@@ -177,7 +295,7 @@ export function chatterHtmlToMarkdown(html: string): string {
         const src = attribute(full, 'src')
         const alt = attribute(full, 'alt') ?? ''
         if (src) {
-          out.push(`![${alt}](${src})`)
+          sink().push(`![${alt}](${src})`)
         }
         break
       }
