@@ -6,6 +6,7 @@ import { VisuallyHidden } from 'radix-ui'
 import CommentMarkdown from '@/components/sidebar/CommentMarkdown'
 import { OdooTicketCommentComposer, OdooTicketCommentList } from '@/components/odoo-ticket-chatter'
 import { OdooTicketHeader } from '@/components/odoo-ticket-header'
+import { isOdooTicketPanelKeepOpenTarget } from '@/components/odoo-ticket-panel-outside-dismiss'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { getProviderRuntimeContextKey } from '@/lib/provider-runtime-context'
@@ -102,7 +103,13 @@ export function OdooTicketWorkspace({
         // The built-in top-right close collides with the OS/app window controls
         // on a full-height right panel; we render our own close in the header.
         showCloseButton={false}
-        onInteractOutside={(event) => event.preventDefault()}
+        // Click on the list/toolbar or a filter dropdown keeps the panel open
+        // (clicking another row swaps the detail); a click in the void dismisses.
+        onInteractOutside={(event) => {
+          if (isOdooTicketPanelKeepOpenTarget(event.detail.originalEvent.target)) {
+            event.preventDefault()
+          }
+        }}
         overlayClassName="bg-transparent backdrop-blur-none pointer-events-none"
         style={{ width: panelWidth }}
         className="flex max-w-[96vw] flex-col gap-0 p-0 sm:max-w-none"

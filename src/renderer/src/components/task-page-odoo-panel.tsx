@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { OdooIcon } from '@/components/icons/OdooIcon'
 import { OdooConnectDialog } from '@/components/odoo-connect-dialog'
 import { OdooTicketWorkspace } from '@/components/odoo-ticket-workspace'
+import { deriveOdooTicketFacets, filterOdooTickets } from '@/components/odoo-ticket-facets'
 import { OdooTicketRow } from '@/components/task-page-odoo-ticket-row'
 import { getOdooPresets, getOdooPriorityLabels } from '@/components/task-page-localized-options'
 import { Button } from '@/components/ui/button'
@@ -43,6 +44,9 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   // Client-side narrowing of the loaded set — instant and instance-agnostic.
   const [stageFilter, setStageFilter] = useState<string>('all')
   const [priorityFilter, setPriorityFilter] = useState<OdooPriority | 'all'>('all')
+  // Assignee/tag facets hold the selected id as a string ('all' = no filter).
+  const [assigneeFilter, setAssigneeFilter] = useState<string>('all')
+  const [tagFilter, setTagFilter] = useState<string>('all')
   // The Refresh button sets this so the next read bypasses the cache TTL.
   const forceNextReadRef = useRef(false)
 
@@ -54,24 +58,19 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   const resetFilters = (): void => {
     setStageFilter('all')
     setPriorityFilter('all')
+    setAssigneeFilter('all')
+    setTagFilter('all')
   }
-  const stageOptions = useMemo(() => {
-    const names = new Set<string>()
-    for (const ticket of tickets) {
-      if (ticket.stage) {
-        names.add(ticket.stage.name)
-      }
-    }
-    return [...names].sort((a, b) => a.localeCompare(b))
-  }, [tickets])
+  const facets = useMemo(() => deriveOdooTicketFacets(tickets), [tickets])
   const visibleTickets = useMemo(
     () =>
-      tickets.filter(
-        (ticket) =>
-          (stageFilter === 'all' || ticket.stage?.name === stageFilter) &&
-          (priorityFilter === 'all' || ticket.priority === priorityFilter)
-      ),
-    [tickets, stageFilter, priorityFilter]
+      filterOdooTickets(tickets, {
+        stage: stageFilter,
+        priority: priorityFilter,
+        assignee: assigneeFilter,
+        tag: tagFilter
+      }),
+    [tickets, stageFilter, priorityFilter, assigneeFilter, tagFilter]
   )
 
   useEffect(() => {
@@ -163,7 +162,10 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   }
 
   return (
-    <div className="mt-4 flex min-h-0 max-h-full flex-col overflow-hidden rounded-md border border-border/50 bg-background shadow-sm">
+    <div
+      data-odoo-panel="true"
+      className="mt-4 flex min-h-0 max-h-full flex-col overflow-hidden rounded-md border border-border/50 bg-background shadow-sm"
+    >
       <div className="flex flex-none flex-wrap items-center justify-between gap-3 border-b border-border/50 bg-muted/50 px-3 py-2">
         <div className="flex flex-wrap gap-2">
           {presets.map((entry) => {
@@ -223,7 +225,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
               </SelectContent>
             </Select>
           ) : null}
-          {stageOptions.length > 0 ? (
+          {facets.stages.length > 0 ? (
             <Select value={stageFilter} onValueChange={setStageFilter}>
               <SelectTrigger className="h-7 w-32 text-xs">
                 <SelectValue />
@@ -232,9 +234,43 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
                 <SelectItem value="all">
                   {translate('auto.components.task.page.odoo.panel.all_stages', 'All stages')}
                 </SelectItem>
-                {stageOptions.map((name) => (
+                {facets.stages.map((name) => (
                   <SelectItem key={name} value={name}>
                     {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : null}
+          {facets.assignees.length > 0 ? (
+            <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+              <SelectTrigger className="h-7 w-36 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  {translate('auto.components.task.page.odoo.panel.all_assignees', 'All assignees')}
+                </SelectItem>
+                {facets.assignees.map((option) => (
+                  <SelectItem key={option.id} value={String(option.id)}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : null}
+          {facets.tags.length > 0 ? (
+            <Select value={tagFilter} onValueChange={setTagFilter}>
+              <SelectTrigger className="h-7 w-32 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  {translate('auto.components.task.page.odoo.panel.all_tags', 'All tags')}
+                </SelectItem>
+                {facets.tags.map((option) => (
+                  <SelectItem key={option.id} value={String(option.id)}>
+                    {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
