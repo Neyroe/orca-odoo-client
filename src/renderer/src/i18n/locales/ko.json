@@ -4599,6 +4599,9 @@
           "failedUnnestWorkspace": "워크트리 펼치기 실패"
         },
         "WorktreeMetaDialog": {
+          "odoo_ticket_label": "Odoo Ticket",
+          "odoo_ticket_placeholder": "Ticket # or Odoo URL",
+          "odoo_ticket_hint": "Paste an Odoo task URL, or enter a number. Leave blank to remove the link.",
           "3db0a2a593": "취소",
           "b48c271d39": "저장, 줄 바꿈은 Shift+Enter.",
           "7f0be5e9a6": "**markdown** 지원 — 굵게, 목록, `코드`, 링크. Enter 키를 누르거나",

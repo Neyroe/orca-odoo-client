@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { WorktreeMeta } from '../../../../shared/types'
 import {
+  buildOdooTicketMetaUpdate,
   buildWorktreeMetaUpdates,
   type WorktreeMetaDraft,
   type WorktreeMetaLiveLinks,
@@ -362,5 +363,44 @@ describe('buildWorktreeMetaUpdates', () => {
 
   it('clears a comment with empty string, never a present-undefined key', () => {
     expect(buildUpdates({ commentInput: '  ' }, { comment: 'old note' }).comment).toBe('')
+  })
+})
+
+const INSTANCES = [
+  { id: 'a', serverUrl: 'https://acme.odoo.com' },
+  { id: 'b', serverUrl: 'https://other.odoo.com' }
+]
+
+describe('buildOdooTicketMetaUpdate', () => {
+  it('clears both slots on empty input', () => {
+    expect(
+      buildOdooTicketMetaUpdate({ odooInput: '  ', instances: INSTANCES, fallbackInstanceId: 'a' })
+    ).toEqual({ linkedOdooTicket: null, linkedOdooInstanceId: null })
+  })
+
+  it('leaves the link untouched on unparseable non-empty input', () => {
+    expect(
+      buildOdooTicketMetaUpdate({
+        odooInput: 'nope',
+        instances: INSTANCES,
+        fallbackInstanceId: 'a'
+      })
+    ).toEqual({})
+  })
+
+  it('uses the fallback instance for a raw ticket number', () => {
+    expect(
+      buildOdooTicketMetaUpdate({ odooInput: '42', instances: INSTANCES, fallbackInstanceId: 'a' })
+    ).toEqual({ linkedOdooTicket: 42, linkedOdooInstanceId: 'a' })
+  })
+
+  it('resolves the instance from a pasted URL origin', () => {
+    expect(
+      buildOdooTicketMetaUpdate({
+        odooInput: 'https://other.odoo.com/odoo/project/1/task/42',
+        instances: INSTANCES,
+        fallbackInstanceId: 'a'
+      })
+    ).toEqual({ linkedOdooTicket: 42, linkedOdooInstanceId: 'b' })
   })
 })

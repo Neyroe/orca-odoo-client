@@ -9,6 +9,8 @@ type LinkedWorkItemMetadata = Pick<
   | 'linkedGiteaPR'
   | 'linkedWorkItem'
   | 'linkedTaskSourceContext'
+  | 'linkedOdooTicket'
+  | 'linkedOdooInstanceId'
 >
 
 export function getLinkedWorkItemMetadata(meta: WorktreeMeta | undefined): LinkedWorkItemMetadata {
@@ -20,5 +22,7 @@ export function getLinkedWorkItemMetadata(meta: WorktreeMeta | undefined): Linke
     linkedGiteaPR: meta?.linkedGiteaPR ?? null,
     linkedWorkItem: meta?.linkedWorkItem ?? null,
     linkedTaskSourceContext: meta?.linkedTaskSourceContext ?? null
+    linkedOdooTicket: meta?.linkedOdooTicket ?? null,
+    linkedOdooInstanceId: meta?.linkedOdooInstanceId ?? null
   }
 }

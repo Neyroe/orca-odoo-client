@@ -4835,6 +4835,9 @@
           "failedUnnestWorkspace": "Failed to unnest workspace"
         },
         "WorktreeMetaDialog": {
+          "odoo_ticket_label": "Odoo Ticket",
+          "odoo_ticket_placeholder": "Ticket # or Odoo URL",
+          "odoo_ticket_hint": "Paste an Odoo task URL, or enter a number. Leave blank to remove the link.",
           "3db0a2a593": "Cancel",
           "b48c271d39": "to save, Shift+Enter for a new line.",
           "7f0be5e9a6": "Supports **markdown** — bold, lists, `code`, links. Press Enter or",

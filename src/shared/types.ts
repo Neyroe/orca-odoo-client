@@ -524,6 +524,8 @@ export type Worktree = {
   linkedGiteaPR?: number | null
   linkedWorkItem?: WorkspaceLinkedItem | null
   linkedTaskSourceContext?: TaskSourceContext | null
+  linkedOdooTicket?: number | null
+  linkedOdooInstanceId?: string | null
   isArchived: boolean
   isUnread: boolean
   isPinned: boolean
@@ -655,6 +657,10 @@ export type WorktreeMeta = {
   linkedGiteaPR?: number | null
   linkedWorkItem?: WorkspaceLinkedItem | null
   linkedTaskSourceContext?: TaskSourceContext | null
+  /** Optional for backward compatibility — see Worktree.linkedOdooTicket. */
+  linkedOdooTicket?: number | null
+  /** Optional for backward compatibility — see Worktree.linkedOdooTicket. */
+  linkedOdooInstanceId?: string | null
   isArchived: boolean
   isUnread: boolean
   isPinned: boolean

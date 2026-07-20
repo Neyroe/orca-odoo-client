@@ -119,6 +119,8 @@ export const WorktreeCreate = z
     linkedGiteaPR: TriStateLinkedIssue,
     linkedWorkItem: WorkspaceLinkedItemSchema.nullable().optional(),
     linkedTaskSourceContext: TaskSourceContextSchema.nullable().optional(),
+    linkedOdooTicket: z.number().nullable().optional(),
+    linkedOdooInstanceId: z.string().nullable().optional(),
     comment: OptionalString,
     displayName: OptionalString,
     telemetrySource: z
@@ -240,6 +242,8 @@ export const WorktreeSet = WorktreeSelector.extend({
   linkedGiteaPR: TriStateLinkedIssue,
   linkedWorkItem: WorkspaceLinkedItemSchema.nullable().optional(),
   linkedTaskSourceContext: TaskSourceContextSchema.nullable().optional(),
+  linkedOdooTicket: z.number().nullable().optional(),
+  linkedOdooInstanceId: z.string().nullable().optional(),
   isArchived: OptionalBoolean,
   isUnread: OptionalBoolean,
   isPinned: OptionalBoolean,

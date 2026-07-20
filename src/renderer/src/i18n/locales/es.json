@@ -4618,6 +4618,9 @@
           "failedUnnestWorkspace": "Error al expandir el espacio de trabajo"
         },
         "WorktreeMetaDialog": {
+          "odoo_ticket_label": "Odoo Ticket",
+          "odoo_ticket_placeholder": "Ticket # or Odoo URL",
+          "odoo_ticket_hint": "Paste an Odoo task URL, or enter a number. Leave blank to remove the link.",
           "3db0a2a593": "Cancelar",
           "b48c271d39": "para guardar, Mayús+Enter para una nueva línea.",
           "7f0be5e9a6": "Admite **markdown** — negrita, listas, `código`, enlaces. Pulsa Enter o",

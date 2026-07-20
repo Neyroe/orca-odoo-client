@@ -8139,6 +8139,8 @@ function getDefaultWorktreeMeta(): WorktreeMeta {
     linkedGiteaPR: null,
     linkedWorkItem: null,
     linkedTaskSourceContext: null,
+    linkedOdooTicket: null,
+    linkedOdooInstanceId: null,
     isArchived: false,
     isUnread: false,
     isPinned: false,

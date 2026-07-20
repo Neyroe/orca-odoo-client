@@ -12,12 +12,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getDisplacedLinkLabels } from './worktree-issue-displacement'
 import {
+  buildOdooTicketMetaUpdate,
   buildWorktreeMetaUpdates,
   parseGitHubWorkItemNumberForMetaField,
   type WorktreeMetaDraft,
   type WorktreeMetaSavedPayload,
   type WorktreeMetaSnapshot
 } from './worktree-meta-updates'
+import { WorktreeMetaOdooField } from './WorktreeMetaOdooField'
 import { useWorktreeIssueLink } from './use-worktree-issue-link'
 import { useWorktreeMetaWorkspace } from './use-worktree-meta-workspace'
 import { WorktreeIssueLinkField } from './WorktreeIssueLinkField'
@@ -60,6 +62,15 @@ const WorktreeMetaDialog = React.memo(function WorktreeMetaDialog() {
     typeof modalData.currentDisplayName === 'string' ? modalData.currentDisplayName : ''
   const currentComment =
     typeof modalData.currentComment === 'string' ? modalData.currentComment : ''
+  // Odoo link is read from the live worktree (not modalData) so callers that
+  // open this dialog need no changes.
+  const odooStatus = useAppStore((s) => s.odooStatus)
+  const currentOdooTicket = useAppStore((s) => {
+    const worktree = Object.values(s.worktreesByRepo)
+      .flat()
+      .find((item) => item.id === worktreeId)
+    return worktree?.linkedOdooTicket ?? null
+  })
   const focusField = typeof modalData.focus === 'string' ? modalData.focus : 'comment'
   const afterSave =
     typeof modalData.afterSave === 'function'
@@ -90,6 +101,7 @@ const WorktreeMetaDialog = React.memo(function WorktreeMetaDialog() {
   const [issueInput, setIssueInput] = useState('')
   const [issueProvider, setIssueProvider] = useState<IssueLinkProvider>('github')
   const [prInput, setPrInput] = useState('')
+  const [odooInput, setOdooInput] = useState('')
   const [commentInput, setCommentInput] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -117,6 +129,7 @@ const WorktreeMetaDialog = React.memo(function WorktreeMetaDialog() {
     setIssueInput(currentIssue)
     setIssueProvider(currentProvider)
     setPrInput(currentPR)
+    setOdooInput(currentOdooTicket != null ? String(currentOdooTicket) : '')
     setCommentInput(currentComment)
     // Why: the baseline is frozen with the seed instead of tracking the store.
     // A background `orca worktree set --linear-issue` while the dialog is open
@@ -223,6 +236,21 @@ const WorktreeMetaDialog = React.memo(function WorktreeMetaDialog() {
     setSaveError(null)
     try {
       const updates = buildWorktreeMetaUpdates(draft, snapshot, liveLinks)
+      if (odooStatus.connected) {
+        const selected = odooStatus.selectedInstanceId
+        // 'all' is a view selection, not a real instance, so link against the
+        // active instance in that case.
+        const fallbackInstanceId =
+          selected && selected !== 'all' ? selected : (odooStatus.activeInstanceId ?? null)
+        Object.assign(
+          updates,
+          buildOdooTicketMetaUpdate({
+            odooInput,
+            instances: odooStatus.instances ?? [],
+            fallbackInstanceId
+          })
+        )
+      }
 
       const result = await updateWorktreeMeta(worktreeId, updates)
       // Why: a failed save refetches and reverts the optimistic write. Closing
@@ -253,6 +281,8 @@ const WorktreeMetaDialog = React.memo(function WorktreeMetaDialog() {
     draft,
     snapshot,
     liveLinks,
+    odooInput,
+    odooStatus,
     updateWorktreeMeta,
     closeModal,
     afterSave,
@@ -362,6 +392,10 @@ const WorktreeMetaDialog = React.memo(function WorktreeMetaDialog() {
               )}
             </p>
           </div>
+
+          {odooStatus.connected ? (
+            <WorktreeMetaOdooField value={odooInput} onChange={setOdooInput} onEnter={handleSave} />
+          ) : null}
 
           <div className="space-y-1">
             <label className="text-[11px] font-medium text-muted-foreground">

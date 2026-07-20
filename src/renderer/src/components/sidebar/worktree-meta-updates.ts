@@ -5,6 +5,7 @@ import {
 } from '../../../../shared/linear-links'
 import { parseIssueLinkInput, type IssueLinkProvider } from '../../../../shared/issue-link-input'
 import type { WorkspaceSourceProvider } from '../../../../shared/new-workspace/workspace-source'
+import { matchOdooInstanceIdByOrigin, parseOdooTicketLink } from '@/lib/odoo-ticket-links'
 import type { WorkspaceLinkedItem, WorktreeMeta } from '../../../../shared/types'
 
 export type WorktreeMetaSavedPayload = {
@@ -261,4 +262,25 @@ export function buildWorktreeMetaUpdates(
     ...buildIssueLinkUpdates(draft, current, live),
     ...buildPrLinkUpdate(draft)
   }
+}
+
+/** Builds the Odoo-link portion of a worktree meta save. Empty input clears the
+ *  link (null); an unparseable non-empty input leaves it untouched (omitted).
+ *  Odoo is multi-tenant, so the ticket id is stored with an instance id resolved
+ *  from the pasted URL's origin, falling back to the active instance. */
+export function buildOdooTicketMetaUpdate(args: {
+  odooInput: string
+  instances: readonly { id: string; serverUrl: string }[]
+  fallbackInstanceId: string | null
+}): Partial<WorktreeMeta> {
+  const trimmed = args.odooInput.trim()
+  if (trimmed === '') {
+    return { linkedOdooTicket: null, linkedOdooInstanceId: null }
+  }
+  const { id, origin } = parseOdooTicketLink(trimmed)
+  if (id === null) {
+    return {}
+  }
+  const instanceId = matchOdooInstanceIdByOrigin(origin, args.instances) ?? args.fallbackInstanceId
+  return { linkedOdooTicket: id, linkedOdooInstanceId: instanceId }
 }

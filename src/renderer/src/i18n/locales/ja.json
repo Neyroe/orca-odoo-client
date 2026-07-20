@@ -4599,6 +4599,9 @@
           "failedUnnestWorkspace": "ワークスペースの展開に失敗しました"
         },
         "WorktreeMetaDialog": {
+          "odoo_ticket_label": "Odoo Ticket",
+          "odoo_ticket_placeholder": "Ticket # or Odoo URL",
+          "odoo_ticket_hint": "Paste an Odoo task URL, or enter a number. Leave blank to remove the link.",
           "3db0a2a593": "キャンセル",
           "b48c271d39": "保存するには、Shift+Enter を押して新規行を入力します。",
           "7f0be5e9a6": "**markdown** - 太字、リスト、「コード」、リンクをサポートします。 Enterを押すか、",
