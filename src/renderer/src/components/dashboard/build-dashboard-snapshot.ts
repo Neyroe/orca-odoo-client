@@ -36,6 +36,7 @@ import {
   selectRuntimePaneTitlesForWorktree
 } from '../sidebar/worktree-card-status-inputs'
 import {
+  dashboardCardContextFields,
   resolveDashboardCardContext,
   type DashboardCardContextState
 } from './dashboard-card-context'
@@ -202,12 +203,7 @@ export function buildDashboardSnapshot(
         worktreeName: boundedLabel(worktree.displayName),
         ...(parentWorktreeId ? { parentWorktreeId } : {}),
         ...hostMetadata,
-        workspaceStatusId: context?.workspaceStatus.id,
-        workspaceStatusLabel: context?.workspaceStatus.label,
-        workspaceStatusColor: context?.workspaceStatus.color,
-        hasReview: context?.hasReview,
-        review: context?.review,
-        odooTicket: context?.odooTicket
+        ...dashboardCardContextFields(context)
       })
     }
 
@@ -288,12 +284,8 @@ export function buildDashboardSnapshot(
               ...hostMetadata
             }
           : {}),
-        workspaceStatusId: context?.workspaceStatus.id,
-        workspaceStatusLabel: context?.workspaceStatus.label,
-        workspaceStatusColor: context?.workspaceStatus.color,
+        ...dashboardCardContextFields(context),
         hasReview: context ? context.hasReview || context.review !== undefined : undefined,
-        review: context?.review,
-        odooTicket: context?.odooTicket,
         subagents: subagentsByParentPaneKey?.get(row.paneKey),
         lastUserMessage: isTitleDerived ? undefined : nonEmpty(row.entry.prompt),
         lastAgentMessage: isTitleDerived ? undefined : nonEmpty(row.entry.lastAssistantMessage),

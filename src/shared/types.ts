@@ -371,6 +371,9 @@ export type WorkspaceLinkedItem = {
   linearIdentifier?: string
   jiraIdentifier?: string
   repoId?: string
+  /** Which saved Odoo instance the ticket belongs to; tickets are only
+   *  addressable per instance, unlike repo-scoped providers. */
+  odooInstanceId?: string
 }
 
 export type FolderWorkspaceLinkedTask = WorkspaceLinkedItem

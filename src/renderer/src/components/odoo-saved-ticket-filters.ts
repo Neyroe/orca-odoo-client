@@ -129,10 +129,10 @@ export function upsertSavedOdooTicketFilter(
     filters: { ...entry.filters, stages: [...entry.filters.stages] },
     // Re-saving under an existing name keeps its star and pin rather than
     // demoting them.
-    ...(existingIndex >= 0 && saved[existingIndex]?.isDefault ? { isDefault: true } : {}),
-    ...(existingIndex >= 0 && saved[existingIndex]?.pinned ? { pinned: true } : {})
+    ...(existingIndex !== -1 && saved[existingIndex]?.isDefault ? { isDefault: true } : {}),
+    ...(existingIndex !== -1 && saved[existingIndex]?.pinned ? { pinned: true } : {})
   }
-  if (existingIndex >= 0) {
+  if (existingIndex !== -1) {
     const copy = [...saved]
     copy[existingIndex] = next
     return copy
@@ -181,7 +181,7 @@ export function reorderSavedOdooTicketFilters(
 ): OdooSavedTicketFilter[] {
   const from = saved.findIndex((entry) => entry.id === activeId)
   const to = saved.findIndex((entry) => entry.id === overId)
-  if (from < 0 || to < 0 || from === to) {
+  if (from === -1 || to === -1 || from === to) {
     return [...saved]
   }
   const next = [...saved]

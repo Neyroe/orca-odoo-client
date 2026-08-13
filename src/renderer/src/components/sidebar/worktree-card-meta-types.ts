@@ -29,6 +29,8 @@ export type WorktreeCardJiraIssueDisplay = {
   identifier: string
   title: string
   url: string
+}
+
 export type WorktreeCardOdooTicketDisplay = {
   ref: string
   title: string
@@ -41,7 +43,7 @@ export type WorktreeCardMetaBadgesProps = {
   issue: WorktreeCardIssueDisplay | null
   linearIssue: WorktreeCardLinearIssueDisplay | null
   jiraIssue?: WorktreeCardJiraIssueDisplay | null
-  odooTicket: WorktreeCardOdooTicketDisplay | null
+  odooTicket?: WorktreeCardOdooTicketDisplay | null
   review: WorktreeCardPrDisplay | null
   comment: string | null
   automationProvenance?: AutomationWorkspaceProvenance | null

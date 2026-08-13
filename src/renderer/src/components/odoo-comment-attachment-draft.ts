@@ -103,7 +103,7 @@ export function validateOdooAttachmentSelection(
 /** Strips the `data:<mime>;base64,` prefix `FileReader.readAsDataURL` produces. */
 export function stripBase64DataUrlPrefix(dataUrl: string): string {
   const commaIndex = dataUrl.indexOf(',')
-  return commaIndex >= 0 ? dataUrl.slice(commaIndex + 1) : dataUrl
+  return commaIndex !== -1 ? dataUrl.slice(commaIndex + 1) : dataUrl
 }
 
 /** Reads a File into the base64 payload `OdooAttachmentUpload.data` expects (no data: prefix). */

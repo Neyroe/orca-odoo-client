@@ -21,7 +21,7 @@ export function getLinkedWorkItemMetadata(meta: WorktreeMeta | undefined): Linke
     linkedAzureDevOpsPR: meta?.linkedAzureDevOpsPR ?? null,
     linkedGiteaPR: meta?.linkedGiteaPR ?? null,
     linkedWorkItem: meta?.linkedWorkItem ?? null,
-    linkedTaskSourceContext: meta?.linkedTaskSourceContext ?? null
+    linkedTaskSourceContext: meta?.linkedTaskSourceContext ?? null,
     linkedOdooTicket: meta?.linkedOdooTicket ?? null,
     linkedOdooInstanceId: meta?.linkedOdooInstanceId ?? null
   }

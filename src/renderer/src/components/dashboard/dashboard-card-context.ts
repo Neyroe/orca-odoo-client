@@ -121,3 +121,23 @@ export function resolveDashboardCardContext(
     odooTicket: resolveDashboardCardOdooTicket(worktree)
   }
 }
+
+/** The snapshot fields a card context contributes; shared by the workspace and
+ *  agent rows so the two stay in step. */
+export function dashboardCardContextFields(context: DashboardCardContext | undefined): {
+  workspaceStatusId: string | undefined
+  workspaceStatusLabel: string | undefined
+  workspaceStatusColor: string | undefined
+  hasReview: boolean | undefined
+  review: DashboardCardContext['review'] | undefined
+  odooTicket: DashboardCardContext['odooTicket'] | undefined
+} {
+  return {
+    workspaceStatusId: context?.workspaceStatus.id,
+    workspaceStatusLabel: context?.workspaceStatus.label,
+    workspaceStatusColor: context?.workspaceStatus.color,
+    hasReview: context?.hasReview,
+    review: context?.review,
+    odooTicket: context?.odooTicket
+  }
+}

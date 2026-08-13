@@ -39,7 +39,8 @@ export type OdooViewer = {
   avatarUrl?: string
 }
 
-export type OdooInstanceSelection = string | 'all'
+/** A saved instance id, or the literal `all` for the cross-instance view. */
+export type OdooInstanceSelection = string
 
 export type OdooConnectionStatus = {
   connected: boolean

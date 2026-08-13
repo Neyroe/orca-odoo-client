@@ -29,20 +29,20 @@ hands → probe once more → `rename` in one syscall → verify we kept it.
 - **"Can't tell" does not license a kill at launch either.** When the launcher cannot establish
   what a health-check-failing daemon is hosting, it holds it in degraded mode rather than
   replacing it. Only the daemon itself can prove it is empty, over IPC; the process table may
-  only ever *raise* a verdict toward "occupied", never lower one toward a kill.
+  only ever _raise_ a verdict toward "occupied", never lower one toward a kill.
 
   Two exclusions apply **to that residual only** — not to a daemon already proven occupied:
   an endpoint that is proven dead (a cold start has nothing to hold), and `rejected` (it
   answered and refused, so it can never be adopted and its sessions can never be reattached).
 
-  A `rejected` daemon that process evidence shows *is* hosting live PTYs is still held, because
+  A `rejected` daemon that process evidence shows _is_ hosting live PTYs is still held, because
   the choice there is between unreachable-but-running agents and dead ones. Restart recovers it
   at the documented cost.
 
   The cost is deliberate and known: a wedged-but-empty daemon is no longer replaced at launch,
   so #8689 degrades to "restart it from Manage Sessions" instead of being handled automatically.
   And an endpoint held by something that accepts connections but never speaks the protocol — a
-  foreign process, or our own permanently wedged daemon — reads as an incumbent on *every*
+  foreign process, or our own permanently wedged daemon — reads as an incumbent on _every_
   launch, so it stays degraded with no auto-recovery. `killStaleDaemon` only kills a process
   whose identity matches the pid record, so Restart cannot clear that one; the degraded message
   says so and points at quit-and-relaunch.
@@ -51,7 +51,7 @@ hands → probe once more → `rename` in one syscall → verify we kept it.
   on the reasoning that "'unknown' and 'occupied' now behave the same". They do not. The process-
   table evidence read is what holds a daemon whose socket entry vanished while it still hosts
   agents — the occupied branch has no proven-dead check and the unknown hold does. And the
-  grace-retry loop is worth *more* since the hold landed, because a counted `occupied` reaches
+  grace-retry loop is worth _more_ since the hold landed, because a counted `occupied` reaches
   full adoption where the alternative is a degraded hold.
   That was chosen over the alternative, which was killing daemons whose live agents we had
   merely failed to observe — unrecoverable, versus one click.
@@ -59,9 +59,8 @@ hands → probe once more → `rename` in one syscall → verify we kept it.
   Three paths still reach a kill, and each is a residual rather than a guarantee. Adversarial
   review named all three; none is a regression against the pre-hold behaviour, and none should
   be closed by weakening the rules above.
-
   - **`unknown` + a proven-dead endpoint, when process evidence is unavailable.** The endpoint
-    probe proves the *entry* is gone, not the *process*; a socket entry can vanish while the
+    probe proves the _entry_ is gone, not the _process_; a socket entry can vanish while the
     daemon still hosts agents. Evidence covers that on POSIX — it runs for any `unknown`, not
     only a live endpoint — so the gap is where evidence cannot answer: the clock is spent, the
     pid will not verify, or `ps` is blind. Not reachable on Windows, where a named pipe vanishes
@@ -83,15 +82,14 @@ hands → probe once more → `rename` in one syscall → verify we kept it.
     common failure mode, and worsens #8689 whenever the call is merely slow. It also changed the
     behaviour of two endpoint-identity tests in ways that were not quickly explainable. Land it
     on a green base with its own review, not as an addendum.
- An `empty` answer can go stale — another Orca
+    An `empty` answer can go stale — another Orca
     instance may create a session before the ladder runs — and a dead endpoint can be
     republished. Nothing revalidates immediately before the kill, and `liveOwnerSurvived` is
     read only afterwards. Pre-existing, and narrowed by this change rather than widened: the
     window now opens only after the daemon has itself reported zero sessions.
 
   Known limits of the process-table evidence, none of which can license a kill on their own —
-  each only fails to *raise* a verdict, so the cost is a hold not taken:
-
+  each only fails to _raise_ a verdict, so the cost is a hold not taken:
   - A PTY whose session leader has exited leaves its still-running child reparented outside the
     daemon's descendant tree. The walk cannot see it, so a daemon with real work can read as
     childless.
@@ -128,7 +126,7 @@ hands → probe once more → `rename` in one syscall → verify we kept it.
 
   Why it is unreachable at 34s is structure, not margin, and the distinction is the point: the
   hold decoupled long classification from the replace path. A verdict of `empty` means the
-  daemon *answered*, so it resolved fast by construction; `unknown` + proven-dead means nothing
+  daemon _answered_, so it resolved fast by construction; `unknown` + proven-dead means nothing
   is listening, so the probe settles in ~500ms and the ladder short-circuits on ESRCH. The path
   that actually consumes the budget — a wedge that never answers — now ends in a hold, which
   pays neither the ladder nor the fork. The long path and the expensive tail are disjoint.
@@ -159,6 +157,7 @@ hands → probe once more → `rename` in one syscall → verify we kept it.
   Matching the old tolerance for a single probe costs more clock than the 60s startup fail-open
   leaves once the kill ladder and the fork are paid for. The budget is a latency bound, not a
   correctness parameter, and it must stay that way.
+
 - **`link` first, never an unconditional `rename`.** `rename` replaces whatever it finds, so it
   would let a starting daemon destroy a healthy one. `link` fails loudly and forces the liveness
   question.
@@ -168,7 +167,7 @@ hands → probe once more → `rename` in one syscall → verify we kept it.
 - **Do not identify an entry by `birthtimeMs`.** Node documents it as sometimes holding the ctime,
   filesystems without a birth time report the epoch, and its granularity is often coarser than the
   events it must separate. Three attempts to patch around this produced three more defects; inode
-  recycling is now settled by asking whether anything is *serving*.
+  recycling is now settled by asking whether anything is _serving_.
 - **Do not add a sweeper.** Deciding whether someone else's leftover is safe to delete is the
   question this design retired; the last one produced five defects, including deleting a live
   listener's only pathname. Every actor removes its own scratch name on each non-crash path.

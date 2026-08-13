@@ -168,6 +168,10 @@ const ISSUE_WORKTREE_CARD_PROPERTY_OPTIONS: WorktreeCardPropertyOption[] = [
       return translate(
         'auto.components.sidebar.SidebarWorkspaceOptionsMenu.jiraIssues',
         'Jira issues'
+      )
+    }
+  },
+  {
     id: 'odoo-ticket',
     properties: ['odoo-ticket'],
     get label() {

@@ -29,8 +29,6 @@ import {
 } from './worktree-helpers'
 import { projectWorktreeTabModelReconciliation } from './tabs'
 import { splitWorktreeIdForFilesystem } from '../../../../shared/worktree-id'
-import { areWorkspaceLinkedItemsEqual } from '../../../../shared/workspace-linked-item'
-import { areTaskSourceContextsEqual } from '../../../../shared/task-source-context'
 import { deriveOdooWorktreeLinkFields } from '@/lib/odoo-worktree-link-fields'
 import {
   remapClosedTerminalTabSnapshotCwds,

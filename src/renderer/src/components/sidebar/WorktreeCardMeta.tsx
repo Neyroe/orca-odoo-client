@@ -1,8 +1,7 @@
 import React from 'react'
 import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card'
-import { ExternalLink, MonitorUp, Pencil, StickyNote } from 'lucide-react'
+import { ExternalLink, Pencil, StickyNote } from 'lucide-react'
 import { toast } from 'sonner'
-import { LinearIcon } from '@/components/icons/LinearIcon'
 import { JiraIcon } from '@/components/icons/JiraIcon'
 import { SelectedTextCopyMenu } from '@/components/SelectedTextCopyMenu'
 import CommentMarkdown from './CommentMarkdown'
@@ -13,7 +12,6 @@ import {
 } from './WorktreeCardDetailSection'
 import { DetailHeader, MetadataActionIcon } from './WorktreeCardMetadataControls'
 import { hasWorktreeCardDetails, WorktreeCardMetaBadges } from './WorktreeCardMetaBadges'
-import { LinearStateBadge } from './WorktreeCardMetadataStatusBadges'
 import { useWorktreeCardDetailsHoverControl } from './worktree-card-details-hover-state'
 import { getReviewLabel } from './worktree-review-helpers'
 import type {
@@ -56,6 +54,7 @@ export function WorktreeCardDetailsHover({
   issue,
   linearIssue,
   jiraIssue,
+  odooTicket,
   review,
   comment,
   automationProvenance,
@@ -227,7 +226,7 @@ export function WorktreeCardDetailsHover({
           />
 
           <WorktreeCardOdooDetailSection
-            odooTicket={odooTicket}
+            odooTicket={odooTicket ?? null}
             onOpenOdooTicketInOrca={
               onOpenOdooTicketInOrca ? dismissAndRun(onOpenOdooTicketInOrca) : undefined
             }

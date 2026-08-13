@@ -699,7 +699,7 @@ export type UISlice = {
     note: string
     attachments: string[]
     linkedWorkItem: {
-      provider?: 'github' | 'gitlab' | 'linear' | 'jira'
+      provider?: 'github' | 'gitlab' | 'linear' | 'jira' | 'odoo'
       type: 'issue' | 'pr' | 'mr'
       number: number
       title: string
@@ -708,6 +708,7 @@ export type UISlice = {
       linearBranchName?: string
       jiraIdentifier?: string
       repoId?: string
+      odooInstanceId?: string
     } | null
     /** Preserve where provider data came from, separately from the host chosen to run the workspace. */
     taskSourceContext?: TaskSourceContext | null
