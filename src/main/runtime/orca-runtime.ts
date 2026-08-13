@@ -219,6 +219,7 @@ import type {
   JiraIssueFilter,
   JiraIssueUpdate,
   JiraSiteSelection,
+  OdooAttachmentUpload,
   OdooConnectArgs,
   OdooCreateTicketArgs,
   OdooInstanceSelection,
@@ -827,13 +828,17 @@ import {
 } from '../odoo/client'
 import {
   addTicketComment as addOdooTicketComment,
-  getTicketComments as getOdooTicketComments
+  getTicketComments as getOdooTicketComments,
+  searchMentionCandidates as searchOdooMentionCandidates,
+  updateTicketComment as updateOdooTicketComment,
+  uploadTicketAttachments as uploadOdooTicketAttachments
 } from '../odoo/ticket-chatter'
 import {
   createTicket as createOdooTicket,
   getTicket as getOdooTicket,
   listAssignableUsers as listOdooAssignableUsers,
   listProjects as listOdooProjects,
+  listStageNames as listOdooStageNames,
   listStages as listOdooStages,
   listTags as listOdooTags,
   listTickets as listOdooTickets,
@@ -21883,6 +21888,8 @@ export class OrcaRuntimeService {
     linkedBitbucketPR?: number | null
     linkedAzureDevOpsPR?: number | null
     linkedGiteaPR?: number | null
+    linkedOdooTicket?: number | null
+    linkedOdooInstanceId?: string | null
     linkedWorkItem?: WorkspaceLinkedItem | null
     linkedTaskSourceContext?: TaskSourceContext | null
     comment?: string
@@ -21994,6 +22001,12 @@ export class OrcaRuntimeService {
           ? { linkedAzureDevOpsPR: args.linkedAzureDevOpsPR }
           : {}),
         ...(args.linkedGiteaPR !== undefined ? { linkedGiteaPR: args.linkedGiteaPR } : {}),
+        // Odoo needs its own pair: the stage sync and the sidebar card read the
+        // ticket id + instance rather than `linkedWorkItem`.
+        ...(args.linkedOdooTicket !== undefined ? { linkedOdooTicket: args.linkedOdooTicket } : {}),
+        ...(args.linkedOdooInstanceId !== undefined
+          ? { linkedOdooInstanceId: args.linkedOdooInstanceId }
+          : {}),
         ...(args.linkedWorkItem !== undefined ? { linkedWorkItem: args.linkedWorkItem } : {}),
         ...(args.linkedTaskSourceContext !== undefined
           ? { linkedTaskSourceContext: args.linkedTaskSourceContext }
@@ -22590,6 +22603,12 @@ export class OrcaRuntimeService {
         ? { linkedAzureDevOpsPR: args.linkedAzureDevOpsPR }
         : {}),
       ...(args.linkedGiteaPR !== undefined ? { linkedGiteaPR: args.linkedGiteaPR } : {}),
+      // Odoo needs its own pair: the stage sync and the sidebar card read the
+      // ticket id + instance rather than `linkedWorkItem`.
+      ...(args.linkedOdooTicket !== undefined ? { linkedOdooTicket: args.linkedOdooTicket } : {}),
+      ...(args.linkedOdooInstanceId !== undefined
+        ? { linkedOdooInstanceId: args.linkedOdooInstanceId }
+        : {}),
       ...(args.linkedWorkItem !== undefined ? { linkedWorkItem: args.linkedWorkItem } : {}),
       ...(args.linkedTaskSourceContext !== undefined
         ? { linkedTaskSourceContext: args.linkedTaskSourceContext }
@@ -35307,13 +35326,39 @@ export class OrcaRuntimeService {
     id: number,
     body: string,
     isNote?: boolean,
-    instanceId?: string
+    instanceId?: string,
+    mentionPartnerIds?: number[],
+    attachmentIds?: number[]
   ): ReturnType<typeof addOdooTicketComment> {
-    return addOdooTicketComment(id, body, isNote, instanceId)
+    return addOdooTicketComment(id, body, isNote, instanceId, mentionPartnerIds, attachmentIds)
+  }
+
+  odooUpdateTicketComment(
+    id: number,
+    body: string,
+    instanceId?: string
+  ): ReturnType<typeof updateOdooTicketComment> {
+    return updateOdooTicketComment(id, body, instanceId)
   }
 
   odooTicketComments(id: number, instanceId?: string): ReturnType<typeof getOdooTicketComments> {
     return getOdooTicketComments(id, instanceId)
+  }
+
+  odooSearchMentionCandidates(
+    ticketId: number,
+    query: string,
+    instanceId?: string
+  ): ReturnType<typeof searchOdooMentionCandidates> {
+    return searchOdooMentionCandidates(ticketId, query, instanceId)
+  }
+
+  odooUploadTicketAttachments(
+    ticketId: number,
+    files: OdooAttachmentUpload[],
+    instanceId?: string
+  ): ReturnType<typeof uploadOdooTicketAttachments> {
+    return uploadOdooTicketAttachments(ticketId, files, instanceId)
   }
 
   odooListProjects(instanceId?: OdooInstanceSelection): ReturnType<typeof listOdooProjects> {
@@ -35326,6 +35371,10 @@ export class OrcaRuntimeService {
 
   odooListTags(instanceId?: OdooInstanceSelection): ReturnType<typeof listOdooTags> {
     return listOdooTags(instanceId)
+  }
+
+  odooListStageNames(instanceId?: OdooInstanceSelection): ReturnType<typeof listOdooStageNames> {
+    return listOdooStageNames(instanceId)
   }
 
   odooListAssignableUsers(

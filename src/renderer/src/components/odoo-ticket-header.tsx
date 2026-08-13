@@ -1,6 +1,8 @@
 import { CalendarClock, ExternalLink, X } from 'lucide-react'
 
-import { OdooUserAvatar } from '@/components/odoo-user-avatar'
+import { OdooTicketAssigneePicker } from '@/components/odoo-ticket-assignee-picker'
+import { ODOO_TICKET_CONTROL_WIDTH_CLASS } from '@/components/odoo-ticket-control-width'
+import { OdooTicketStartWorkspaceButton } from '@/components/odoo-ticket-start-workspace-button'
 import {
   ODOO_CUSTOMER_BADGE_CLASS,
   odooColorBadgeClass,
@@ -93,7 +95,7 @@ export function OdooTicketHeader({
                 }
               }}
             >
-              <SelectTrigger className="h-7 w-40 text-xs">
+              <SelectTrigger className={cn('h-7 text-xs', ODOO_TICKET_CONTROL_WIDTH_CLASS)}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -125,7 +127,7 @@ export function OdooTicketHeader({
               }
             }}
           >
-            <SelectTrigger className="h-7 w-28 text-xs">
+            <SelectTrigger className={cn('h-7 text-xs', ODOO_TICKET_CONTROL_WIDTH_CLASS)}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -137,21 +139,24 @@ export function OdooTicketHeader({
             </SelectContent>
           </Select>
         </div>
-        {ticket.assignees.length > 0 ? (
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-            <span>
-              {translate('auto.components.odoo.ticket.workspace.4f1a1c9e6c', 'Assignees')}
-            </span>
-            <div className="flex flex-wrap items-center gap-2">
-              {ticket.assignees.map((user) => (
-                <div key={user.id} className="flex items-center gap-1.5">
-                  <OdooUserAvatar user={user} className="size-8" />
-                  <span className="text-xs text-foreground">{user.displayName}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] text-muted-foreground">
+            {translate('auto.components.odoo.ticket.workspace.4f1a1c9e6c', 'Assignees')}
+          </span>
+          <OdooTicketAssigneePicker
+            ticket={ticket}
+            saving={saving}
+            onChange={(assignees) =>
+              applyUpdate({ assigneeIds: assignees.map((user) => user.id) }, { assignees })
+            }
+          />
+        </div>
+        {/* Sits on the metadata row rather than the title row: the panel's top
+            band overlaps the titlebar drag strip, where a button reads as
+            floating in the window chrome. */}
+        <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2 pl-2">
+          <OdooTicketStartWorkspaceButton ticket={ticket} />
+        </div>
       </div>
       {ticket.customer || ticket.deadline || ticket.tags.length > 0 ? (
         <div className="flex flex-wrap items-center gap-2">

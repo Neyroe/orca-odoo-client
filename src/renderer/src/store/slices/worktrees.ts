@@ -29,6 +29,9 @@ import {
 } from './worktree-helpers'
 import { projectWorktreeTabModelReconciliation } from './tabs'
 import { splitWorktreeIdForFilesystem } from '../../../../shared/worktree-id'
+import { areWorkspaceLinkedItemsEqual } from '../../../../shared/workspace-linked-item'
+import { areTaskSourceContextsEqual } from '../../../../shared/task-source-context'
+import { deriveOdooWorktreeLinkFields } from '@/lib/odoo-worktree-link-fields'
 import {
   remapClosedTerminalTabSnapshotCwds,
   type ClosedTerminalTabSnapshot
@@ -3927,6 +3930,9 @@ export const createWorktreeSlice: StateCreator<AppState, [], [], WorktreeSlice> 
     const linkedWorkItem = options?.linkedWorkItem
     const linkedTaskSourceContext = options?.linkedTaskSourceContext
     const startupDraft = options?.startupDraft
+    // Why: linkedOdooTicket/linkedOdooInstanceId are the flat fields the Odoo
+    // board sync and sidebar card read; linkedWorkItem alone doesn't reach them.
+    const odooLinkFields = deriveOdooWorktreeLinkFields(linkedWorkItem)
     try {
       for (let attempt = 0; attempt < CLIENT_WORKTREE_CREATE_MAX_ATTEMPTS; attempt += 1) {
         const candidateName = getClientWorktreeCreateCandidate(name, attempt)
@@ -3975,6 +3981,7 @@ export const createWorktreeSlice: StateCreator<AppState, [], [], WorktreeSlice> 
             ...(linkedAzureDevOpsPR !== undefined ? { linkedAzureDevOpsPR } : {}),
             ...(linkedGiteaPR !== undefined ? { linkedGiteaPR } : {}),
             ...(linkedWorkItem !== undefined ? { linkedWorkItem } : {}),
+            ...odooLinkFields,
             ...(linkedTaskSourceContext !== undefined ? { linkedTaskSourceContext } : {}),
             ...(startup ? { startup } : {}),
             ...(creationId ? { creationId } : {}),
@@ -4032,6 +4039,7 @@ export const createWorktreeSlice: StateCreator<AppState, [], [], WorktreeSlice> 
                     ...(linkedAzureDevOpsPR !== undefined ? { linkedAzureDevOpsPR } : {}),
                     ...(linkedGiteaPR !== undefined ? { linkedGiteaPR } : {}),
                     ...(linkedWorkItem !== undefined ? { linkedWorkItem } : {}),
+                    ...odooLinkFields,
                     ...(linkedTaskSourceContext !== undefined ? { linkedTaskSourceContext } : {}),
                     ...(startupDraft ? { startupDraft } : {}),
                     ...(automationProvenanceRequest ? { automationProvenanceRequest } : {}),
