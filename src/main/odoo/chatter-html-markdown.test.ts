@@ -72,4 +72,27 @@ describe('markdownToChatterHtml', () => {
   it('returns empty string for blank input', () => {
     expect(markdownToChatterHtml('   ')).toBe('')
   })
+
+  it('passes an Odoo mention anchor embedded in markdown through untouched', () => {
+    const mentionHtml =
+      '<a href="#" data-oe-model="res.partner" data-oe-id="42" class="o_mail_redirect">@Nom</a>'
+    const markdown = `Hey ${mentionHtml} can you check this?`
+    expect(markdownToChatterHtml(markdown)).toBe(`<p>Hey ${mentionHtml} can you check this?</p>`)
+  })
+})
+
+describe('mention link round-trip', () => {
+  it('reads back as readable text instead of a raw "#" link', () => {
+    const mentionHtml =
+      '<a href="#" data-oe-model="res.partner" data-oe-id="42" class="o_mail_redirect">@Nom</a>'
+    const markdown = `Hey ${mentionHtml} can you check this?`
+    const storedHtml = markdownToChatterHtml(markdown)
+    expect(chatterHtmlToMarkdown(storedHtml)).toBe('Hey @Nom can you check this?')
+  })
+
+  it('still renders an ordinary link with its href, unaffected by the mention special-case', () => {
+    expect(chatterHtmlToMarkdown('<p>Voir <a href="https://odoo.com">le site</a></p>')).toBe(
+      'Voir [le site](https://odoo.com)'
+    )
+  })
 })

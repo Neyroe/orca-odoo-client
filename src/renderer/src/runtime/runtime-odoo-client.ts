@@ -1,5 +1,4 @@
 import type {
-  GlobalSettings,
   OdooComment,
   OdooConnectionStatus,
   OdooCreateTicketArgs,
@@ -15,34 +14,21 @@ import type {
   OdooUser,
   OdooViewer
 } from '../../../shared/types'
-import { callRuntimeRpc, getActiveRuntimeTarget } from './runtime-rpc-client'
-import {
-  getTaskSourceRuntimeSettings,
-  type TaskSourceContext
-} from '../../../shared/task-source-context'
+import { callRuntimeRpc } from './runtime-rpc-client'
 import { isRuntimeProviderSearchQueryWithinLimit } from './runtime-provider-search-bounds'
+import { getOdooRuntimeTarget, type RuntimeOdooSettings } from './odoo-runtime-target'
 
-export type RuntimeOdooSettings =
-  | Pick<GlobalSettings, 'activeRuntimeEnvironmentId'>
-  | TaskSourceContext
-  | null
-  | undefined
+// Why re-exported here: chatter-specific transport (edit/mention-search/upload)
+// lives in its own module to keep this file under the max-lines budget, but
+// callers should still import every `odooX` function from this one contract file.
+export {
+  odooSearchMentionCandidates,
+  odooUpdateTicketComment,
+  odooUploadTicketAttachments
+} from './runtime-odoo-chatter-client'
+export { getOdooRuntimeTarget, type RuntimeOdooSettings } from './odoo-runtime-target'
 
 export type OdooConnectResult = { ok: true; viewer: OdooViewer } | { ok: false; error: string }
-
-function isTaskSourceRuntimeSettings(settings: RuntimeOdooSettings): settings is TaskSourceContext {
-  return settings !== null && settings !== undefined && 'kind' in settings
-}
-
-function getOdooRuntimeTarget(
-  settings: RuntimeOdooSettings
-): ReturnType<typeof getActiveRuntimeTarget> {
-  // Why: task source context makes provider ownership explicit; legacy callers
-  // still pass focused runtime settings until Tasks finishes migrating.
-  return getActiveRuntimeTarget(
-    isTaskSourceRuntimeSettings(settings) ? getTaskSourceRuntimeSettings(settings) : settings
-  )
-}
 
 export async function odooStatus(settings: RuntimeOdooSettings): Promise<OdooConnectionStatus> {
   const target = getOdooRuntimeTarget(settings)
@@ -176,10 +162,19 @@ export async function odooAddTicketComment(
   id: number,
   body: string,
   isNote?: boolean,
-  instanceId?: string | null
+  instanceId?: string | null,
+  mentionPartnerIds?: number[],
+  attachmentIds?: number[]
 ): Promise<OdooMutationResult> {
   const target = getOdooRuntimeTarget(settings)
-  const args = { id, body, isNote, instanceId: instanceId ?? undefined }
+  const args = {
+    id,
+    body,
+    isNote,
+    instanceId: instanceId ?? undefined,
+    mentionPartnerIds,
+    attachmentIds
+  }
   return target.kind === 'environment'
     ? callRuntimeRpc<OdooMutationResult>(target, 'odoo.addTicketComment', args, {
         timeoutMs: 30_000
@@ -236,6 +231,18 @@ export async function odooListTags(
         timeoutMs: 30_000
       })
     : window.api.odoo.listTags(instanceId ? { instanceId } : undefined)
+}
+
+/** Every distinct stage name of the instance, for the board mapping picker. */
+export async function odooListStageNames(
+  settings: RuntimeOdooSettings,
+  instanceId?: OdooInstanceSelection | null
+): Promise<string[]> {
+  const target = getOdooRuntimeTarget(settings)
+  const args = instanceId ? { instanceId } : undefined
+  return target.kind === 'environment'
+    ? callRuntimeRpc<string[]>(target, 'odoo.listStageNames', args, { timeoutMs: 30_000 })
+    : window.api.odoo.listStageNames(args)
 }
 
 export async function odooListAssignableUsers(

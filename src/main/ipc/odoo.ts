@@ -1,11 +1,11 @@
 import { ipcMain } from 'electron'
 import { connect, disconnect, getStatus, selectInstance, testConnection } from '../odoo/client'
-import { addTicketComment, getTicketComments } from '../odoo/ticket-chatter'
 import {
   createTicket,
   getTicket,
   listAssignableUsers,
   listProjects,
+  listStageNames,
   listStages,
   listTags,
   listTickets,
@@ -13,6 +13,14 @@ import {
   updateTicket
 } from '../odoo/tickets'
 import { ODOO_PRIORITIES } from '../../shared/odoo-types'
+import {
+  clampLimit,
+  normalizeIdArray,
+  normalizeInstanceId,
+  normalizeInstanceSelection,
+  normalizeRecordId
+} from './odoo-ipc-args'
+import { registerOdooTicketChatterHandlers } from './odoo-ticket-chatter'
 import type {
   OdooConnectArgs,
   OdooCreateTicketArgs,
@@ -33,35 +41,6 @@ const VALID_STATES = new Set<OdooTicketState>([
   '1_done',
   '1_canceled'
 ])
-
-function normalizeInstanceId(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim() ? value.trim() : undefined
-}
-
-function normalizeInstanceSelection(value: unknown): OdooInstanceSelection | undefined {
-  return normalizeInstanceId(value) as OdooInstanceSelection | undefined
-}
-
-function clampLimit(value: unknown, fallback = 30): number {
-  const limit = typeof value === 'number' && Number.isFinite(value) ? value : fallback
-  return Math.min(Math.max(1, limit), 100)
-}
-
-/** Odoo record ids are positive integers; anything else is a malformed call. */
-function normalizeRecordId(value: unknown): number | null {
-  return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : null
-}
-
-function normalizeIdArray(value: unknown): number[] | undefined {
-  if (value === undefined) {
-    return undefined
-  }
-  if (!Array.isArray(value)) {
-    return undefined
-  }
-  const ids = value.map((item) => normalizeRecordId(item))
-  return ids.every((id): id is number => id !== null) ? ids : undefined
-}
 
 function normalizeTicketUpdate(value: unknown): OdooTicketUpdate | null {
   if (!value || typeof value !== 'object') {
@@ -214,35 +193,7 @@ export function registerOdooHandlers(): void {
     }
   )
 
-  ipcMain.handle(
-    'odoo:addTicketComment',
-    async (_event, args: { id: number; body: string; isNote?: boolean; instanceId?: string }) => {
-      const id = normalizeRecordId(args?.id)
-      if (id === null) {
-        return { ok: false, error: 'Ticket ID is required.' }
-      }
-      if (typeof args?.body !== 'string' || !args.body.trim()) {
-        return { ok: false, error: 'Comment body is required.' }
-      }
-      return addTicketComment(
-        id,
-        args.body.trim(),
-        args.isNote,
-        normalizeInstanceId(args.instanceId)
-      )
-    }
-  )
-
-  ipcMain.handle(
-    'odoo:ticketComments',
-    async (_event, args: { id: number; instanceId?: string }) => {
-      const id = normalizeRecordId(args?.id)
-      if (id === null) {
-        return []
-      }
-      return getTicketComments(id, normalizeInstanceId(args.instanceId))
-    }
-  )
+  registerOdooTicketChatterHandlers()
 
   ipcMain.handle(
     'odoo:listProjects',
@@ -263,6 +214,12 @@ export function registerOdooHandlers(): void {
 
   ipcMain.handle('odoo:listTags', async (_event, args?: { instanceId?: OdooInstanceSelection }) =>
     listTags(normalizeInstanceSelection(args?.instanceId))
+  )
+
+  ipcMain.handle(
+    'odoo:listStageNames',
+    async (_event, args?: { instanceId?: OdooInstanceSelection }) =>
+      listStageNames(normalizeInstanceSelection(args?.instanceId))
   )
 
   ipcMain.handle(

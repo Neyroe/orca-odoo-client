@@ -486,6 +486,13 @@ export type WorkspaceStatusDefinition = {
   label: string
   color?: string
   icon?: string
+  /**
+   * Odoo `project.task.type` name this board column maps to. Stored by name
+   * rather than id because stages are per-project: the id would pin the mapping
+   * to one project, while the name resolves against whichever project the
+   * linked ticket belongs to. Empty/absent means "do not sync this column".
+   */
+  odooStageName?: string
 }
 
 export type Worktree = {
@@ -2077,13 +2084,16 @@ export type {
 } from './jira-types'
 
 export type {
+  OdooAttachmentUpload,
   OdooComment,
+  OdooCommentAttachment,
   OdooConnectArgs,
   OdooConnectionStatus,
   OdooCreateTicketArgs,
   OdooCreateTicketResult,
   OdooInstance,
   OdooInstanceSelection,
+  OdooMentionSuggestion,
   OdooMutationResult,
   OdooPriority,
   OdooProject,
@@ -2337,6 +2347,10 @@ export type CreateWorktreeArgs = {
   linkedBitbucketPR?: number | null
   linkedAzureDevOpsPR?: number | null
   linkedGiteaPR?: number | null
+  /** Odoo tickets are only addressable per instance, so the stage sync and the
+   *  sidebar card read this pair rather than `linkedWorkItem` alone. */
+  linkedOdooTicket?: number | null
+  linkedOdooInstanceId?: string | null
   linkedWorkItem?: WorkspaceLinkedItem | null
   linkedTaskSourceContext?: TaskSourceContext | null
   pushTarget?: GitPushTarget

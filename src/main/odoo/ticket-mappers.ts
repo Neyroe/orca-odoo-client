@@ -1,6 +1,7 @@
 import { chatterHtmlToMarkdown } from './chatter-html-markdown'
 import { executeKw, type OdooClientForInstance } from './json-rpc'
 import type {
+  OdooCommentAttachment,
   OdooPriority,
   OdooStage,
   OdooTag,
@@ -107,6 +108,34 @@ export function mapUser(raw: OdooRecord): OdooUser {
     login: readString(raw.login),
     avatarUrl: base64ImageDataUri(raw.avatar_128)
   }
+}
+
+/**
+ * Maps one message's `attachment_ids` to full attachment records.
+ *
+ * Why a lookup map: comments are read in one batch, and `ir.attachment` is
+ * read once for every distinct id across all of them — resolving per message
+ * would mean one round trip per comment.
+ */
+export function mapCommentAttachments(
+  ids: number[],
+  attachmentsById: Map<number, { name?: string; mimetype?: string }>,
+  serverUrl: string
+): OdooCommentAttachment[] {
+  return ids.flatMap((id) => {
+    const attachment = attachmentsById.get(id)
+    if (!attachment) {
+      return []
+    }
+    return [
+      {
+        id,
+        name: attachment.name ?? String(id),
+        mimetype: attachment.mimetype,
+        url: `${serverUrl}/web/content/${id}?download=true`
+      }
+    ]
+  })
 }
 
 export function mapTag(raw: OdooRecord): OdooTag {

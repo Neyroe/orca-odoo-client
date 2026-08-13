@@ -114,6 +114,14 @@ export type OdooTicket = {
   updatedAt: string
 }
 
+export type OdooCommentAttachment = {
+  id: number
+  name: string
+  mimetype?: string
+  /** Absolute /web/content URL on the ticket's instance. */
+  url: string
+}
+
 export type OdooComment = {
   id: number
   /** Odoo chatter stores HTML; the client converts it to markdown. */
@@ -122,6 +130,24 @@ export type OdooComment = {
   author?: OdooUser
   /** True when the message's subtype is internal (Odoo "Log note"). */
   isNote: boolean
+  attachments?: OdooCommentAttachment[]
+  /** True when the session user authored it and may still edit the body. */
+  canEdit?: boolean
+}
+
+export type OdooMentionSuggestion = {
+  /** res.partner id — what message_post's partner_ids expects. */
+  id: number
+  name: string
+  login?: string
+  avatarUrl?: string
+}
+
+export type OdooAttachmentUpload = {
+  name: string
+  mimetype: string
+  /** Base64 payload without the `data:` prefix. */
+  data: string
 }
 
 export type OdooTicketUpdate = {

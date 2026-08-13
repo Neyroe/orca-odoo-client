@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { base64ImageDataUri, mapStage, mapUser } from './ticket-mappers'
+import { base64ImageDataUri, mapCommentAttachments, mapStage, mapUser } from './ticket-mappers'
 
 describe('base64ImageDataUri', () => {
   it('labels an Odoo SVG placeholder as svg+xml, not png', () => {
@@ -60,5 +60,47 @@ describe('mapUser', () => {
     expect(
       mapUser({ id: 5, name: 'Dev', login: 'dev', avatar_128: false }).avatarUrl
     ).toBeUndefined()
+  })
+})
+
+describe('mapCommentAttachments', () => {
+  const serverUrl = 'https://example.odoo.com'
+
+  it('resolves each id against the batch-read lookup and builds a download URL', () => {
+    const attachmentsById = new Map([
+      [10, { name: 'spec.pdf', mimetype: 'application/pdf' }],
+      [11, { name: 'shot.png', mimetype: 'image/png' }]
+    ])
+    expect(mapCommentAttachments([10, 11], attachmentsById, serverUrl)).toEqual([
+      {
+        id: 10,
+        name: 'spec.pdf',
+        mimetype: 'application/pdf',
+        url: 'https://example.odoo.com/web/content/10?download=true'
+      },
+      {
+        id: 11,
+        name: 'shot.png',
+        mimetype: 'image/png',
+        url: 'https://example.odoo.com/web/content/11?download=true'
+      }
+    ])
+  })
+
+  it('skips ids missing from the lookup rather than throwing', () => {
+    const attachmentsById = new Map([[10, { name: 'spec.pdf', mimetype: 'application/pdf' }]])
+    expect(mapCommentAttachments([10, 999], attachmentsById, serverUrl)).toEqual([
+      {
+        id: 10,
+        name: 'spec.pdf',
+        mimetype: 'application/pdf',
+        url: 'https://example.odoo.com/web/content/10?download=true'
+      }
+    ])
+  })
+
+  it('falls back to the numeric id as name when the attachment carries none', () => {
+    const attachmentsById = new Map([[10, {}]])
+    expect(mapCommentAttachments([10], attachmentsById, serverUrl)[0]?.name).toBe('10')
   })
 })

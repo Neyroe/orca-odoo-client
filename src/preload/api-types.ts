@@ -208,9 +208,11 @@ import type {
   JiraIssueFilter,
   JiraIssueType,
   JiraProjectStatusOrder,
+  OdooAttachmentUpload,
   OdooComment,
   OdooConnectionStatus,
   OdooCreateTicketResult,
+  OdooMentionSuggestion,
   OdooMutationResult,
   OdooPriority,
   OdooProject,
@@ -2383,11 +2385,29 @@ export type PreloadApi = {
       body: string
       isNote?: boolean
       instanceId?: string
+      mentionPartnerIds?: number[]
+      attachmentIds?: number[]
+    }) => Promise<OdooMutationResult>
+    updateTicketComment: (args: {
+      id: number
+      body: string
+      instanceId?: string
     }) => Promise<OdooMutationResult>
     ticketComments: (args: { id: number; instanceId?: string }) => Promise<OdooComment[]>
+    searchMentionCandidates: (args: {
+      ticketId: number
+      query?: string
+      instanceId?: string
+    }) => Promise<OdooMentionSuggestion[]>
+    uploadTicketAttachments: (args: {
+      ticketId: number
+      files: OdooAttachmentUpload[]
+      instanceId?: string
+    }) => Promise<{ ok: true; ids: number[] } | { ok: false; error: string }>
     listProjects: (args?: { instanceId?: string }) => Promise<OdooProject[]>
     listStages: (args: { projectId: number; instanceId?: string }) => Promise<OdooStage[]>
     listTags: (args?: { instanceId?: string }) => Promise<OdooTag[]>
+    listStageNames: (args?: { instanceId?: string }) => Promise<string[]>
     listAssignableUsers: (args?: { query?: string; instanceId?: string }) => Promise<OdooUser[]>
   }
   starNag: {

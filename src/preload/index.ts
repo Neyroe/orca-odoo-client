@@ -2053,11 +2053,33 @@ const api = {
       body: string
       isNote?: boolean
       instanceId?: string
+      mentionPartnerIds?: number[]
+      attachmentIds?: number[]
     }): Promise<{ ok: true } | { ok: false; error: string }> =>
       ipcRenderer.invoke('odoo:addTicketComment', args),
 
+    updateTicketComment: (args: {
+      id: number
+      body: string
+      instanceId?: string
+    }): Promise<{ ok: true } | { ok: false; error: string }> =>
+      ipcRenderer.invoke('odoo:updateTicketComment', args),
+
     ticketComments: (args: { id: number; instanceId?: string }): Promise<unknown[]> =>
       ipcRenderer.invoke('odoo:ticketComments', args),
+
+    searchMentionCandidates: (args: {
+      ticketId: number
+      query?: string
+      instanceId?: string
+    }): Promise<unknown[]> => ipcRenderer.invoke('odoo:searchMentionCandidates', args),
+
+    uploadTicketAttachments: (args: {
+      ticketId: number
+      files: { name: string; mimetype: string; data: string }[]
+      instanceId?: string
+    }): Promise<{ ok: true; ids: number[] } | { ok: false; error: string }> =>
+      ipcRenderer.invoke('odoo:uploadTicketAttachments', args),
 
     listProjects: (args?: { instanceId?: string }): Promise<unknown[]> =>
       ipcRenderer.invoke('odoo:listProjects', args),
@@ -2067,6 +2089,9 @@ const api = {
 
     listTags: (args?: { instanceId?: string }): Promise<unknown[]> =>
       ipcRenderer.invoke('odoo:listTags', args),
+
+    listStageNames: (args?: { instanceId?: string }): Promise<unknown[]> =>
+      ipcRenderer.invoke('odoo:listStageNames', args),
 
     listAssignableUsers: (args?: { query?: string; instanceId?: string }): Promise<unknown[]> =>
       ipcRenderer.invoke('odoo:listAssignableUsers', args)

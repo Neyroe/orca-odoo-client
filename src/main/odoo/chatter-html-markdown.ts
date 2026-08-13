@@ -284,7 +284,13 @@ export function chatterHtmlToMarkdown(html: string): string {
           sink().push(pendingLink ? `](${pendingLink})` : '')
           pendingLink = null
         } else {
-          const href = attribute(full, 'href')
+          // Odoo mention links (`@Name`) carry a real anchor tag, but their
+          // href is always "#" — rendering them as `[@Name](#)` would be
+          // noise, so keep the readable "@Name" text and drop the wrapper.
+          const isMentionLink =
+            attribute(full, 'data-oe-model') === 'res.partner' &&
+            (attribute(full, 'class') ?? '').split(/\s+/).includes('o_mail_redirect')
+          const href = isMentionLink ? null : attribute(full, 'href')
           pendingLink = href
           if (href) {
             sink().push('[')
@@ -313,6 +319,11 @@ export function chatterHtmlToMarkdown(html: string): string {
  *
  * Why: RPC callers cannot hand Odoo a `Markup` object, so bodies must travel as
  * HTML strings alongside `body_is_html: true`. Odoo sanitizes on write.
+ *
+ * Why raw HTML survives: the composer embeds real `<a data-oe-model=...>`
+ * mention anchors inline in the markdown source (Odoo mentions need attributes
+ * markdown can't express); `marked` passes inline/block HTML through
+ * untouched by default, so those anchors reach Odoo intact.
  */
 export function markdownToChatterHtml(markdown: string): string {
   if (!markdown.trim()) {

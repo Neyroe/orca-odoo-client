@@ -85,6 +85,32 @@ const TicketComment = z.object({
   id: z.number().int().positive(),
   body: requiredString('Comment body is required'),
   isNote: z.boolean().optional(),
+  instanceId: OptionalString,
+  mentionPartnerIds: z.array(z.number().int().positive()).optional(),
+  attachmentIds: z.array(z.number().int().positive()).optional()
+})
+
+const UpdateTicketComment = z.object({
+  id: z.number().int().positive(),
+  body: requiredString('Comment body is required'),
+  instanceId: OptionalString
+})
+
+const SearchMentionCandidates = z.object({
+  ticketId: z.number().int().positive(),
+  query: OptionalPlainString,
+  instanceId: OptionalString
+})
+
+const AttachmentUpload = z.object({
+  name: requiredString('Attachment name is required'),
+  mimetype: requiredString('Attachment mimetype is required'),
+  data: requiredString('Attachment data is required')
+})
+
+const UploadTicketAttachments = z.object({
+  ticketId: z.number().int().positive(),
+  files: z.array(AttachmentUpload),
   instanceId: OptionalString
 })
 
@@ -171,12 +197,41 @@ export const ODOO_METHODS: RpcMethod[] = [
     name: 'odoo.addTicketComment',
     params: TicketComment,
     handler: async (params, { runtime }) =>
-      runtime.odooAddTicketComment(params.id, params.body.trim(), params.isNote, params.instanceId)
+      runtime.odooAddTicketComment(
+        params.id,
+        params.body.trim(),
+        params.isNote,
+        params.instanceId,
+        params.mentionPartnerIds,
+        params.attachmentIds
+      )
+  }),
+  defineMethod({
+    name: 'odoo.updateTicketComment',
+    params: UpdateTicketComment,
+    handler: async (params, { runtime }) =>
+      runtime.odooUpdateTicketComment(params.id, params.body.trim(), params.instanceId)
   }),
   defineMethod({
     name: 'odoo.ticketComments',
     params: TicketId,
     handler: async (params, { runtime }) => runtime.odooTicketComments(params.id, params.instanceId)
+  }),
+  defineMethod({
+    name: 'odoo.searchMentionCandidates',
+    params: SearchMentionCandidates,
+    handler: async (params, { runtime }) =>
+      runtime.odooSearchMentionCandidates(
+        params.ticketId,
+        params.query?.trim() ?? '',
+        params.instanceId
+      )
+  }),
+  defineMethod({
+    name: 'odoo.uploadTicketAttachments',
+    params: UploadTicketAttachments,
+    handler: async (params, { runtime }) =>
+      runtime.odooUploadTicketAttachments(params.ticketId, params.files, params.instanceId)
   }),
   defineMethod({
     name: 'odoo.listProjects',
@@ -193,6 +248,11 @@ export const ODOO_METHODS: RpcMethod[] = [
     name: 'odoo.listTags',
     params: InstanceSelection,
     handler: async (params, { runtime }) => runtime.odooListTags(params?.instanceId)
+  }),
+  defineMethod({
+    name: 'odoo.listStageNames',
+    params: InstanceSelection,
+    handler: async (params, { runtime }) => runtime.odooListStageNames(params?.instanceId)
   }),
   defineMethod({
     name: 'odoo.listAssignableUsers',

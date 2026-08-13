@@ -246,6 +246,34 @@ export async function listStages(
   }
 }
 
+/**
+ * Distinct `project.task.type` names across every project of the instance.
+ *
+ * The workspace-board mapping is stored by stage NAME because stages are
+ * per-project, so the picker has to offer every name a linked ticket could
+ * land on — not the stages of one project.
+ */
+export async function listStageNames(instanceId?: OdooInstanceSelection | null): Promise<string[]> {
+  const rows = await forEachClient(instanceId, async (client) => {
+    const records = await executeKw<OdooRecord[]>(
+      client,
+      'project.task.type',
+      'search_read',
+      [[]],
+      { fields: ['name'], order: 'sequence asc' }
+    )
+    return records
+  })
+  const names = new Set<string>()
+  for (const row of rows) {
+    const name = typeof row.name === 'string' ? row.name.trim() : ''
+    if (name) {
+      names.add(name)
+    }
+  }
+  return [...names].sort((a, b) => a.localeCompare(b))
+}
+
 export async function listTags(instanceId?: OdooInstanceSelection | null): Promise<OdooTag[]> {
   return forEachClient(instanceId, async (client) => {
     const rows = await executeKw<OdooRecord[]>(client, 'project.tags', 'search_read', [[]], {
