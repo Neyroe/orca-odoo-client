@@ -15264,6 +15264,32 @@
               "delete": "Delete saved filter"
             }
           }
+        },
+        "auto": {
+          "workspace": {
+            "title": "Auto-start workspaces",
+            "description": "Starts a workspace for matching tickets on each panel refresh. A ticket that already has one never starts a second.",
+            "enabled": "Enabled",
+            "needsRepo": "Pick a target project first.",
+            "repo": "Project",
+            "repoHint": "An Odoo ticket carries no repository, so the target is set here.",
+            "repoPlaceholder": "Pick a project",
+            "baseBranch": "Base branch",
+            "baseBranchHint": "Empty uses the project's default branch.",
+            "assigned": "Assigned to me",
+            "priority": "Priority",
+            "priorityHint": "Any priority when none is picked.",
+            "deadline": "Due within (days)",
+            "deadlineHint": "Overdue tickets always match. Empty ignores deadlines.",
+            "requireDescription": "Require a description",
+            "cap": "Max per refresh",
+            "capHint": "Bounds how many workspaces one over-broad rule can create.",
+            "cancel": "Cancel",
+            "save": "Save",
+            "capped": "{{value0}} more matching tickets were skipped by the per-run limit.",
+            "created": "Started a workspace for {{value0}}.",
+            "failed": "Could not start a workspace for {{value0}}."
+          }
         }
       },
       "odoo-ticket-start-workspace-button": {

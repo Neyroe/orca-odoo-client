@@ -31,6 +31,7 @@ import { getOdooPresets, getOdooPriorityLabels } from '@/components/task-page-lo
 import { Button } from '@/components/ui/button'
 import { useAppStore } from '@/store'
 import { isWindowVisible } from '@/lib/window-visibility-interval'
+import { useOdooAutoWorkspace } from '@/components/use-odoo-auto-workspace'
 import {
   ODOO_TICKET_PANEL_REFRESH_INTERVAL_MS,
   shouldRunScheduledOdooRefresh
@@ -83,6 +84,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   const [savedFilters, setSavedFilters] = useState<OdooSavedTicketFilter[]>(initialSavedFilters)
   const [view, setView] = useState<OdooTicketPanelView>(readStoredView)
   // The Refresh button sets this so the next read bypasses the cache TTL.
+  const maybeStartOdooAutoWorkspaces = useOdooAutoWorkspace()
   const forceNextReadRef = useRef(false)
   // Read inside the interval callback, which must not re-subscribe on every
   // load toggle.
@@ -162,6 +164,9 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
       .then((result) => {
         if (!cancelled) {
           setTickets(result)
+          // Runs off the panel's own reads, so it can never fire more often
+          // than the panel already talks to Odoo.
+          maybeStartOdooAutoWorkspaces(result)
         }
       })
       .catch((readError: unknown) => {

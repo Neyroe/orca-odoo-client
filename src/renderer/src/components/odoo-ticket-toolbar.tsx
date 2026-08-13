@@ -1,5 +1,5 @@
 import React from 'react'
-import { Columns3, List, RefreshCw } from 'lucide-react'
+import { Columns3, List, RefreshCw, Zap } from 'lucide-react'
 
 import {
   OdooTicketFilterSelect,
@@ -11,6 +11,7 @@ import {
   type OdooTicketListFilters
 } from '@/components/odoo-ticket-facets'
 import { OdooTicketFilterMultiSelect } from '@/components/odoo-ticket-filter-multi-select'
+import { OdooAutoWorkspaceDialog } from '@/components/odoo-auto-workspace-dialog'
 import { OdooSavedFilterMenu } from '@/components/odoo-saved-filter-menu'
 import {
   getPinnedSavedOdooTicketFilters,
@@ -92,6 +93,7 @@ export function OdooTicketToolbar({
   onViewChange
 }: OdooTicketToolbarProps): React.JSX.Element {
   const menu = { openFilter, onOpenFilterChange }
+  const [autoWorkspaceOpen, setAutoWorkspaceOpen] = React.useState(false)
   const pinnedFilters = getPinnedSavedOdooTicketFilters(savedFilters)
   return (
     <div className="flex flex-none flex-wrap items-center justify-between gap-3 border-b border-border/50 bg-muted/50 px-3 py-2">
@@ -267,6 +269,26 @@ export function OdooTicketToolbar({
             <List className="size-3.5" />
           </Button>
         </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              onClick={() => setAutoWorkspaceOpen(true)}
+            >
+              <Zap className="size-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {translate('auto.components.odoo.auto.workspace.title', 'Auto-start workspaces')}
+          </TooltipContent>
+        </Tooltip>
+        <OdooAutoWorkspaceDialog
+          open={autoWorkspaceOpen}
+          onOpenChange={setAutoWorkspaceOpen}
+          priorityLabels={priorityLabels}
+        />
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" className="size-7" onClick={onRefresh}>
