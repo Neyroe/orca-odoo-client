@@ -11,7 +11,6 @@ import React, {
 import { useAppStore } from '@/store'
 import { useAllWorktrees, useRepoMap } from '@/store/selectors'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
-import { toast } from 'sonner'
 import WorkspaceKanbanAreaSelectionOverlay from './WorkspaceKanbanAreaSelectionOverlay'
 import WorkspaceKanbanDrawerHeader from './WorkspaceKanbanDrawerHeader'
 import WorkspaceKanbanLaneGrid from './WorkspaceKanbanLaneGrid'
@@ -33,17 +32,11 @@ import {
   useWorkspaceKanbanOutsideDismiss
 } from './use-workspace-kanban-outside-dismiss'
 import { useVisibleWorkspaceKanbanWorktreeIds } from './use-visible-workspace-kanban-worktree-ids'
-import { getSettingsForWorktreeRuntimeOwner } from '@/lib/worktree-runtime-owner'
 import { groupWorkspaceKanbanWorktrees } from './workspace-kanban-worktree-groups'
 import { resolveFullLaneDropIndex } from './workspace-kanban-filtered-drop-index'
 import { buildWorkspaceKanbanLaneViews } from './workspace-kanban-search'
 import { useWorkspaceKanbanSearch } from './use-workspace-kanban-search'
-import {
-  getWorkspaceBoardTaskStatusSyncRequest,
-  syncWorkspaceBoardTaskStatuses,
-  type WorkspaceBoardTaskStatusSyncMessage,
-  type WorkspaceBoardTaskStatusSyncResult
-} from './workspace-board-task-status-sync'
+import { useWorkspaceStatusProviderSync } from './use-workspace-status-provider-sync'
 import {
   buildManualOrderUpdatesForGroupDrop,
   shouldWriteManualOrderForGroupDrop,
@@ -53,7 +46,6 @@ import type { WorkspaceStatus, Worktree, WorktreeMeta } from '../../../../shared
 import { makeWorkspaceStatusId } from '../../../../shared/workspace-statuses'
 import { STATUS_BAR_RESERVE_HEIGHT, WORKSPACE_TOP_CHROME_HEIGHT } from './workspace-chrome-metrics'
 import { useContextualTour } from '@/components/contextual-tours/use-contextual-tour'
-import { translate } from '@/i18n/i18n'
 import { registerWorkspaceKanbanSidebarDropGroups } from './workspace-kanban-sidebar-drop'
 
 type WorkspaceKanbanDrawerProps = {
@@ -69,100 +61,7 @@ type WorkspaceKanbanDrawerProps = {
 // Why: outlast the Sheet close animation so the board does not disappear mid-slide.
 const WORKSPACE_BOARD_CLOSE_LINGER_MS = 300
 
-function formatTaskStatusSyncMessage(message: WorkspaceBoardTaskStatusSyncMessage): string {
-  switch (message.kind) {
-    case 'issue-read-failed':
-      return translate(
-        'auto.components.sidebar.WorkspaceKanbanDrawer.c1d2e3f4a5',
-        'Linear issue {{value0}} could not be read.',
-        { value0: message.issueIdentifier }
-      )
-    case 'missing-workflow-state':
-      return translate(
-        'auto.components.sidebar.WorkspaceKanbanDrawer.d2e3f4a5b6',
-        'No matching Linear workflow state for {{value0}}.',
-        { value0: message.statusLabel }
-      )
-    case 'ambiguous-workflow-state':
-      return translate(
-        'auto.components.sidebar.WorkspaceKanbanDrawer.e3f4a5b6c7',
-        'Multiple Linear workflow states match {{value0}}.',
-        { value0: message.statusLabel }
-      )
-    case 'update-failed':
-      return translate(
-        'auto.components.sidebar.WorkspaceKanbanDrawer.f4a5b6c7d8',
-        'Could not update Linear issue {{value0}}.',
-        { value0: message.issueIdentifier }
-      )
-    case 'provider-error':
-      return translate(
-        'auto.components.sidebar.WorkspaceKanbanDrawer.a5b6c7d8e9',
-        'Could not sync Linear issue {{value0}}.',
-        { value0: message.issueIdentifier }
-      )
-    case 'unexpected-error':
-      return translate(
-        'auto.components.sidebar.WorkspaceKanbanDrawer.b6c7d8e9f0',
-        'Task status sync could not finish.'
-      )
-  }
-}
-
-function formatTaskStatusSyncDescription(result: WorkspaceBoardTaskStatusSyncResult): string {
-  const counts = [
-    result.updated > 0
-      ? translate(
-          'auto.components.sidebar.WorkspaceKanbanDrawer.c7d8e9f0a1',
-          '{{value0}} updated',
-          {
-            value0: result.updated
-          }
-        )
-      : null,
-    result.skipped > 0
-      ? translate(
-          'auto.components.sidebar.WorkspaceKanbanDrawer.d8e9f0a1b2',
-          '{{value0}} skipped',
-          {
-            value0: result.skipped
-          }
-        )
-      : null,
-    result.failed > 0
-      ? translate('auto.components.sidebar.WorkspaceKanbanDrawer.e9f0a1b2c3', '{{value0}} failed', {
-          value0: result.failed
-        })
-      : null
-  ].filter((part): part is string => part !== null)
-  return [
-    counts.join(', '),
-    result.messages[0] ? formatTaskStatusSyncMessage(result.messages[0]) : null
-  ]
-    .filter(Boolean)
-    .join('. ')
-}
-
-export default function WorkspaceKanbanDrawer(
-  props: WorkspaceKanbanDrawerProps
-): React.JSX.Element | null {
-  const [lingering, setLingering] = useState(props.open)
-  useEffect(() => {
-    if (props.open) {
-      setLingering(true)
-      return
-    }
-    const timer = window.setTimeout(() => setLingering(false), WORKSPACE_BOARD_CLOSE_LINGER_MS)
-    return () => window.clearTimeout(timer)
-  }, [props.open])
-
-  if (!props.open && !lingering) {
-    return null
-  }
-  return <WorkspaceKanbanDrawerContent {...props} />
-}
-
-function WorkspaceKanbanDrawerContent({
+export default function WorkspaceKanbanDrawer({
   leftSidebarStyle,
   open,
   statusBarVisible,
@@ -271,73 +170,7 @@ function WorkspaceKanbanDrawerContent({
   })
   const { columnWidth, isResizingColumn, onColumnResizeStart, onColumnResizeKeyDown } =
     useWorkspaceKanbanColumnResize(workspaceBoardColumnWidth, setWorkspaceBoardColumnWidth)
-  const handleTaskStatusSyncResult = useCallback((result: WorkspaceBoardTaskStatusSyncResult) => {
-    if (result.failed === 0 && result.messages.length === 0) {
-      return
-    }
-    const description = formatTaskStatusSyncDescription(result)
-    if (result.failed > 0) {
-      toast.error(
-        translate(
-          'auto.components.sidebar.WorkspaceKanbanDrawer.1975a4e480',
-          'Task status sync failed'
-        ),
-        { description }
-      )
-      return
-    }
-    toast.warning(
-      translate(
-        'auto.components.sidebar.WorkspaceKanbanDrawer.e02b0d92ff',
-        'Task status sync skipped'
-      ),
-      { description }
-    )
-  }, [])
-  const maybeSyncWorkspaceBoardTaskStatuses = useCallback(
-    (worktreeIds: readonly string[], status: WorkspaceStatus) => {
-      const request = getWorkspaceBoardTaskStatusSyncRequest({
-        enabled: syncTaskStatusFromWorkspaceBoard,
-        worktreeIds,
-        status,
-        worktreesById: worktreeById,
-        workspaceStatuses
-      })
-      if (!request) {
-        return
-      }
-      void syncWorkspaceBoardTaskStatuses({
-        worktreeIds: request.worktreeIds,
-        targetStatus: request.targetStatus,
-        worktreesById: worktreeById,
-        getSettingsForWorktree: (worktreeId) =>
-          getSettingsForWorktreeRuntimeOwner(useAppStore.getState(), worktreeId),
-        getLatestWorkspaceStatus: (worktreeId) =>
-          useAppStore.getState().getKnownWorktreeById(worktreeId)?.workspaceStatus
-      })
-        .then((result) => {
-          if (result.updated > 0 || result.failed > 0 || result.messages.length > 0) {
-            console.info('Workspace board task status sync result', result)
-          }
-          handleTaskStatusSyncResult(result)
-        })
-        .catch((error: unknown) => {
-          console.warn('Workspace board task status sync failed', error)
-          handleTaskStatusSyncResult({
-            updated: 0,
-            skipped: 0,
-            failed: request.worktreeIds.length,
-            messages: [
-              {
-                kind: 'unexpected-error',
-                detail: error instanceof Error ? error.message : undefined
-              }
-            ]
-          })
-        })
-    },
-    [handleTaskStatusSyncResult, syncTaskStatusFromWorkspaceBoard, workspaceStatuses, worktreeById]
-  )
+  const maybeSyncWorkspaceBoardTaskStatuses = useWorkspaceStatusProviderSync()
   const moveWorktreeToStatus = useCallback(
     (worktreeId: string, status: WorkspaceStatus) => {
       const current = worktreeById.get(worktreeId)
@@ -651,6 +484,25 @@ function WorkspaceKanbanDrawerContent({
     [setWorkspaceStatuses, workspaceStatuses]
   )
 
+  const handleChangeStatusOdooStage = useCallback(
+    (statusId: string, stageName: string) => {
+      const trimmed = stageName.trim()
+      setWorkspaceStatuses(
+        workspaceStatuses.map((status) => {
+          if (status.id !== statusId) {
+            return status
+          }
+          // Clearing the field removes the key entirely, so the column reads as
+          // "not mapped" rather than mapped to an empty stage name.
+          const { odooStageName: _dropped, ...rest } = status
+          return trimmed ? { ...rest, odooStageName: trimmed } : rest
+        })
+      )
+      useAppStore.getState().recordFeatureInteraction('workspace-board-actions')
+    },
+    [setWorkspaceStatuses, workspaceStatuses]
+  )
+
   const handleChangeStatusColor = useCallback(
     (statusId: string, color: string) => {
       setWorkspaceStatuses(
@@ -891,6 +743,7 @@ function WorkspaceKanbanDrawerContent({
           syncTaskStatusFromWorkspaceBoard={syncTaskStatusFromWorkspaceBoard}
           onSyncTaskStatusFromWorkspaceBoardChange={setSyncTaskStatusFromWorkspaceBoard}
           onRenameStatus={handleRenameStatus}
+          onChangeStatusOdooStage={handleChangeStatusOdooStage}
           onChangeStatusColor={handleChangeStatusColor}
           onChangeStatusIcon={handleChangeStatusIcon}
           onMoveStatus={handleMoveStatus}

@@ -53,6 +53,7 @@ import {
   getProjectedWorktreeLineage
 } from './worktree-lineage-projection'
 import { getWorkspaceStatus, getWorkspaceStatusVisualMeta } from './workspace-status'
+import { useWorkspaceStatusProviderSync } from './use-workspace-status-provider-sync'
 import { WorktreeOpenInSubMenu } from './WorktreeOpenInMenu'
 import { ProjectGroupNameDialog } from './ProjectGroupNameDialog'
 import { WorktreeParentPickerPopover } from './WorktreeParentPickerPopover'
@@ -325,6 +326,7 @@ const WorktreeContextMenu = React.memo(function WorktreeContextMenu({
   const defaultSelectedWorktrees = useMemo(() => [worktree], [worktree])
   const effectiveSelectedWorktrees = selectedWorktrees ?? defaultSelectedWorktrees
   const updateWorktreeMeta = useAppStore((s) => s.updateWorktreeMeta)
+  const syncWorkspaceStatusToProviders = useWorkspaceStatusProviderSync()
   const setWorktreesPinnedAndReveal = useAppStore((s) => s.setWorktreesPinnedAndReveal)
   const workspaceStatuses = useAppStore((s) => s.workspaceStatuses)
   const openModal = useAppStore((s) => s.openModal)
@@ -614,16 +616,22 @@ const WorktreeContextMenu = React.memo(function WorktreeContextMenu({
         onAssignWorkspaceStatus?.(plan.worktreeIds, status)
         return
       }
-      // Why: outside the workspace board (e.g. the sidebar list) status changes
-      // are local-only; Linear sync is scoped to board moves like drag-and-drop.
+      // Why: the sidebar list has no board callback, but a status change is a
+      // status change — push it to the linked task providers here too, or "Move
+      // to Status" would silently diverge from the board's drag-and-drop.
+      if (plan.localWriteIds.length === 0) {
+        return
+      }
       void Promise.all(
         plan.localWriteIds.map((id) => updateWorktreeMeta(id, { workspaceStatus: status }))
       )
+      syncWorkspaceStatusToProviders(plan.localWriteIds, status)
     },
     [
       activeContextWorktrees,
       onAssignWorkspaceStatus,
       setMenuOpenState,
+      syncWorkspaceStatusToProviders,
       updateWorktreeMeta,
       workspaceStatuses
     ]

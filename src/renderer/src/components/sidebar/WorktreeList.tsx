@@ -188,6 +188,7 @@ import {
   resolveWorkspaceKanbanSidebarFullLaneDropIndex,
   updateWorkspaceKanbanSidebarDropTargetVisual
 } from './workspace-kanban-sidebar-drop'
+import { useWorkspaceStatusProviderSync } from './use-workspace-status-provider-sync'
 import {
   resolveWorkspaceKanbanCardDropCommitTarget,
   type WorkspaceKanbanCardTrackedDropTarget
@@ -5280,6 +5281,7 @@ const WorktreeList = React.memo(function WorktreeList({
   const openSettingsTarget = useAppStore((s) => s.openSettingsTarget)
   const updateWorktreeMeta = useAppStore((s) => s.updateWorktreeMeta)
   const updateWorktreesMeta = useAppStore((s) => s.updateWorktreesMeta)
+  const syncWorkspaceStatusToProviders = useWorkspaceStatusProviderSync()
   const updateRepo = useAppStore((s) => s.updateRepo)
   const fetchWorktrees = useAppStore((s) => s.fetchWorktrees)
   const activeView = useAppStore((s) => s.activeView)
@@ -6556,8 +6558,23 @@ const WorktreeList = React.memo(function WorktreeList({
       }
       useAppStore.getState().recordFeatureInteraction('workspace-board-actions')
       void updateWorktreesMeta(result.updates)
+      // Manual-order-only entries carry no status change, so only the ones that
+      // actually moved lane are worth pushing to the task providers.
+      const movedIds = [...result.updates]
+        .filter(([, update]) => update.workspaceStatus !== undefined)
+        .map(([worktreeId]) => worktreeId)
+      if (movedIds.length > 0) {
+        syncWorkspaceStatusToProviders(movedIds, args.status)
+      }
     },
-    [setSortBy, sortBy, updateWorktreesMeta, worktreeMap, workspaceStatuses]
+    [
+      setSortBy,
+      sortBy,
+      syncWorkspaceStatusToProviders,
+      updateWorktreesMeta,
+      worktreeMap,
+      workspaceStatuses
+    ]
   )
 
   // Why: count hideDefaultBranchWorkspace as a filter so the Clear Filters escape hatch stays reachable when it alone empties the list.

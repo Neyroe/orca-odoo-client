@@ -158,6 +158,9 @@ export function makeWorkspaceStatusId(
   return `status-${Date.now().toString(36)}`
 }
 
+/** Odoo caps `project.task.type.name` well below this; it only guards the store. */
+export const ODOO_STAGE_NAME_MAX_LENGTH = 128
+
 function normalizeWorkspaceStatusesInternal(
   value: unknown,
   options: WorkspaceStatusNormalizationOptions
@@ -184,7 +187,10 @@ function normalizeWorkspaceStatusesInternal(
       id,
       label,
       color: sanitizeWorkspaceStatusColor(raw.color, id, label, statuses.length, options),
-      icon: sanitizeWorkspaceStatusIcon(raw.icon, id, label, options)
+      icon: sanitizeWorkspaceStatusIcon(raw.icon, id, label, options),
+      ...(typeof raw.odooStageName === 'string' && raw.odooStageName.trim()
+        ? { odooStageName: raw.odooStageName.trim().slice(0, ODOO_STAGE_NAME_MAX_LENGTH) }
+        : {})
     })
   }
 
