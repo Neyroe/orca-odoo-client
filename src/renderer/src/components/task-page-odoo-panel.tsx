@@ -30,6 +30,11 @@ import type { OdooTicketFilterId } from '@/components/odoo-ticket-filter-select'
 import { getOdooPresets, getOdooPriorityLabels } from '@/components/task-page-localized-options'
 import { Button } from '@/components/ui/button'
 import { useAppStore } from '@/store'
+import { isWindowVisible } from '@/lib/window-visibility-interval'
+import {
+  ODOO_TICKET_PANEL_REFRESH_INTERVAL_MS,
+  shouldRunScheduledOdooRefresh
+} from '@/components/odoo-ticket-panel-refresh-schedule'
 import { translate } from '@/i18n/i18n'
 import type { OdooTicket, OdooTicketFilter } from '../../../shared/types'
 
@@ -79,6 +84,10 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   const [view, setView] = useState<OdooTicketPanelView>(readStoredView)
   // The Refresh button sets this so the next read bypasses the cache TTL.
   const forceNextReadRef = useRef(false)
+  // Read inside the interval callback, which must not re-subscribe on every
+  // load toggle.
+  const loadingRef = useRef(false)
+  loadingRef.current = loading
   // The signed-in user seeds the assignee filter, but only once: switching
   // preset afterwards must not silently re-narrow the list back to them.
   // A starred filter is an explicit choice, so it outranks the viewer seed.
@@ -177,6 +186,29 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
     listOdooTickets,
     searchOdooTickets
   ])
+
+  // Unattended refresh. Reuses the Refresh button's exact path (force the next
+  // read past the cache TTL, then bump the nonce) so there is one read path to
+  // reason about rather than a second, subtly different one.
+  useEffect(() => {
+    if (!odooStatus.connected) {
+      return
+    }
+    const timer = window.setInterval(() => {
+      if (
+        !shouldRunScheduledOdooRefresh({
+          connected: useAppStore.getState().odooStatus.connected,
+          windowVisible: isWindowVisible(),
+          loading: loadingRef.current
+        })
+      ) {
+        return
+      }
+      forceNextReadRef.current = true
+      setRefreshNonce((n) => n + 1)
+    }, ODOO_TICKET_PANEL_REFRESH_INTERVAL_MS)
+    return () => window.clearInterval(timer)
+  }, [odooStatus.connected, selectedInstanceId])
 
   const patchListedTicket = (ticketId: number, patch: Partial<OdooTicket>): void => {
     setTickets((current) =>
