@@ -206,7 +206,8 @@ export function buildDashboardSnapshot(
         workspaceStatusLabel: context?.workspaceStatus.label,
         workspaceStatusColor: context?.workspaceStatus.color,
         hasReview: context?.hasReview,
-        review: context?.review
+        review: context?.review,
+        odooTicket: context?.odooTicket
       })
     }
 
@@ -292,6 +293,7 @@ export function buildDashboardSnapshot(
         workspaceStatusColor: context?.workspaceStatus.color,
         hasReview: context ? context.hasReview || context.review !== undefined : undefined,
         review: context?.review,
+        odooTicket: context?.odooTicket,
         subagents: subagentsByParentPaneKey?.get(row.paneKey),
         lastUserMessage: isTitleDerived ? undefined : nonEmpty(row.entry.prompt),
         lastAgentMessage: isTitleDerived ? undefined : nonEmpty(row.entry.lastAssistantMessage),

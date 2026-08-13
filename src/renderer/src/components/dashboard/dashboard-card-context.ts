@@ -1,7 +1,10 @@
 import { branchName } from '@/lib/git-utils'
 import { getHostedReviewCacheKey } from '@/store/slices/hosted-review-cache-identity'
 import type { AppState } from '@/store/types'
-import type { DashboardCardReview } from '../../../../shared/dashboard-snapshot'
+import type {
+  DashboardCardOdooTicket,
+  DashboardCardReview
+} from '../../../../shared/dashboard-snapshot'
 import { hostedReviewInfoFromGitHubPRInfo } from '../../../../shared/hosted-review-github'
 import { isPositiveHostedReviewNumber } from '../../../../shared/hosted-review'
 import type { Repo, Worktree, WorkspaceStatusDefinition } from '../../../../shared/types'
@@ -23,6 +26,31 @@ export type DashboardCardContext = {
   workspaceStatus: WorkspaceStatusDefinition
   hasReview: boolean
   review?: DashboardCardReview
+  odooTicket?: DashboardCardOdooTicket
+}
+
+/**
+ * `linkedWorkItem` caches the ticket's title/URL, but a link made without it
+ * (or displaced by another provider) still leaves `linkedOdooTicket` set — so
+ * the id alone is enough to badge the card.
+ */
+export function resolveDashboardCardOdooTicket(
+  worktree: Worktree
+): DashboardCardOdooTicket | undefined {
+  const cached = worktree.linkedWorkItem?.provider === 'odoo' ? worktree.linkedWorkItem : undefined
+  const id = worktree.linkedOdooTicket ?? cached?.number ?? null
+  if (id === null || !Number.isFinite(id) || id <= 0) {
+    return undefined
+  }
+  const instanceId = worktree.linkedOdooInstanceId ?? cached?.odooInstanceId ?? undefined
+  // Only trust the cached title/URL when it actually describes this ticket.
+  const describesLinked = cached?.number === id
+  return {
+    id,
+    ...(describesLinked && cached?.title ? { title: cached.title } : {}),
+    ...(describesLinked && cached?.url ? { url: cached.url } : {}),
+    ...(instanceId ? { instanceId } : {})
+  }
 }
 
 function hasLinkedReview(worktree: Worktree): boolean {
@@ -89,6 +117,7 @@ export function resolveDashboardCardContext(
     workspaceStatus:
       statuses.find((status) => status.id === workspaceStatusId) ?? DEFAULT_WORKSPACE_STATUSES[0],
     review: resolveReview(state, repo, worktree),
-    hasReview: hasLinkedReview(worktree)
+    hasReview: hasLinkedReview(worktree),
+    odooTicket: resolveDashboardCardOdooTicket(worktree)
   }
 }
