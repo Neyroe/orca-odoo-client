@@ -1,28 +1,52 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { LoaderCircle, RefreshCw } from 'lucide-react'
+import { LoaderCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { OdooIcon } from '@/components/icons/OdooIcon'
 import { OdooConnectDialog } from '@/components/odoo-connect-dialog'
 import { OdooTicketWorkspace } from '@/components/odoo-ticket-workspace'
-import { deriveOdooTicketFacets, filterOdooTickets } from '@/components/odoo-ticket-facets'
+import {
+  DEFAULT_ODOO_TICKET_FILTERS,
+  deriveOdooTicketFacets,
+  filterOdooTickets,
+  type OdooTicketListFilters
+} from '@/components/odoo-ticket-facets'
+import {
+  getDefaultSavedOdooTicketFilter,
+  ODOO_SEEDED_FILTER_PRESETS,
+  readOrSeedSavedOdooTicketFilters,
+  removeSavedOdooTicketFilter,
+  reorderSavedOdooTicketFilters,
+  setDefaultSavedOdooTicketFilter,
+  toggleSavedOdooTicketFilterPin,
+  upsertSavedOdooTicketFilter,
+  writeSavedOdooTicketFilters,
+  type OdooSavedTicketFilter
+} from '@/components/odoo-saved-ticket-filters'
+import { OdooTicketKanban } from '@/components/odoo-ticket-kanban'
+import { OdooTicketToolbar, type OdooTicketPanelView } from '@/components/odoo-ticket-toolbar'
 import { OdooTicketRow } from '@/components/task-page-odoo-ticket-row'
+import type { OdooTicketFilterId } from '@/components/odoo-ticket-filter-select'
 import { getOdooPresets, getOdooPriorityLabels } from '@/components/task-page-localized-options'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { cn } from '@/lib/utils'
 import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
-import { ODOO_PRIORITIES } from '../../../shared/odoo-types'
-import type { OdooPriority, OdooTicket, OdooTicketFilter } from '../../../shared/types'
+import type { OdooTicket, OdooTicketFilter } from '../../../shared/types'
+
+const VIEW_STORAGE_KEY = 'odoo.ticketPanelView'
+
+// Kanban is the default: the stage columns are what the panel is for, and the
+// list is the opt-in fallback.
+function readStoredView(): OdooTicketPanelView {
+  if (typeof window === 'undefined') {
+    return 'kanban'
+  }
+  return window.localStorage.getItem(VIEW_STORAGE_KEY) === 'list' ? 'list' : 'kanban'
+}
+
+function odooPresetLabel(preset: OdooTicketFilter): string {
+  return getOdooPresets().find((entry) => entry.id === preset)?.label ?? preset
+}
 
 export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JSX.Element {
   const odooStatus = useAppStore((s) => s.odooStatus)
@@ -32,7 +56,11 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   const searchOdooTickets = useAppStore((s) => s.searchOdooTickets)
   const selectOdooInstance = useAppStore((s) => s.selectOdooInstance)
 
-  const [preset, setPreset] = useState<OdooTicketFilter>('assigned')
+  // A starred saved filter is what the panel opens on, so it has to seed the
+  // initial state rather than be applied after the first read fires.
+  const initialSavedFilters = useRef(readOrSeedSavedOdooTicketFilters(odooPresetLabel)).current
+  const initialDefault = getDefaultSavedOdooTicketFilter(initialSavedFilters)
+  const [preset, setPreset] = useState<OdooTicketFilter>(initialDefault?.preset ?? 'assigned')
   const [searchInput, setSearchInput] = useState('')
   const [appliedSearch, setAppliedSearch] = useState('')
   const [tickets, setTickets] = useState<OdooTicket[]>([])
@@ -42,36 +70,68 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   const [connectOpen, setConnectOpen] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<OdooTicket | null>(null)
   // Client-side narrowing of the loaded set — instant and instance-agnostic.
-  const [stageFilter, setStageFilter] = useState<string>('all')
-  const [priorityFilter, setPriorityFilter] = useState<OdooPriority | 'all'>('all')
-  // Assignee/tag facets hold the selected id as a string ('all' = no filter).
-  const [assigneeFilter, setAssigneeFilter] = useState<string>('all')
-  const [tagFilter, setTagFilter] = useState<string>('all')
+  const [filters, setFilters] = useState<OdooTicketListFilters>(
+    initialDefault?.filters ?? DEFAULT_ODOO_TICKET_FILTERS
+  )
+  // Only one filter menu may be open at a time; see OdooTicketFilterSelect.
+  const [openFilter, setOpenFilter] = useState<OdooTicketFilterId>(null)
+  const [savedFilters, setSavedFilters] = useState<OdooSavedTicketFilter[]>(initialSavedFilters)
+  const [view, setView] = useState<OdooTicketPanelView>(readStoredView)
   // The Refresh button sets this so the next read bypasses the cache TTL.
   const forceNextReadRef = useRef(false)
+  // The signed-in user seeds the assignee filter, but only once: switching
+  // preset afterwards must not silently re-narrow the list back to them.
+  // A starred filter is an explicit choice, so it outranks the viewer seed.
+  const viewerAssigneeAppliedRef = useRef(initialDefault !== null)
 
-  const presets = getOdooPresets()
+  // Only the two starter presets are offered: the rest of the Jira-shared
+  // vocabulary was noise here, and anything narrower belongs in a saved filter.
+  const presets = getOdooPresets().filter((entry) => ODOO_SEEDED_FILTER_PRESETS.includes(entry.id))
   const priorityLabels = getOdooPriorityLabels()
   const instances = odooStatus.instances ?? []
   const selectedInstanceId = odooStatus.selectedInstanceId ?? odooStatus.activeInstanceId ?? null
 
-  const resetFilters = (): void => {
-    setStageFilter('all')
-    setPriorityFilter('all')
-    setAssigneeFilter('all')
-    setTagFilter('all')
+  const resetFilters = (): void => setFilters(DEFAULT_ODOO_TICKET_FILTERS)
+  const setFilter = <K extends keyof OdooTicketListFilters>(
+    key: K,
+    value: OdooTicketListFilters[K]
+  ): void => setFilters((current) => ({ ...current, [key]: value }))
+
+  const persistSavedFilters = (next: OdooSavedTicketFilter[]): void => {
+    setSavedFilters(next)
+    writeSavedOdooTicketFilters(next)
   }
+
   const facets = useMemo(() => deriveOdooTicketFacets(tickets), [tickets])
-  const visibleTickets = useMemo(
-    () =>
-      filterOdooTickets(tickets, {
-        stage: stageFilter,
-        priority: priorityFilter,
-        assignee: assigneeFilter,
-        tag: tagFilter
-      }),
-    [tickets, stageFilter, priorityFilter, assigneeFilter, tagFilter]
-  )
+  const visibleTickets = useMemo(() => filterOdooTickets(tickets, filters), [tickets, filters])
+
+  // Drives the ticket panel's prev/next pager — position within the same
+  // filtered/sorted list the user is currently browsing, not the raw fetch.
+  const selectedTicketIndex = selectedTicket
+    ? visibleTickets.findIndex(
+        (entry) => entry.id === selectedTicket.id && entry.instanceId === selectedTicket.instanceId
+      )
+    : -1
+  const previousTicket = selectedTicketIndex > 0 ? visibleTickets[selectedTicketIndex - 1] : null
+  const nextTicket =
+    selectedTicketIndex >= 0 && selectedTicketIndex < visibleTickets.length - 1
+      ? visibleTickets[selectedTicketIndex + 1]
+      : null
+  const ticketPosition =
+    selectedTicketIndex >= 0 ? { index: selectedTicketIndex, total: visibleTickets.length } : null
+
+  // Open on the signed-in user rather than "All assignees" — the first loaded
+  // set is what tells us whether they actually appear in the facet.
+  const viewerUid = odooStatus.viewer?.uid
+  useEffect(() => {
+    if (viewerAssigneeAppliedRef.current || viewerUid === undefined || tickets.length === 0) {
+      return
+    }
+    viewerAssigneeAppliedRef.current = true
+    if (facets.assignees.some((option) => option.id === viewerUid)) {
+      setFilter('assignee', String(viewerUid))
+    }
+  }, [facets, tickets.length, viewerUid])
 
   useEffect(() => {
     void checkOdooConnection()
@@ -166,171 +226,81 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
       data-odoo-panel="true"
       className="mt-4 flex min-h-0 max-h-full flex-col overflow-hidden rounded-md border border-border/50 bg-background shadow-sm"
     >
-      <div className="flex flex-none flex-wrap items-center justify-between gap-3 border-b border-border/50 bg-muted/50 px-3 py-2">
-        <div className="flex flex-wrap gap-2">
-          {presets.map((entry) => {
-            const active = !appliedSearch && preset === entry.id
-            return (
-              <button
-                key={entry.id}
-                type="button"
-                onClick={() => {
-                  setSearchInput('')
-                  setAppliedSearch('')
-                  setPreset(entry.id)
-                  resetFilters()
-                }}
-                className={cn(
-                  'rounded-md border px-2 py-1 text-xs transition',
-                  active
-                    ? 'border-border/50 bg-foreground/90 text-background backdrop-blur-md'
-                    : 'border-border/50 bg-transparent text-foreground hover:bg-muted/50'
-                )}
-              >
-                {entry.label}
-              </button>
+      <OdooTicketToolbar
+        presets={presets}
+        preset={preset}
+        presetActive={!appliedSearch}
+        onPresetSelect={(next) => {
+          setSearchInput('')
+          setAppliedSearch('')
+          setPreset(next)
+          resetFilters()
+        }}
+        instances={instances}
+        selectedInstanceId={selectedInstanceId}
+        onInstanceSelect={(instanceId) => {
+          setSelectedTicket(null)
+          setTickets([])
+          resetFilters()
+          void selectOdooInstance(instanceId).catch(() => {
+            toast.error(
+              translate(
+                'auto.components.task.page.odoo.panel.85e1148843',
+                'Failed to switch Odoo instance.'
+              )
             )
-          })}
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {instances.length > 1 ? (
-            <Select
-              value={selectedInstanceId ?? undefined}
-              onValueChange={(value) => {
-                setSelectedTicket(null)
-                setTickets([])
-                resetFilters()
-                void selectOdooInstance(value).catch(() => {
-                  toast.error(
-                    translate(
-                      'auto.components.task.page.odoo.panel.85e1148843',
-                      'Failed to switch Odoo instance.'
-                    )
-                  )
-                })
-              }}
-            >
-              <SelectTrigger className="h-7 w-44 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">
-                  {translate('auto.components.task.page.odoo.panel.83d54e0f6a', 'All instances')}
-                </SelectItem>
-                {instances.map((instance) => (
-                  <SelectItem key={instance.id} value={instance.id}>
-                    {instance.database}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : null}
-          {facets.stages.length > 0 ? (
-            <Select value={stageFilter} onValueChange={setStageFilter}>
-              <SelectTrigger className="h-7 w-32 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">
-                  {translate('auto.components.task.page.odoo.panel.all_stages', 'All stages')}
-                </SelectItem>
-                {facets.stages.map((name) => (
-                  <SelectItem key={name} value={name}>
-                    {name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : null}
-          {facets.assignees.length > 0 ? (
-            <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-              <SelectTrigger className="h-7 w-36 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">
-                  {translate('auto.components.task.page.odoo.panel.all_assignees', 'All assignees')}
-                </SelectItem>
-                {facets.assignees.map((option) => (
-                  <SelectItem key={option.id} value={String(option.id)}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : null}
-          {facets.tags.length > 0 ? (
-            <Select value={tagFilter} onValueChange={setTagFilter}>
-              <SelectTrigger className="h-7 w-32 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">
-                  {translate('auto.components.task.page.odoo.panel.all_tags', 'All tags')}
-                </SelectItem>
-                {facets.tags.map((option) => (
-                  <SelectItem key={option.id} value={String(option.id)}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : null}
-          <Select
-            value={priorityFilter}
-            onValueChange={(value) => setPriorityFilter(value as OdooPriority | 'all')}
-          >
-            <SelectTrigger className="h-7 w-28 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">
-                {translate('auto.components.task.page.odoo.panel.all_priorities', 'All priorities')}
-              </SelectItem>
-              {ODOO_PRIORITIES.map((priority) => (
-                <SelectItem key={priority} value={priority}>
-                  {priorityLabels[priority]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault()
-              setAppliedSearch(searchInput.trim())
-              resetFilters()
-            }}
-          >
-            <Input
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder={translate(
-                'auto.components.task.page.odoo.panel.a0b20f5246',
-                'Search tickets by title…'
-              )}
-              className="h-7 w-52 text-xs"
-            />
-          </form>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7"
-                onClick={() => {
-                  forceNextReadRef.current = true
-                  setRefreshNonce((n) => n + 1)
-                }}
-              >
-                <RefreshCw className={cn('size-3.5', loading && 'animate-spin')} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {translate('auto.components.task.page.odoo.panel.56db121047', 'Refresh')}
-            </TooltipContent>
-          </Tooltip>
-        </div>
-      </div>
+          })
+        }}
+        facets={facets}
+        filters={filters}
+        onFilterChange={setFilter}
+        openFilter={openFilter}
+        onOpenFilterChange={setOpenFilter}
+        priorityLabels={priorityLabels}
+        searchInput={searchInput}
+        onSearchInputChange={setSearchInput}
+        onSearchSubmit={() => {
+          setAppliedSearch(searchInput.trim())
+          resetFilters()
+        }}
+        loading={loading}
+        onRefresh={() => {
+          forceNextReadRef.current = true
+          setRefreshNonce((n) => n + 1)
+        }}
+        savedFilters={savedFilters}
+        onApplySavedFilter={(entry) => {
+          // Recalling a saved view must also drop any active title search,
+          // otherwise the server read stays pinned to the search results.
+          setSearchInput('')
+          setAppliedSearch('')
+          setPreset(entry.preset)
+          setFilters(entry.filters)
+          // A recalled view is an explicit choice; don't let the viewer seed
+          // overwrite its assignee on the next load.
+          viewerAssigneeAppliedRef.current = true
+        }}
+        onSaveFilter={(name) =>
+          persistSavedFilters(upsertSavedOdooTicketFilter(savedFilters, { name, preset, filters }))
+        }
+        onDeleteSavedFilter={(id) =>
+          persistSavedFilters(removeSavedOdooTicketFilter(savedFilters, id))
+        }
+        onSetDefaultSavedFilter={(id) =>
+          persistSavedFilters(setDefaultSavedOdooTicketFilter(savedFilters, id))
+        }
+        onTogglePinnedSavedFilter={(id) =>
+          persistSavedFilters(toggleSavedOdooTicketFilterPin(savedFilters, id))
+        }
+        onReorderSavedFilters={(activeId, overId) =>
+          persistSavedFilters(reorderSavedOdooTicketFilters(savedFilters, activeId, overId))
+        }
+        view={view}
+        onViewChange={(next) => {
+          setView(next)
+          window.localStorage.setItem(VIEW_STORAGE_KEY, next)
+        }}
+      />
 
       <div className="flex h-10 flex-none items-center justify-between gap-3 border-b border-border/50 bg-muted/35 px-3">
         <div className="min-w-0 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
@@ -342,61 +312,78 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
         </div>
       </div>
 
-      <div
-        className="min-h-0 flex-1 overflow-y-auto scrollbar-sleek"
-        style={{ scrollbarGutter: 'stable' }}
-      >
-        {odooStatus.credentialError ? (
-          <div className="border-b border-border px-4 py-4 text-sm text-destructive">
-            {odooStatus.credentialError}
-          </div>
-        ) : null}
-        {!odooStatus.credentialError && error ? (
-          <div className="border-b border-border px-4 py-4 text-sm text-destructive">{error}</div>
-        ) : null}
+      {odooStatus.credentialError ? (
+        <div className="flex-none border-b border-border px-4 py-4 text-sm text-destructive">
+          {odooStatus.credentialError}
+        </div>
+      ) : null}
+      {!odooStatus.credentialError && error ? (
+        <div className="flex-none border-b border-border px-4 py-4 text-sm text-destructive">
+          {error}
+        </div>
+      ) : null}
 
-        {loading && tickets.length === 0 ? (
-          <div className="divide-y divide-border/50">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="px-3 py-3">
-                <div className="h-4 w-4/5 animate-pulse rounded bg-muted/70" />
-                <div className="mt-2 h-3 w-3/5 animate-pulse rounded bg-muted/60" />
-              </div>
-            ))}
-          </div>
-        ) : null}
-
-        {!loading && visibleTickets.length === 0 && !error && !odooStatus.credentialError ? (
-          <div className="px-4 py-10 text-center">
-            <p className="text-sm font-medium text-foreground">
-              {translate('auto.components.task.page.odoo.panel.f5975fc3d1', 'No tickets found')}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {translate(
-                'auto.components.task.page.odoo.panel.7bb7235cda',
-                'Try a different filter or search.'
-              )}
-            </p>
-          </div>
-        ) : null}
-
-        <div className="divide-y divide-border/50">
-          {visibleTickets.map((ticket) => (
-            <OdooTicketRow
-              key={`${ticket.instanceId ?? ''}:${ticket.id}`}
-              ticket={ticket}
-              selected={selectedTicket?.id === ticket.id}
-              showInstanceContext={instances.length > 1}
-              onOpen={setSelectedTicket}
-            />
+      {loading && tickets.length === 0 ? (
+        <div className="flex-none divide-y divide-border/50">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="px-3 py-3">
+              <div className="h-4 w-4/5 animate-pulse rounded bg-muted/70" />
+              <div className="mt-2 h-3 w-3/5 animate-pulse rounded bg-muted/60" />
+            </div>
           ))}
         </div>
-      </div>
+      ) : null}
+
+      {!loading && visibleTickets.length === 0 && !error && !odooStatus.credentialError ? (
+        <div className="flex-none px-4 py-10 text-center">
+          <p className="text-sm font-medium text-foreground">
+            {translate('auto.components.task.page.odoo.panel.f5975fc3d1', 'No tickets found')}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {translate(
+              'auto.components.task.page.odoo.panel.7bb7235cda',
+              'Try a different filter or search.'
+            )}
+          </p>
+        </div>
+      ) : null}
+
+      {/* The kanban scrolls horizontally across stages and vertically inside
+          each column, so it owns its own overflow instead of the list's. */}
+      {view === 'kanban' ? (
+        <OdooTicketKanban
+          tickets={visibleTickets}
+          selectedTicketId={selectedTicket?.id ?? null}
+          showInstanceContext={instances.length > 1}
+          onOpen={setSelectedTicket}
+        />
+      ) : (
+        <div
+          className="min-h-0 flex-1 overflow-y-auto scrollbar-sleek"
+          style={{ scrollbarGutter: 'stable' }}
+        >
+          <div className="divide-y divide-border/50">
+            {visibleTickets.map((ticket) => (
+              <OdooTicketRow
+                key={`${ticket.instanceId ?? ''}:${ticket.id}`}
+                ticket={ticket}
+                selected={selectedTicket?.id === ticket.id}
+                showInstanceContext={instances.length > 1}
+                onOpen={setSelectedTicket}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       <OdooTicketWorkspace
         ticket={selectedTicket}
         onClose={() => setSelectedTicket(null)}
         onTicketPatched={patchListedTicket}
+        previousTicket={previousTicket}
+        nextTicket={nextTicket}
+        ticketPosition={ticketPosition}
+        onNavigate={setSelectedTicket}
       />
     </div>
   )

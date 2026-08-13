@@ -56,7 +56,7 @@ describe('filterOdooTickets', () => {
 
   it("returns everything when all facets are 'all'", () => {
     const result = filterOdooTickets(tickets, {
-      stage: 'all',
+      stages: [],
       priority: 'all',
       assignee: 'all',
       tag: 'all'
@@ -66,7 +66,7 @@ describe('filterOdooTickets', () => {
 
   it('matches assignee id as a string', () => {
     const result = filterOdooTickets(tickets, {
-      stage: 'all',
+      stages: [],
       priority: 'all',
       assignee: '5',
       tag: 'all'
@@ -76,7 +76,7 @@ describe('filterOdooTickets', () => {
 
   it('matches tag id as a string', () => {
     const result = filterOdooTickets(tickets, {
-      stage: 'all',
+      stages: [],
       priority: 'all',
       assignee: 'all',
       tag: '9'
@@ -84,9 +84,44 @@ describe('filterOdooTickets', () => {
     expect(result.map((t) => t.id)).toEqual([2])
   })
 
+  it('unions several stages and keeps other facets a conjunction', () => {
+    const staged = [
+      ticket({ id: 1, stage: { id: 1, name: 'Backlog', sequence: 0, fold: false } }),
+      ticket({ id: 2, stage: { id: 2, name: 'Doing', sequence: 1, fold: false } }),
+      ticket({ id: 3, stage: { id: 3, name: 'Done', sequence: 2, fold: false } })
+    ]
+    const result = filterOdooTickets(staged, {
+      stages: ['Backlog', 'Done'],
+      priority: 'all',
+      assignee: 'all',
+      tag: 'all'
+    })
+    expect(result.map((t) => t.id)).toEqual([1, 3])
+  })
+
+  it('excludes stage-less tickets once any stage is selected', () => {
+    const result = filterOdooTickets([ticket({ id: 9 })], {
+      stages: ['Backlog'],
+      priority: 'all',
+      assignee: 'all',
+      tag: 'all'
+    })
+    expect(result).toEqual([])
+  })
+
+  it('matches tickets nobody owns on the unassigned sentinel', () => {
+    const result = filterOdooTickets(tickets, {
+      stages: [],
+      priority: 'all',
+      assignee: 'unassigned',
+      tag: 'all'
+    })
+    expect(result.map((t) => t.id)).toEqual([2])
+  })
+
   it('combines facets as a conjunction', () => {
     const result = filterOdooTickets(tickets, {
-      stage: 'all',
+      stages: [],
       priority: '3',
       assignee: '5',
       tag: 'all'
