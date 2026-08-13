@@ -4,8 +4,10 @@ import { toast } from 'sonner'
 import { VisuallyHidden } from 'radix-ui'
 
 import CommentMarkdown from '@/components/sidebar/CommentMarkdown'
-import { OdooTicketCommentComposer, OdooTicketCommentList } from '@/components/odoo-ticket-chatter'
+import { OdooTicketCommentComposer } from '@/components/odoo-ticket-comment-composer'
+import { OdooTicketCommentList } from '@/components/odoo-ticket-comment-list'
 import { OdooTicketHeader } from '@/components/odoo-ticket-header'
+import { OdooTicketPager } from '@/components/odoo-ticket-pager'
 import { isOdooTicketPanelKeepOpenTarget } from '@/components/odoo-ticket-panel-outside-dismiss'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
@@ -15,10 +17,18 @@ import { odooListStages, odooTicketComments, odooUpdateTicket } from '@/runtime/
 import { translate } from '@/i18n/i18n'
 import type { OdooComment, OdooStage, OdooTicket, OdooTicketUpdate } from '../../../shared/types'
 
+type OdooTicketPosition = { index: number; total: number }
+
 type OdooTicketWorkspaceProps = {
   ticket: OdooTicket | null
   onClose: () => void
   onTicketPatched: (ticketId: number, patch: Partial<OdooTicket>) => void
+  /** The ticket immediately before/after `ticket` in the currently visible list, if any. */
+  previousTicket?: OdooTicket | null
+  nextTicket?: OdooTicket | null
+  /** `ticket`'s 0-based position within the visible list, for the "3/24" pager label. */
+  ticketPosition?: OdooTicketPosition | null
+  onNavigate?: (ticket: OdooTicket) => void
 }
 
 const PANEL_WIDTH_KEY = 'odoo.ticketPanelWidth'
@@ -64,7 +74,11 @@ function SectionToggle({
 export function OdooTicketWorkspace({
   ticket,
   onClose,
-  onTicketPatched
+  onTicketPatched,
+  previousTicket = null,
+  nextTicket = null,
+  ticketPosition = null,
+  onNavigate
 }: OdooTicketWorkspaceProps): React.JSX.Element {
   const [panelWidth, setPanelWidth] = useState(readStoredPanelWidth)
   const widthRef = useRef(panelWidth)
@@ -110,7 +124,10 @@ export function OdooTicketWorkspace({
             event.preventDefault()
           }
         }}
-        overlayClassName="bg-transparent backdrop-blur-none pointer-events-none"
+        // Why: non-modal — pointer-events-none keeps the ticket list clickable
+        // underneath, but the default Sheet scrim/blur still pulls focus onto
+        // the open ticket.
+        overlayClassName="pointer-events-none"
         style={{ width: panelWidth }}
         className="flex max-w-[96vw] flex-col gap-0 p-0 sm:max-w-none"
       >
@@ -134,6 +151,10 @@ export function OdooTicketWorkspace({
             ticket={ticket}
             onClose={onClose}
             onTicketPatched={onTicketPatched}
+            previousTicket={previousTicket}
+            nextTicket={nextTicket}
+            ticketPosition={ticketPosition}
+            onNavigate={onNavigate}
           />
         ) : null}
       </SheetContent>
@@ -144,11 +165,19 @@ export function OdooTicketWorkspace({
 function OdooTicketDetail({
   ticket,
   onClose,
-  onTicketPatched
+  onTicketPatched,
+  previousTicket,
+  nextTicket,
+  ticketPosition,
+  onNavigate
 }: {
   ticket: OdooTicket
   onClose: () => void
   onTicketPatched: (ticketId: number, patch: Partial<OdooTicket>) => void
+  previousTicket: OdooTicket | null
+  nextTicket: OdooTicket | null
+  ticketPosition: OdooTicketPosition | null
+  onNavigate?: (ticket: OdooTicket) => void
 }): React.JSX.Element {
   const settings = useAppStore((s) => s.settings)
   const patchOdooTicket = useAppStore((s) => s.patchOdooTicket)
@@ -235,6 +264,13 @@ function OdooTicketDetail({
 
   return (
     <>
+      <OdooTicketPager
+        position={ticketPosition}
+        hasPrevious={previousTicket !== null}
+        hasNext={nextTicket !== null}
+        onPrevious={() => previousTicket && onNavigate?.(previousTicket)}
+        onNext={() => nextTicket && onNavigate?.(nextTicket)}
+      />
       <OdooTicketHeader
         ticket={ticket}
         stages={stages}
@@ -268,7 +304,12 @@ function OdooTicketDetail({
           count={comments.length}
         />
         {commentsOpen ? (
-          <OdooTicketCommentList comments={comments} loading={commentsLoading} />
+          <OdooTicketCommentList
+            comments={comments}
+            loading={commentsLoading}
+            ticket={ticket}
+            onCommentUpdated={reloadComments}
+          />
         ) : null}
       </div>
 
