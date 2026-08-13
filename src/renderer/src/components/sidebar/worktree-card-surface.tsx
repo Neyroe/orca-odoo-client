@@ -41,6 +41,7 @@ export function WorktreeCardSurface({ card }: { card: WorktreeCardController }):
     hoverIssue,
     hoverLinearIssue,
     hoverJiraIssue,
+    hoverOdooTicket,
     hoverReview,
     hoverComment,
     metaAutomationProvenance,
@@ -78,6 +79,7 @@ export function WorktreeCardSurface({ card }: { card: WorktreeCardController }):
         issue={hoverIssue}
         linearIssue={hoverLinearIssue}
         jiraIssue={hoverJiraIssue}
+        odooTicket={hoverOdooTicket}
         review={hoverReview}
         comment={hoverComment}
         automationProvenance={metaAutomationProvenance}
