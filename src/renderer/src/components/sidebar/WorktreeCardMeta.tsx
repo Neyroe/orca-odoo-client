@@ -168,6 +168,7 @@ export function WorktreeCardDetailsHover({
       issue,
       linearIssue,
       jiraIssue,
+      odooTicket,
       review,
       comment,
       automationProvenance,

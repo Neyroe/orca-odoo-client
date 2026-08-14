@@ -329,4 +329,28 @@ describe('WorktreeCardDetailsHover', () => {
     expect(markup).toContain('https://linear.app/acme/issue/ENG-123')
     expect(markup).toContain('View on Linear')
   })
+
+  it('renders the hover panel when an Odoo ticket is the only linked detail', () => {
+    const markup = renderToStaticMarkup(
+      <WorktreeCardDetailsHover
+        issue={null}
+        linearIssue={null}
+        odooTicket={{
+          ref: 'TASK-72',
+          title: 'Chatter attachments',
+          url: 'https://odoo.example.test/odoo/project/1/tasks/72'
+        }}
+        review={null}
+        comment={null}
+        onEditIssue={vi.fn()}
+        onEditComment={vi.fn()}
+        onOpenOdooTicketInOrca={vi.fn()}
+      >
+        <span>TASK-72</span>
+      </WorktreeCardDetailsHover>
+    )
+
+    expect(markup).toContain('Odoo ticket TASK-72')
+    expect(markup).toContain('Chatter attachments')
+  })
 })
