@@ -39,7 +39,9 @@ function escapeMarkdown(value: string): string {
 }
 
 function attribute(tag: string, name: string): string | null {
-  const match = new RegExp(`${name}\\s*=\\s*("([^"]*)"|'([^']*)')`, 'i').exec(tag)
+  // The left boundary keeps `href` from matching inside `data-orig-href`, which
+  // would otherwise win as the first match in the tag.
+  const match = new RegExp(`(?<![-\\w])${name}\\s*=\\s*("([^"]*)"|'([^']*)')`, 'i').exec(tag)
   const raw = match?.[2] ?? match?.[3]
   return raw === undefined ? null : decodeEntities(raw)
 }
