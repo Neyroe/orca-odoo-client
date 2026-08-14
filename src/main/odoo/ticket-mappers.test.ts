@@ -4,8 +4,29 @@ import {
   mapCommentAttachments,
   mapMentionSuggestion,
   mapStage,
-  mapUser
+  mapUser,
+  toIsoDate
 } from './ticket-mappers'
+
+describe('toIsoDate', () => {
+  it('turns a naive Odoo datetime into a UTC ISO string', () => {
+    expect(toIsoDate('2026-08-14 09:30:00')).toBe('2026-08-14T09:30:00Z')
+  })
+
+  it('adds midnight to a date-only value so the result stays parseable', () => {
+    // `date_deadline` is a Date field: `2026-08-14Z` alone is not RFC 3339.
+    expect(toIsoDate('2026-08-14')).toBe('2026-08-14T00:00:00Z')
+    expect(Number.isNaN(new Date(toIsoDate('2026-08-14')).getTime())).toBe(false)
+  })
+
+  it('leaves an already-ISO value alone', () => {
+    expect(toIsoDate('2026-08-14T09:30:00Z')).toBe('2026-08-14T09:30:00Z')
+  })
+
+  it('falls back to the epoch for Odoo `false`', () => {
+    expect(toIsoDate(false)).toBe(new Date(0).toISOString())
+  })
+})
 
 describe('base64ImageDataUri', () => {
   it('labels an Odoo SVG placeholder as svg+xml, not png', () => {
