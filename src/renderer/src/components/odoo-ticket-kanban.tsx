@@ -3,20 +3,25 @@ import React, { useMemo } from 'react'
 import { OdooTicketCard } from '@/components/odoo-ticket-card'
 import {
   deriveOdooTicketStageColumns,
-  ODOO_NO_STAGE_COLUMN,
   type OdooTicketStageColumn
 } from '@/components/odoo-ticket-stage-columns'
 import { odooStageBadgeClass } from '@/components/odoo-badge-tones'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import type { OdooTicket } from '../../../shared/odoo-types'
-/** Stable DOM id for a stage column's ticket-count pill, so it can be targeted. */
-export function odooStageCountElementId(columnKey: string): string {
-  return `odoo-stage-count-${columnKey === ODOO_NO_STAGE_COLUMN ? 'no-stage' : columnKey}`
+/**
+ * Stable DOM id for a stage column's ticket-count pill, so it can be targeted.
+ * Instance ids are base64url, so the result stays a valid id.
+ */
+export function odooStageCountElementId(column: OdooTicketStageColumn): string {
+  const stage = column.stageId === null ? 'no-stage' : String(column.stageId)
+  return column.instanceId
+    ? `odoo-stage-count-${column.instanceId}-${stage}`
+    : `odoo-stage-count-${stage}`
 }
 
 function columnLabel(column: OdooTicketStageColumn): string {
-  return column.key === ODOO_NO_STAGE_COLUMN
+  return column.stageId === null
     ? translate('auto.components.odoo.ticket.kanban.no_stage', 'No stage')
     : column.name
 }
@@ -24,34 +29,36 @@ function columnLabel(column: OdooTicketStageColumn): string {
 function StageColumn({
   column,
   selectedTicketId,
+  selectedInstanceId,
   showInstanceContext,
   onOpen
 }: {
   column: OdooTicketStageColumn
   selectedTicketId: number | null
+  selectedInstanceId: string | null
   showInstanceContext: boolean
   onOpen: (ticket: OdooTicket) => void
 }): React.JSX.Element {
   // The count pill borrows the column's own stage tone so the board reads as a
   // colour code rather than a row of identical grey chips.
   const tone =
-    column.key === ODOO_NO_STAGE_COLUMN
+    column.stageId === null
       ? 'border-border/60 bg-muted/50 text-muted-foreground'
       : odooStageBadgeClass({
-          id: Number(column.key),
+          id: column.stageId,
           ...(column.color !== undefined ? { color: column.color } : {})
         })
   return (
     <section className="flex min-w-[248px] flex-1 flex-col rounded-xl border border-border/60 bg-muted/30">
       <header className="flex flex-none items-center gap-2 px-3 py-2">
-        {column.key !== ODOO_NO_STAGE_COLUMN ? (
+        {column.stageId !== null ? (
           <span aria-hidden className={cn('size-2 shrink-0 rounded-full border', tone)} />
         ) : null}
         <span className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
           {columnLabel(column)}
         </span>
         <span
-          id={odooStageCountElementId(column.key)}
+          id={odooStageCountElementId(column)}
           data-odoo-stage-count={column.tickets.length}
           data-odoo-stage-key={column.key}
           className={cn(
@@ -67,7 +74,10 @@ function StageColumn({
           <OdooTicketCard
             key={`${ticket.instanceId ?? ''}:${ticket.id}`}
             ticket={ticket}
-            selected={selectedTicketId === ticket.id}
+            // Ticket ids repeat across instances, so identity is the pair.
+            selected={
+              selectedTicketId === ticket.id && selectedInstanceId === (ticket.instanceId ?? null)
+            }
             showInstanceContext={showInstanceContext}
             onOpen={onOpen}
           />
@@ -81,11 +91,13 @@ function StageColumn({
 export function OdooTicketKanban({
   tickets,
   selectedTicketId,
+  selectedInstanceId,
   showInstanceContext,
   onOpen
 }: {
   tickets: OdooTicket[]
   selectedTicketId: number | null
+  selectedInstanceId: string | null
   showInstanceContext: boolean
   onOpen: (ticket: OdooTicket) => void
 }): React.JSX.Element {
@@ -98,6 +110,7 @@ export function OdooTicketKanban({
             key={column.key}
             column={column}
             selectedTicketId={selectedTicketId}
+            selectedInstanceId={selectedInstanceId}
             showInstanceContext={showInstanceContext}
             onOpen={onOpen}
           />
