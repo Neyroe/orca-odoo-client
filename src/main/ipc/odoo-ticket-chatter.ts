@@ -94,13 +94,20 @@ export function registerOdooTicketChatterHandlers(): void {
       if (!Array.isArray(args?.files)) {
         return { ok: false, error: 'Files are required.' }
       }
-      const files = args.files.filter(
-        (file): file is OdooAttachmentUpload =>
+      // Dropping malformed entries would report `ok: true` for a partial upload,
+      // so one bad entry fails the whole batch instead.
+      // `Array.from` materializes holes so `every` cannot skip them.
+      const files: OdooAttachmentUpload[] = Array.from(args.files)
+      const valid = files.every(
+        (file) =>
           !!file &&
           typeof file.name === 'string' &&
           typeof file.mimetype === 'string' &&
           typeof file.data === 'string'
       )
+      if (!valid) {
+        return { ok: false, error: 'One or more attachments are malformed.' }
+      }
       return uploadTicketAttachments(ticketId, files, normalizeInstanceId(args.instanceId))
     }
   )
