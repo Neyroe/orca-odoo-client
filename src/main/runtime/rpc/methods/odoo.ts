@@ -1,4 +1,8 @@
 import { z } from 'zod'
+import {
+  MAX_ODOO_ATTACHMENT_COUNT,
+  ODOO_ATTACHMENT_UPLOAD_MAX_BASE64_LENGTH
+} from '../../../../shared/odoo-attachment-upload-limit'
 import { defineMethod, type RpcMethod } from '../core'
 import {
   OptionalFiniteNumber,
@@ -102,15 +106,23 @@ const SearchMentionCandidates = z.object({
   instanceId: OptionalString
 })
 
+// Why: the upload call caps the batch again, but bounding it here keeps an
+// oversized base64 blob from crossing the relay only to be refused at the far end.
 const AttachmentUpload = z.object({
   name: requiredString('Attachment name is required'),
   mimetype: requiredString('Attachment mimetype is required'),
-  data: requiredString('Attachment data is required')
+  data: requiredString('Attachment data is required').pipe(
+    z
+      .string()
+      .max(ODOO_ATTACHMENT_UPLOAD_MAX_BASE64_LENGTH, 'Attachment exceeds the upload size limit')
+  )
 })
 
 const UploadTicketAttachments = z.object({
   ticketId: z.number().int().positive(),
-  files: z.array(AttachmentUpload),
+  files: z
+    .array(AttachmentUpload)
+    .max(MAX_ODOO_ATTACHMENT_COUNT, 'Too many attachments in one upload'),
   instanceId: OptionalString
 })
 

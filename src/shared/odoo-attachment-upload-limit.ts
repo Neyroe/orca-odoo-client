@@ -4,6 +4,13 @@
 // the call is made rather than left to fail deep inside the RPC pipe.
 export const ODOO_ATTACHMENT_UPLOAD_MAX_BYTES = 15 * 1024 * 1024
 
+/** Files the chatter composer accepts on one comment. */
+export const MAX_ODOO_ATTACHMENT_COUNT = 10
+
+/** Longest base64 string that can still decode to within the byte cap. */
+export const ODOO_ATTACHMENT_UPLOAD_MAX_BASE64_LENGTH =
+  Math.ceil(ODOO_ATTACHMENT_UPLOAD_MAX_BYTES / 3) * 4
+
 /** Decoded byte length of a base64 payload (without the `data:` prefix). */
 export function base64PayloadByteLength(base64: string): number {
   if (!base64) {

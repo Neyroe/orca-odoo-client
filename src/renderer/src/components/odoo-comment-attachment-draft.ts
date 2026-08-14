@@ -1,6 +1,9 @@
 import { createBrowserUuid } from '@/lib/browser-uuid'
 import { translate } from '@/i18n/i18n'
-import { ODOO_ATTACHMENT_UPLOAD_MAX_BYTES } from '../../../shared/odoo-attachment-upload-limit'
+import {
+  MAX_ODOO_ATTACHMENT_COUNT,
+  ODOO_ATTACHMENT_UPLOAD_MAX_BYTES
+} from '../../../shared/odoo-attachment-upload-limit'
 
 /** A file picked/dropped in the composer, pending upload alongside the comment. */
 export type OdooAttachmentDraft = {
@@ -11,7 +14,7 @@ export type OdooAttachmentDraft = {
   size: number
 }
 
-export const MAX_ODOO_ATTACHMENT_COUNT = 10
+export { MAX_ODOO_ATTACHMENT_COUNT }
 // Why: reuse the same cap odooUploadTicketAttachments enforces server-side so a
 // file rejected here never differs from what the upload call would reject later.
 export const MAX_ODOO_ATTACHMENT_BYTES = ODOO_ATTACHMENT_UPLOAD_MAX_BYTES
