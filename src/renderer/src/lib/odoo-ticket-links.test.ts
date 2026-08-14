@@ -80,3 +80,12 @@ describe('matchOdooInstanceIdByOrigin', () => {
     expect(matchOdooInstanceIdByOrigin('https://ghost.odoo.com', instances)).toBeNull()
   })
 })
+
+describe('parseOdooTicketLink origin contract', () => {
+  it('never returns the literal string "null" for a non-special scheme', () => {
+    // `new URL('mycompany:8069/...')` parses, but its origin is the string 'null'.
+    const parsed = parseOdooTicketLink('mycompany:8069/odoo/project/5/task/7')
+    expect(parsed.id).toBe(7)
+    expect(parsed.origin).toBeNull()
+  })
+})

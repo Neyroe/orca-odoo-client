@@ -35,12 +35,14 @@ export function evictStaleEntries<T>(
   return pruned
 }
 
+/** Single classifier for "the stored credential failed", shared with the list-read fallback. */
 export function looksLikeOdooAuthError(error: unknown): boolean {
   const msg = error instanceof Error ? error.message : String(error)
   // Why: Odoo raises AccessError for record-permission gaps while the API key
   // stays valid; only credential rejection should flip Settings to
-  // disconnected. The client maps that to AccessDenied wording.
-  return /AccessDenied|rejected the credentials|authenticat|unauthorized|401/i.test(msg)
+  // disconnected. The client maps that to AccessDenied wording, and an
+  // undecryptable stored key is the same class of failure.
+  return /AccessDenied|rejected the credentials|authenticat|unauthorized|401|decrypt/i.test(msg)
 }
 
 export type InflightOdooRead<T> = {
