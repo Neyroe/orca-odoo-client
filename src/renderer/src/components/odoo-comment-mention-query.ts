@@ -13,6 +13,9 @@ export type OdooMentionQuery = {
 // Matches an `@` that starts a word (after start-of-string or whitespace) followed by a
 // run of non-whitespace up to the caret — mirrors the native-chat `$`/`/` trigger parsing.
 const MENTION_TRIGGER_RE = /(?:^|\s)@(\S*)$/
+// Whitespace or closing punctuation already separates the mention from what
+// follows, so no space is inserted in front of it.
+const MENTION_TRAILING_SPACE_SKIP_RE = /^[\s,.;:!?)\]}]/
 
 /** Finds the `@` mention token ending at `caret`, or null when none is in progress. */
 export function findOdooMentionQuery(value: string, caret: number): OdooMentionQuery | null {
@@ -44,8 +47,9 @@ export function applyOdooMentionSelection(
   const before = value.slice(0, mentionQuery.atIndex)
   const after = value.slice(caret)
   const label = `@${candidate.name}`
-  // Why: avoid a doubled space when the caret already sits right before one.
-  const inserted = after.startsWith(' ') ? label : `${label} `
+  // Why: the trailing space closes the mention token, but adding it before an
+  // existing space would double it and before punctuation would post "@Jo , hi".
+  const inserted = MENTION_TRAILING_SPACE_SKIP_RE.test(after) ? label : `${label} `
   return { value: `${before}${inserted}${after}`, caret: before.length + inserted.length }
 }
 

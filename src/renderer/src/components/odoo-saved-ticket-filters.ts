@@ -1,10 +1,12 @@
 import { DEFAULT_ODOO_TICKET_FILTERS, type OdooTicketListFilters } from './odoo-ticket-facets'
-import type { OdooTicketFilter } from '../../../shared/odoo-types'
+import { ODOO_PRIORITIES } from '../../../shared/odoo-types'
+import type { OdooPriority, OdooTicketFilter } from '../../../shared/odoo-types'
 const STORAGE_KEY = 'odoo.savedTicketFilters'
 // Separate marker so an empty list means "the user cleared them", not "never
 // seeded" — otherwise deleting the seeded entries would bring them straight back.
 const SEEDED_STORAGE_KEY = 'odoo.savedTicketFilters.seeded'
-const MAX_SAVED_FILTERS = 30
+/** Cap on stored entries. Exported so the trimming ends stay pinned by tests. */
+export const MAX_SAVED_FILTERS = 30
 const MAX_NAME_LENGTH = 60
 
 /** A named preset + facet combination the user can recall in one click. */
@@ -56,10 +58,9 @@ function parseFilters(value: unknown): OdooTicketListFilters {
   const { priority, assignee, tag } = value
   return {
     stages: parseStages(value),
-    priority:
-      priority === '0' || priority === '1' || priority === '2' || priority === '3'
-        ? priority
-        : 'all',
+    priority: ODOO_PRIORITIES.includes(priority as OdooPriority)
+      ? (priority as OdooPriority)
+      : 'all',
     assignee: typeof assignee === 'string' ? assignee : 'all',
     tag: typeof tag === 'string' ? tag : 'all'
   }
@@ -227,18 +228,36 @@ export function isSavedOdooTicketFilterActive(
   )
 }
 
+/** Storage access throws when it is disabled or over quota; the save, pin, star,
+ *  delete and reorder handlers must not break on that. */
+function readStorageItem(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function writeStorageItem(key: string, value: string): void {
+  try {
+    window.localStorage.setItem(key, value)
+  } catch {
+    // Unavailable or full storage: the change stays in memory for this session.
+  }
+}
+
 export function readSavedOdooTicketFilters(): OdooSavedTicketFilter[] {
   if (typeof window === 'undefined') {
     return []
   }
-  return parseSavedOdooTicketFilters(window.localStorage.getItem(STORAGE_KEY))
+  return parseSavedOdooTicketFilters(readStorageItem(STORAGE_KEY))
 }
 
 export function writeSavedOdooTicketFilters(saved: readonly OdooSavedTicketFilter[]): void {
   if (typeof window === 'undefined') {
     return
   }
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(saved))
+  writeStorageItem(STORAGE_KEY, JSON.stringify(saved))
 }
 
 /**
@@ -274,10 +293,10 @@ export function readOrSeedSavedOdooTicketFilters(
     return []
   }
   const stored = readSavedOdooTicketFilters()
-  if (window.localStorage.getItem(SEEDED_STORAGE_KEY) === '1') {
+  if (readStorageItem(SEEDED_STORAGE_KEY) === '1') {
     return stored
   }
-  window.localStorage.setItem(SEEDED_STORAGE_KEY, '1')
+  writeStorageItem(SEEDED_STORAGE_KEY, '1')
   if (stored.length > 0) {
     return stored
   }

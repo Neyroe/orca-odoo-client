@@ -1,11 +1,14 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import {
   getDefaultSavedOdooTicketFilter,
   getPinnedSavedOdooTicketFilters,
   isSavedOdooTicketFilterActive,
+  MAX_SAVED_FILTERS,
   ODOO_SEEDED_FILTER_PRESETS,
   parseSavedOdooTicketFilters,
+  readSavedOdooTicketFilters,
+  writeSavedOdooTicketFilters,
   removeSavedOdooTicketFilter,
   reorderSavedOdooTicketFilters,
   seedDefaultSavedOdooTicketFilters,
@@ -89,6 +92,75 @@ describe('upsertSavedOdooTicketFilter', () => {
     expect(upsertSavedOdooTicketFilter([], { name: '   ', preset: 'all', filters: MINE })).toEqual(
       []
     )
+  })
+})
+
+describe('saved-filter cap', () => {
+  const atCap = Array.from({ length: MAX_SAVED_FILTERS }, (_unused, index) =>
+    saved(`F${index + 1}`)
+  )
+
+  it('drops the oldest entry when a new one pushes past the cap', () => {
+    const next = upsertSavedOdooTicketFilter(atCap, {
+      name: 'Newest',
+      preset: 'all',
+      filters: MINE
+    })
+    expect(next).toHaveLength(MAX_SAVED_FILTERS)
+    expect(next.map((entry) => entry.id)).not.toContain('f1')
+    expect(next.at(-1)?.id).toBe('newest')
+  })
+
+  it('leaves the list untouched when re-saving an existing entry at the cap', () => {
+    const next = upsertSavedOdooTicketFilter(atCap, { name: 'F1', preset: 'all', filters: MINE })
+    expect(next).toHaveLength(MAX_SAVED_FILTERS)
+    expect(next[0]?.id).toBe('f1')
+  })
+
+  it('keeps the first entries when a stored payload exceeds the cap', () => {
+    const raw = JSON.stringify(
+      Array.from({ length: MAX_SAVED_FILTERS + 1 }, (_unused, index) => ({
+        name: `F${index + 1}`,
+        preset: 'all',
+        filters: {}
+      }))
+    )
+    const parsed = parseSavedOdooTicketFilters(raw)
+    expect(parsed).toHaveLength(MAX_SAVED_FILTERS)
+    expect(parsed[0]?.id).toBe('f1')
+    expect(parsed.map((entry) => entry.id)).not.toContain(`f${MAX_SAVED_FILTERS + 1}`)
+  })
+})
+
+describe('storage access', () => {
+  afterEach(() => {
+    Reflect.deleteProperty(globalThis, 'window')
+  })
+
+  function stubThrowingStorage(): void {
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      value: {
+        localStorage: {
+          getItem(): string {
+            throw new Error('storage disabled')
+          },
+          setItem(): void {
+            throw new Error('quota exceeded')
+          }
+        }
+      }
+    })
+  }
+
+  it('returns an empty list when reading storage throws', () => {
+    stubThrowingStorage()
+    expect(readSavedOdooTicketFilters()).toEqual([])
+  })
+
+  it('swallows a failing write so the calling handler still completes', () => {
+    stubThrowingStorage()
+    expect(() => writeSavedOdooTicketFilters([saved('Mine')])).not.toThrow()
   })
 })
 

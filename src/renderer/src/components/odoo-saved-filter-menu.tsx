@@ -93,7 +93,7 @@ export function OdooSavedFilterMenu({
           role="combobox"
           aria-expanded={open}
           className="h-7 max-w-44 justify-start gap-1.5 px-2 text-xs font-normal"
-          title={translate('auto.components.odoo.saved.filter.menu.title', 'Saved filters')}
+          title={translate('auto.components.odoo.saved.filter.menu.88c6da15ed', 'Saved filters')}
         >
           <Bookmark
             className={cn('size-3.5 shrink-0', activeEntry ? 'fill-current' : 'opacity-50')}
@@ -102,14 +102,14 @@ export function OdooSavedFilterMenu({
             {activeEntry?.name ??
               (presetActive && activePreset
                 ? activePreset.label
-                : translate('auto.components.odoo.saved.filter.menu.title', 'Saved filters'))}
+                : translate('auto.components.odoo.saved.filter.menu.88c6da15ed', 'Saved filters'))}
           </span>
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-72 p-0">
         <div className="max-h-64 overflow-y-auto scrollbar-sleek py-1">
           <p className="px-3 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-            {translate('auto.components.odoo.saved.filter.menu.presets', 'Presets')}
+            {translate('auto.components.odoo.saved.filter.menu.c089bd7f5d', 'Presets')}
           </p>
           {presets.map((entry) => (
             <button
@@ -131,12 +131,12 @@ export function OdooSavedFilterMenu({
             </button>
           ))}
           <p className="mt-1 border-t border-border/60 px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-            {translate('auto.components.odoo.saved.filter.menu.saved_section', 'Saved')}
+            {translate('auto.components.odoo.saved.filter.menu.4008391fe0', 'Saved')}
           </p>
           {saved.length === 0 ? (
             <p className="px-3 py-2 text-xs text-muted-foreground">
               {translate(
-                'auto.components.odoo.saved.filter.menu.empty',
+                'auto.components.odoo.saved.filter.menu.a9ec70f877',
                 'No saved filter yet. Set up the toolbar, save it below, then pin it to keep it in reach.'
               )}
             </p>
@@ -183,13 +183,13 @@ export function OdooSavedFilterMenu({
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder={translate(
-              'auto.components.odoo.saved.filter.menu.name_placeholder',
+              'auto.components.odoo.saved.filter.menu.5f484b298e',
               'Name these filters…'
             )}
             className="h-7 flex-1 text-xs"
           />
           <Button type="submit" size="sm" className="h-7 px-2 text-xs" disabled={!name.trim()}>
-            {translate('auto.components.odoo.saved.filter.menu.save', 'Save')}
+            {translate('auto.components.odoo.saved.filter.menu.ac57de0469', 'Save')}
           </Button>
         </form>
       </PopoverContent>

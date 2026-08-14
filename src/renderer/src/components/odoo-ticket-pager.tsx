@@ -32,14 +32,17 @@ export function OdooTicketPager({
             variant="ghost"
             size="icon-xs"
             disabled={!hasPrevious}
-            aria-label={translate('auto.components.odoo.ticket.pager.previous', 'Previous ticket')}
+            aria-label={translate(
+              'auto.components.odoo.ticket.pager.a22df7a932',
+              'Previous ticket'
+            )}
             onClick={onPrevious}
           >
             <ChevronLeft className="size-3.5" />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="top" sideOffset={4}>
-          {translate('auto.components.odoo.ticket.pager.previous', 'Previous ticket')}
+          {translate('auto.components.odoo.ticket.pager.a22df7a932', 'Previous ticket')}
         </TooltipContent>
       </Tooltip>
       {position ? (
@@ -54,14 +57,14 @@ export function OdooTicketPager({
             variant="ghost"
             size="icon-xs"
             disabled={!hasNext}
-            aria-label={translate('auto.components.odoo.ticket.pager.next', 'Next ticket')}
+            aria-label={translate('auto.components.odoo.ticket.pager.983fd8b806', 'Next ticket')}
             onClick={onNext}
           >
             <ChevronRight className="size-3.5" />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="top" sideOffset={4}>
-          {translate('auto.components.odoo.ticket.pager.next', 'Next ticket')}
+          {translate('auto.components.odoo.ticket.pager.983fd8b806', 'Next ticket')}
         </TooltipContent>
       </Tooltip>
     </div>
