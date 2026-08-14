@@ -6,6 +6,7 @@ import {
   MAX_ODOO_ATTACHMENT_BYTES,
   MAX_ODOO_ATTACHMENT_COUNT,
   formatOdooAttachmentSize,
+  odooAttachmentDraftSetKey,
   readOdooAttachmentAsBase64,
   stripBase64DataUrlPrefix,
   validateOdooAttachmentSelection
@@ -64,6 +65,26 @@ describe('validateOdooAttachmentSelection', () => {
     const blob = new File(['x'], 'noext', { type: '' })
     const { accepted } = validateOdooAttachmentSelection([blob], 0)
     expect(accepted[0].mimetype).toBe('application/octet-stream')
+  })
+})
+
+describe('odooAttachmentDraftSetKey', () => {
+  it('is stable for the same staged set, so a retry can reuse its upload', () => {
+    const { accepted } = validateOdooAttachmentSelection([file('a.txt'), file('b.txt')], 0)
+    expect(odooAttachmentDraftSetKey(accepted)).toBe(odooAttachmentDraftSetKey([...accepted]))
+  })
+
+  it('changes when a draft is removed, so the retry re-uploads what is left', () => {
+    const { accepted } = validateOdooAttachmentSelection([file('a.txt'), file('b.txt')], 0)
+    expect(odooAttachmentDraftSetKey(accepted.slice(1))).not.toBe(
+      odooAttachmentDraftSetKey(accepted)
+    )
+  })
+
+  it('changes when the same file is re-picked, since that is a fresh draft', () => {
+    const first = validateOdooAttachmentSelection([file('a.txt')], 0).accepted
+    const second = validateOdooAttachmentSelection([file('a.txt')], 0).accepted
+    expect(odooAttachmentDraftSetKey(second)).not.toBe(odooAttachmentDraftSetKey(first))
   })
 })
 
