@@ -36,7 +36,7 @@ import {
   updateTicketComment,
   uploadTicketAttachments
 } from './ticket-chatter'
-import { listStages, updateTicket } from './tickets'
+import { getTicket, listStages, updateTicket } from './tickets'
 
 const TICKET_ID = Number(process.env.ODOO_PROOF_TICKET ?? '72')
 const PROJECT_ID = Number(process.env.ODOO_PROOF_PROJECT ?? '7')
@@ -132,11 +132,18 @@ describe.skipIf(!LIVE)('Odoo live round trips', () => {
     if (!target) {
       return
     }
-    const written = await updateTicket(TICKET_ID, { stageId: target.id })
-    expect(written.ok, written.ok ? '' : written.error).toBe(true)
-
-    const comments = await getTicketComments(TICKET_ID)
-    expect(comments.length).toBeGreaterThan(0)
-    console.log('STAGE PROOF', JSON.stringify({ movedTo: target.name, id: target.id }))
+    // The configured ticket is reusable proof data, so the move is undone: a run
+    // that parked it in the last stage would make the next run start elsewhere.
+    const originalStageId = (await getTicket(TICKET_ID))?.stage?.id ?? null
+    try {
+      const written = await updateTicket(TICKET_ID, { stageId: target.id })
+      expect(written.ok, written.ok ? '' : written.error).toBe(true)
+      expect((await getTicket(TICKET_ID))?.stage?.id, 'stage write did not land').toBe(target.id)
+      console.log('STAGE PROOF', JSON.stringify({ movedTo: target.name, id: target.id }))
+    } finally {
+      if (originalStageId !== null && originalStageId !== target.id) {
+        await updateTicket(TICKET_ID, { stageId: originalStageId })
+      }
+    }
   }, 90_000)
 })
