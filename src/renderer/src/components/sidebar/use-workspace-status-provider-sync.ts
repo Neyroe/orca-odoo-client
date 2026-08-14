@@ -219,6 +219,12 @@ export function useWorkspaceStatusProviderSync(): (
           })
         })
     },
-    [reportResult, syncTaskStatusFromWorkspaceBoard, workspaceStatuses, worktreeById]
+    [
+      reportOdooResult,
+      reportResult,
+      syncTaskStatusFromWorkspaceBoard,
+      workspaceStatuses,
+      worktreeById
+    ]
   )
 }

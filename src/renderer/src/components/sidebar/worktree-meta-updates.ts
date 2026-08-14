@@ -6,6 +6,7 @@ import {
 import { parseIssueLinkInput, type IssueLinkProvider } from '../../../../shared/issue-link-input'
 import type { WorkspaceSourceProvider } from '../../../../shared/new-workspace/workspace-source'
 import { matchOdooInstanceIdByOrigin, parseOdooTicketLink } from '@/lib/odoo-ticket-links'
+import type { OdooConnectionStatus } from '../../../../shared/odoo-types'
 import type { WorktreeMeta } from '../../../../shared/worktree/meta-types'
 import type { WorkspaceLinkedItem } from '../../../../shared/worktree/types'
 
@@ -31,6 +32,9 @@ export type WorktreeMetaSnapshot = {
   comment: string
   issueInput: string
   issueProvider: IssueLinkProvider
+  /** The Odoo field's seeded value: a bare ticket id names no instance, so an
+   *  untouched field must not be re-resolved. */
+  odooInput: string
   /** Stands in for an org key the typed value omits, so re-saving a stored bare
    *  identifier does not read as a change. */
   linkedLinearIssueOrganizationUrlKey?: string | null
@@ -268,13 +272,21 @@ export function buildWorktreeMetaUpdates(
 /** Builds the Odoo-link portion of a worktree meta save. Empty input clears the
  *  link (null); an unparseable non-empty input leaves it untouched (omitted).
  *  Odoo is multi-tenant, so the ticket id is stored with an instance id resolved
- *  from the pasted URL's origin, falling back to the active instance. */
+ *  from the pasted URL's origin, falling back to the active instance.
+ *
+ *  `seededInput` is what the field opened with. An untouched field emits nothing:
+ *  a stored bare ticket id would otherwise be re-resolved against whichever
+ *  instance is active now, silently rebinding a workspace linked elsewhere. */
 export function buildOdooTicketMetaUpdate(args: {
   odooInput: string
+  seededInput?: string
   instances: readonly { id: string; serverUrl: string }[]
   fallbackInstanceId: string | null
 }): Partial<WorktreeMeta> {
   const trimmed = args.odooInput.trim()
+  if (args.seededInput !== undefined && trimmed === args.seededInput.trim()) {
+    return {}
+  }
   if (trimmed === '') {
     return { linkedOdooTicket: null, linkedOdooInstanceId: null }
   }
@@ -284,4 +296,25 @@ export function buildOdooTicketMetaUpdate(args: {
   }
   const instanceId = matchOdooInstanceIdByOrigin(origin, args.instances) ?? args.fallbackInstanceId
   return { linkedOdooTicket: id, linkedOdooInstanceId: instanceId }
+}
+
+/** The Odoo half of a save, resolved against the live connection status.
+ *  'all' is a view selection rather than a real instance, so a bare ticket id
+ *  falls back to the active one. */
+export function buildOdooTicketMetaUpdateForStatus(
+  odooInput: string,
+  seededInput: string,
+  status: OdooConnectionStatus
+): Partial<WorktreeMeta> {
+  if (!status.connected) {
+    return {}
+  }
+  const selected = status.selectedInstanceId
+  return buildOdooTicketMetaUpdate({
+    odooInput,
+    seededInput,
+    instances: status.instances ?? [],
+    fallbackInstanceId:
+      selected && selected !== 'all' ? selected : (status.activeInstanceId ?? null)
+  })
 }

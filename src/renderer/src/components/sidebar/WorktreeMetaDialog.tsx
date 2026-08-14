@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getDisplacedLinkLabels } from './worktree-issue-displacement'
 import {
-  buildOdooTicketMetaUpdate,
+  buildOdooTicketMetaUpdateForStatus,
   buildWorktreeMetaUpdates,
   parseGitHubWorkItemNumberForMetaField,
   type WorktreeMetaDraft,
@@ -44,7 +44,8 @@ const EMPTY_SNAPSHOT: WorktreeMetaSnapshot = {
   displayName: '',
   comment: '',
   issueInput: '',
-  issueProvider: 'github'
+  issueProvider: 'github',
+  odooInput: ''
 }
 
 const WorktreeMetaDialog = React.memo(function WorktreeMetaDialog() {
@@ -129,17 +130,21 @@ const WorktreeMetaDialog = React.memo(function WorktreeMetaDialog() {
     setIssueInput(currentIssue)
     setIssueProvider(currentProvider)
     setPrInput(currentPR)
-    setOdooInput(currentOdooTicket != null ? String(currentOdooTicket) : '')
+    const seededOdooInput = currentOdooTicket != null ? String(currentOdooTicket) : ''
+    setOdooInput(seededOdooInput)
     setCommentInput(currentComment)
     // Why: the baseline is frozen with the seed instead of tracking the store.
     // A background `orca worktree set --linear-issue` while the dialog is open
     // would otherwise move it, making the untouched field read as dirty — and
     // the next comment-only save would write the stale seed back over the new link.
+    // The Odoo seed is captured for the same reason, plus one of its own: it is a
+    // bare ticket id, so re-resolving it would pick the active instance.
     setSnapshot({
       displayName: currentDisplayName,
       comment: currentComment,
       issueInput: currentIssue,
       issueProvider: currentProvider,
+      odooInput: seededOdooInput,
       linkedLinearIssueOrganizationUrlKey: worktree?.linkedLinearIssueOrganizationUrlKey ?? null
     })
     setSaveError(null)
@@ -236,21 +241,10 @@ const WorktreeMetaDialog = React.memo(function WorktreeMetaDialog() {
     setSaveError(null)
     try {
       const updates = buildWorktreeMetaUpdates(draft, snapshot, liveLinks)
-      if (odooStatus.connected) {
-        const selected = odooStatus.selectedInstanceId
-        // 'all' is a view selection, not a real instance, so link against the
-        // active instance in that case.
-        const fallbackInstanceId =
-          selected && selected !== 'all' ? selected : (odooStatus.activeInstanceId ?? null)
-        Object.assign(
-          updates,
-          buildOdooTicketMetaUpdate({
-            odooInput,
-            instances: odooStatus.instances ?? [],
-            fallbackInstanceId
-          })
-        )
-      }
+      Object.assign(
+        updates,
+        buildOdooTicketMetaUpdateForStatus(odooInput, snapshot.odooInput, odooStatus)
+      )
 
       const result = await updateWorktreeMeta(worktreeId, updates)
       // Why: a failed save refetches and reverts the optimistic write. Closing

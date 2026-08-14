@@ -25,6 +25,7 @@ function makeSnapshot(overrides: Partial<WorktreeMetaSnapshot> = {}): WorktreeMe
     comment: '',
     issueInput: '',
     issueProvider: 'github',
+    odooInput: '',
     ...overrides
   }
 }
@@ -392,6 +393,41 @@ describe('buildOdooTicketMetaUpdate', () => {
     expect(
       buildOdooTicketMetaUpdate({ odooInput: '42', instances: INSTANCES, fallbackInstanceId: 'a' })
     ).toEqual({ linkedOdooTicket: 42, linkedOdooInstanceId: 'a' })
+  })
+
+  it('emits nothing when the seeded ticket id is saved untouched', () => {
+    // A comment-only save on a worktree linked to instance B, while instance A is
+    // the active one, must not rebind the link to A.
+    expect(
+      buildOdooTicketMetaUpdate({
+        odooInput: '42',
+        seededInput: '42',
+        instances: INSTANCES,
+        fallbackInstanceId: 'a'
+      })
+    ).toEqual({})
+  })
+
+  it('still resolves once the seeded ticket id is edited', () => {
+    expect(
+      buildOdooTicketMetaUpdate({
+        odooInput: '43',
+        seededInput: '42',
+        instances: INSTANCES,
+        fallbackInstanceId: 'a'
+      })
+    ).toEqual({ linkedOdooTicket: 43, linkedOdooInstanceId: 'a' })
+  })
+
+  it('clears the link when a seeded ticket id is emptied', () => {
+    expect(
+      buildOdooTicketMetaUpdate({
+        odooInput: '',
+        seededInput: '42',
+        instances: INSTANCES,
+        fallbackInstanceId: 'a'
+      })
+    ).toEqual({ linkedOdooTicket: null, linkedOdooInstanceId: null })
   })
 
   it('resolves the instance from a pasted URL origin', () => {
