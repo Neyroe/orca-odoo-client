@@ -125,3 +125,17 @@ describe('worktree RPC schemas', () => {
     expect(parsed.displayName).toBeUndefined()
   })
 })
+
+describe('linked Odoo ticket ids', () => {
+  it.each([
+    ['create', WorktreeCreate, { repo: 'repo-1', name: 'wt' }],
+    ['update', WorktreeSet, { worktree: 'id:wt-1' }]
+  ])('rejects non-positive and fractional ids on the %s path', (_label, schema, base) => {
+    // Odoo `project.task` ids are positive integers.
+    expect(schema.safeParse({ ...base, linkedOdooTicket: 72 }).success).toBe(true)
+    expect(schema.safeParse({ ...base, linkedOdooTicket: null }).success).toBe(true)
+    expect(schema.safeParse({ ...base, linkedOdooTicket: 0 }).success).toBe(false)
+    expect(schema.safeParse({ ...base, linkedOdooTicket: -5 }).success).toBe(false)
+    expect(schema.safeParse({ ...base, linkedOdooTicket: 7.5 }).success).toBe(false)
+  })
+})
