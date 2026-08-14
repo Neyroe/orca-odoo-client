@@ -32,6 +32,7 @@ export function useTaskSourceProviderReadiness(
   const linearStatusContextKey = useAppStore((s) => s.linearStatusContextKey)
   const odooStatus = useAppStore((s) => s.odooStatus)
   const odooStatusChecked = useAppStore((s) => s.odooStatusChecked)
+  const odooStatusContextKey = useAppStore((s) => s.odooStatusContextKey)
   const providerRuntimeContextKey = getProviderRuntimeContextKey(settings)
   const activeSkillRuntime = useActiveProjectSkillRuntime()
 
@@ -60,7 +61,7 @@ export function useTaskSourceProviderReadiness(
     preflightStatus.glab.authenticated === true
   const jiraChecking = jiraStatusContextKey !== providerRuntimeContextKey || !jiraStatusChecked
   const jiraConnected = !jiraChecking && jiraStatus.connected === true
-  const odooChecking = !odooStatusChecked
+  const odooChecking = odooStatusContextKey !== providerRuntimeContextKey || !odooStatusChecked
   const odooConnected = !odooChecking && odooStatus.connected === true
   const linearChecking =
     linearStatusContextKey !== providerRuntimeContextKey || !linearStatusChecked

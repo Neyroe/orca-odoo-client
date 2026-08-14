@@ -138,7 +138,9 @@ export const createOdooSlice: StateCreator<AppState, [], [], OdooSlice> = (set, 
       const scope = getOdooReadScope(get().settings, options?.sourceContext)
       const cacheKey = scopedOdooCacheKey(scope, `${instanceId ?? 'selected'}::${id}`)
       const cached = get().odooTicketCache[cacheKey]
-      if (isFresh(cached)) {
+      // Why: the focus re-read and the detail panel ask for a forced refresh; honouring
+      // the cache there pinned stage and assignee to a value up to the TTL old.
+      if (!options?.forceRefresh && isFresh(cached)) {
         return cached.data
       }
       return executeOdooRead<OdooTicket | null>({
