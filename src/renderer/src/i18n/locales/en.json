@@ -14944,11 +14944,6 @@
             "allInstances": "All instances",
             "panel": {
               "83d54e0f6a": "All instances",
-              "all_stages": "All stages",
-              "all_assignees": "All assignees",
-              "unassigned": "Unassigned",
-              "all_tags": "All tags",
-              "all_priorities": "All priorities",
               "a0b20f5246": "Search tickets by title…",
               "56db121047": "Refresh",
               "d0e1575687": "Connect Odoo",
@@ -15228,65 +15223,45 @@
       "odoo": {
         "auto": {
           "workspace": {
-            "title": "Auto-start workspaces",
-            "description": "Starts a workspace for matching tickets on each panel refresh. A ticket that already has one never starts a second.",
-            "enabled": "Enabled",
-            "needsRepo": "Pick a target project first.",
-            "repo": "Project",
-            "repoHint": "An Odoo ticket carries no repository, so the target is set here.",
-            "repoPlaceholder": "Pick a project",
-            "baseBranch": "Base branch",
-            "baseBranchHint": "Empty uses the project's default branch.",
-            "assigned": "Assigned to me",
-            "priority": "Priority",
-            "priorityHint": "Any priority when none is picked.",
-            "deadline": "Due within (days)",
-            "deadlineHint": "Overdue tickets always match. Empty ignores deadlines.",
-            "requireDescription": "Require a description",
-            "cap": "Max per refresh",
-            "capHint": "Bounds how many workspaces one over-broad rule can create.",
-            "cancel": "Cancel",
-            "save": "Save",
             "capped": "{{value0}} more matching tickets were skipped by the per-run limit.",
             "created": "Started a workspace for {{value0}}.",
-            "failed": "Could not start a workspace for {{value0}}."
+            "failed": "Could not start a workspace for {{value0}}.",
+            "dialog": {
+              "def72a8110": "Auto-start workspaces",
+              "b32ad78d76": "Starts a workspace for matching tickets on each panel refresh. A ticket that already has one never starts a second.",
+              "6183b72801": "Enabled",
+              "94e897a5f6": "Pick a target project first.",
+              "0abbef1e76": "Project",
+              "d0ee9eab4f": "An Odoo ticket carries no repository, so the target is set here.",
+              "f80f5d71fc": "Pick a project",
+              "82f5c40202": "Base branch",
+              "e383dfcbe7": "Assigned to me",
+              "71667e4cd3": "Priority",
+              "d428eeeeb6": "Any priority when none is picked.",
+              "1438887ad6": "Due within (days)",
+              "ee831d45e1": "Overdue tickets always match. Empty ignores deadlines.",
+              "3c57f063a0": "Require a description",
+              "b4667b375d": "Max per refresh",
+              "18d16befe4": "Bounds how many workspaces one over-broad rule can create.",
+              "06bb829452": "Cancel",
+              "f2040d28d3": "Save",
+              "b2506d68ee": "Empty uses the project's default branch."
+            }
           }
         },
         "ticket": {
-          "chatter": {
-            "attachment_fallback_name": "Attachment",
-            "attachment_empty": "{{fileName}} is empty.",
-            "attachment_too_large": "{{fileName}} would exceed the {{maxSize}} attachment limit.",
-            "attachment_too_many": "You can attach up to {{maxCount}} files.",
-            "attach_files": "Attach files",
-            "edit_failed": "Could not update the message.",
-            "edit_cancel": "Cancel",
-            "edit_save": "Save",
-            "edit_button": "Edit message",
-            "attachment_remove": "Remove attachment",
-            "mention_loading": "Searching people…",
-            "mention_empty": "No matching person"
-          },
           "assignee": {
             "picker": {
-              "unassigned": "Unassigned",
-              "search": "Search users…",
-              "empty": "No user matches your search."
+              "70dacd306b": "Unassigned",
+              "f803a70f1b": "Search users…",
+              "46182cac96": "No user matches your search."
             }
           },
           "workspace": {
-            "note_posted": "Note logged.",
             "8b2db83b43": "Comment posted.",
             "c243d3a215": "Could not post the comment.",
-            "compose_message": "Message",
-            "compose_note": "Log note",
-            "note_placeholder": "Log an internal note…",
             "1b5eaa43b5": "Add a comment…",
-            "log_note_button": "Log note",
-            "send_message_button": "Send message",
             "c87b4521ce": "No comments yet",
-            "note_label": "Note",
-            "message_label": "Message",
             "4411a54695": "Low",
             "bcaea799c1": "Medium",
             "2f1f13a17c": "High",
@@ -15295,7 +15270,6 @@
             "8229d636d2": "Stage",
             "9809e7ba90": "Priority",
             "4f1a1c9e6c": "Assignees",
-            "customer": "Customer",
             "57e34ae785": "Ticket updated.",
             "9311b4efd0": "Could not update the ticket.",
             "795c4960cb": "Description",
@@ -15304,21 +15278,76 @@
           },
           "filter": {
             "multi": {
-              "count": "{{value0}} +{{value1}}",
-              "empty": "Nothing to filter on."
+              "select": {
+                "93e80c55c9": "{{value0}} +{{value1}}",
+                "3a02612aab": "Nothing to filter on."
+              }
             }
           },
           "kanban": {
-            "no_stage": "No stage"
+            "7f463f2d0d": "No stage"
           },
           "pager": {
-            "previous": "Previous ticket",
-            "next": "Next ticket"
+            "a22df7a932": "Previous ticket",
+            "983fd8b806": "Next ticket"
           },
           "toolbar": {
-            "view_label": "Ticket view",
-            "view_kanban": "Kanban",
-            "view_list": "List"
+            "2fa7507b51": "Auto-start workspaces",
+            "9be2437ce8": "All stages",
+            "43754b421e": "All assignees",
+            "d60356cf84": "Unassigned",
+            "484da6b802": "All tags",
+            "7f31abc4a5": "All priorities",
+            "7d46008d09": "Ticket view",
+            "53d7b66f1b": "Kanban",
+            "a65ddcf2d6": "List"
+          },
+          "comment": {
+            "composer": {
+              "c49df753eb": "Note logged.",
+              "7c2a8f723f": "Message",
+              "04a559a66a": "Log note",
+              "ff7fc2b56e": "Log an internal note…",
+              "b8735bb0f5": "Attach files",
+              "58e1f1d8b2": "Send message"
+            },
+            "editor": {
+              "1f08f23e28": "Could not update the message.",
+              "a51eb9cb0b": "Cancel",
+              "3d15a0fae6": "Save"
+            },
+            "list": {
+              "be65a1735f": "Note",
+              "bfa6ff4ca4": "Message",
+              "ab0d9439e0": "Edit message"
+            }
+          },
+          "composer": {
+            "attachments": {
+              "3f7df129bf": "Remove attachment"
+            }
+          },
+          "header": {
+            "4d59a1b53f": "Customer"
+          },
+          "mention": {
+            "suggestions": {
+              "bddabd09c6": "Searching people…",
+              "43bd769377": "No matching person"
+            }
+          },
+          "start": {
+            "workspace": {
+              "button": {
+                "a0cf1fc429": "Couldn’t link this ticket. Reconnect Odoo or pick the matching instance, then try again.",
+                "5c1ee6b176": "Unable to open the workspace attached to this ticket.",
+                "afad57a777": "Open workspace attached to ticket",
+                "1bf8ceb7d8": "Open workspace",
+                "ca2a408c53": "More ticket workspace actions",
+                "13e2780468": "Start new workspace",
+                "961543ead1": "Start workspace from ticket"
+              }
+            }
           }
         },
         "connect": {
@@ -15336,35 +15365,40 @@
             "38baf57dd9": "Create an API key in Odoo under Preferences and Account Security.",
             "d722ded40b": "Cancel",
             "b8d4744f56": "Verifying…",
-            "ceb0150103": "Connect"
+            "ceb0150103": "Connect",
+            "0d81b37e29": "Your API key is sent to the selected remote runtime and stored there with runtime-supported encryption.",
+            "5d8ac0509d": "Your API key is stored locally and encrypted when local runtime storage supports it.",
+            "53ad73eb2d": "Connection failed"
           }
         },
         "saved": {
           "filter": {
             "menu": {
-              "title": "Saved filters",
-              "presets": "Presets",
-              "saved_section": "Saved",
-              "empty": "No saved filter yet. Set up the toolbar, save it below, then pin it to keep it in reach.",
-              "name_placeholder": "Name these filters…",
-              "save": "Save",
-              "reorder": "Reorder saved filter",
-              "toggle_pin": "Pin to the toolbar",
-              "set_default": "Use as default filter",
-              "delete": "Delete saved filter"
+              "88c6da15ed": "Saved filters",
+              "c089bd7f5d": "Presets",
+              "4008391fe0": "Saved",
+              "a9ec70f877": "No saved filter yet. Set up the toolbar, save it below, then pin it to keep it in reach.",
+              "5f484b298e": "Name these filters…",
+              "ac57de0469": "Save"
+            },
+            "row": {
+              "6cba4187fd": "Reorder saved filter",
+              "df9e217790": "Pin to the toolbar",
+              "eaec3d3a60": "Use as default filter",
+              "2e129beeed": "Delete saved filter"
+            }
+          }
+        },
+        "comment": {
+          "attachment": {
+            "draft": {
+              "afbf594adb": "Attachment",
+              "5e08ae0d00": "{{fileName}} is empty.",
+              "ee8fe5dcea": "{{fileName}} would exceed the {{maxSize}} attachment limit.",
+              "73ad77172f": "You can attach up to {{maxCount}} files."
             }
           }
         }
-      },
-      "odoo-ticket-start-workspace-button": {
-        "sourceUnavailable": "Couldn’t link this ticket. Reconnect Odoo or pick the matching instance, then try again.",
-        "openFailed": "Unable to open the workspace attached to this ticket.",
-        "openAria": "Open workspace attached to ticket",
-        "open": "Open workspace",
-        "moreAria": "More ticket workspace actions",
-        "startNew": "Start new workspace",
-        "startAria": "Start workspace from ticket",
-        "start": "Start workspace from ticket"
       }
     },
     "i18n": {

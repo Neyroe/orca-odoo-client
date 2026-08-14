@@ -162,7 +162,7 @@ export function OdooTicketCommentComposer({
       uploadedAttachmentsRef.current = null
       toast.success(
         commentIsNote
-          ? translate('auto.components.odoo.ticket.workspace.note_posted', 'Note logged.')
+          ? translate('auto.components.odoo.ticket.comment.composer.c49df753eb', 'Note logged.')
           : translate('auto.components.odoo.ticket.workspace.8b2db83b43', 'Comment posted.')
       )
       onPosted()
@@ -193,12 +193,15 @@ export function OdooTicketCommentComposer({
             {
               note: false,
               icon: <Mail className="size-3" />,
-              label: translate('auto.components.odoo.ticket.workspace.compose_message', 'Message')
+              label: translate('auto.components.odoo.ticket.comment.composer.7c2a8f723f', 'Message')
             },
             {
               note: true,
               icon: <StickyNote className="size-3" />,
-              label: translate('auto.components.odoo.ticket.workspace.compose_note', 'Log note')
+              label: translate(
+                'auto.components.odoo.ticket.comment.composer.04a559a66a',
+                'Log note'
+              )
             }
           ].map((mode) => {
             const active = commentIsNote === mode.note
@@ -248,7 +251,7 @@ export function OdooTicketCommentComposer({
             placeholder={
               commentIsNote
                 ? translate(
-                    'auto.components.odoo.ticket.workspace.note_placeholder',
+                    'auto.components.odoo.ticket.comment.composer.ff7fc2b56e',
                     'Log an internal note…'
                   )
                 : translate('auto.components.odoo.ticket.workspace.1b5eaa43b5', 'Add a comment…')
@@ -318,9 +321,12 @@ export function OdooTicketCommentComposer({
             variant="ghost"
             size="icon-sm"
             disabled={commentPosting}
-            title={translate('auto.components.odoo.ticket.chatter.attach_files', 'Attach files')}
+            title={translate(
+              'auto.components.odoo.ticket.comment.composer.b8735bb0f5',
+              'Attach files'
+            )}
             aria-label={translate(
-              'auto.components.odoo.ticket.chatter.attach_files',
+              'auto.components.odoo.ticket.comment.composer.b8735bb0f5',
               'Attach files'
             )}
             onClick={() => fileInputRef.current?.click()}
@@ -331,9 +337,9 @@ export function OdooTicketCommentComposer({
             {commentPosting ? (
               <LoaderCircle className="size-3.5 animate-spin" />
             ) : commentIsNote ? (
-              translate('auto.components.odoo.ticket.workspace.log_note_button', 'Log note')
+              translate('auto.components.odoo.ticket.comment.composer.04a559a66a', 'Log note')
             ) : (
-              translate('auto.components.odoo.ticket.workspace.send_message_button', 'Send message')
+              translate('auto.components.odoo.ticket.comment.composer.58e1f1d8b2', 'Send message')
             )}
           </Button>
         </div>

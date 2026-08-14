@@ -24,7 +24,7 @@ function renderTriggerLabel(assignees: OdooUser[]): React.JSX.Element {
   if (assignees.length === 0) {
     return (
       <span className="truncate text-muted-foreground">
-        {translate('auto.components.odoo.ticket.assignee.picker.unassigned', 'Unassigned')}
+        {translate('auto.components.odoo.ticket.assignee.picker.70dacd306b', 'Unassigned')}
       </span>
     )
   }
@@ -116,7 +116,7 @@ export function OdooTicketAssigneePicker({
   // The trigger only shows a capped avatar stack, so the full roster lives here.
   const assigneeNames =
     ticket.assignees.map((user) => user.displayName).join(', ') ||
-    translate('auto.components.odoo.ticket.assignee.picker.unassigned', 'Unassigned')
+    translate('auto.components.odoo.ticket.assignee.picker.70dacd306b', 'Unassigned')
 
   return (
     <Popover
@@ -151,7 +151,7 @@ export function OdooTicketAssigneePicker({
           <CommandInput
             autoFocus
             placeholder={translate(
-              'auto.components.odoo.ticket.assignee.picker.search',
+              'auto.components.odoo.ticket.assignee.picker.f803a70f1b',
               'Search users…'
             )}
             value={query}
@@ -166,7 +166,7 @@ export function OdooTicketAssigneePicker({
             ) : (
               <CommandEmpty>
                 {translate(
-                  'auto.components.odoo.ticket.assignee.picker.empty',
+                  'auto.components.odoo.ticket.assignee.picker.46182cac96',
                   'No user matches your search.'
                 )}
               </CommandEmpty>

@@ -7,6 +7,7 @@ import {
   odooDeadlineBadgeClass
 } from '@/components/odoo-badge-tones'
 import { cn } from '@/lib/utils'
+import { getIntlLocale } from '@/i18n/i18n'
 import type { OdooTicket } from '../../../shared/odoo-types'
 const PRIORITY_TONES: Record<string, string> = {
   '0': 'bg-muted-foreground/40',
@@ -16,7 +17,11 @@ const PRIORITY_TONES: Record<string, string> = {
 }
 
 function formatDeadline(deadline: string): string {
-  return new Date(deadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  // The app language, not the host locale, so the date matches the rest of the card.
+  return new Date(deadline).toLocaleDateString(getIntlLocale(), {
+    month: 'short',
+    day: 'numeric'
+  })
 }
 
 /**

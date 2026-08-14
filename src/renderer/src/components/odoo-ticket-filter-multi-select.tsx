@@ -15,10 +15,14 @@ function triggerLabel(selected: readonly string[], allLabel: string): string {
   const [first] = selected
   return selected.length === 1
     ? (first ?? allLabel)
-    : translate('auto.components.odoo.ticket.filter.multi.count', '{{value0}} +{{value1}}', {
-        value0: first,
-        value1: selected.length - 1
-      })
+    : translate(
+        'auto.components.odoo.ticket.filter.multi.select.93e80c55c9',
+        '{{value0}} +{{value1}}',
+        {
+          value0: first,
+          value1: selected.length - 1
+        }
+      )
 }
 
 /**
@@ -70,7 +74,10 @@ export function OdooTicketFilterMultiSelect({
         <Command shouldFilter={false}>
           <CommandList>
             <CommandEmpty>
-              {translate('auto.components.odoo.ticket.filter.multi.empty', 'Nothing to filter on.')}
+              {translate(
+                'auto.components.odoo.ticket.filter.multi.select.3a02612aab',
+                'Nothing to filter on.'
+              )}
             </CommandEmpty>
             <CommandItem
               value="__all__"

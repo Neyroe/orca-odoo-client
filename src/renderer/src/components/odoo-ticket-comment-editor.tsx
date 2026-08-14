@@ -39,7 +39,7 @@ export function OdooTicketCommentEditor({
     } catch {
       toast.error(
         translate(
-          'auto.components.odoo.ticket.chatter.edit_failed',
+          'auto.components.odoo.ticket.comment.editor.1f08f23e28',
           'Could not update the message.'
         )
       )
@@ -73,7 +73,7 @@ export function OdooTicketCommentEditor({
       />
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" size="sm" disabled={saving} onClick={onCancel}>
-          {translate('auto.components.odoo.ticket.chatter.edit_cancel', 'Cancel')}
+          {translate('auto.components.odoo.ticket.comment.editor.a51eb9cb0b', 'Cancel')}
         </Button>
         <Button
           type="button"
@@ -84,7 +84,7 @@ export function OdooTicketCommentEditor({
           {saving ? (
             <LoaderCircle className="size-3.5 animate-spin" />
           ) : (
-            translate('auto.components.odoo.ticket.chatter.edit_save', 'Save')
+            translate('auto.components.odoo.ticket.comment.editor.3d15a0fae6', 'Save')
           )}
         </Button>
       </div>

@@ -142,7 +142,7 @@ export function OdooTicketToolbar({
             options={facets.stages}
             selected={filters.stages}
             onSelectedChange={(next) => onFilterChange('stages', next)}
-            allLabel={translate('auto.components.task.page.odoo.panel.all_stages', 'All stages')}
+            allLabel={translate('auto.components.odoo.ticket.toolbar.9be2437ce8', 'All stages')}
           />
         ) : null}
         {facets.assignees.length > 0 ? (
@@ -155,14 +155,11 @@ export function OdooTicketToolbar({
             options={[
               {
                 value: 'all',
-                label: translate(
-                  'auto.components.task.page.odoo.panel.all_assignees',
-                  'All assignees'
-                )
+                label: translate('auto.components.odoo.ticket.toolbar.43754b421e', 'All assignees')
               },
               {
                 value: ODOO_UNASSIGNED_FILTER,
-                label: translate('auto.components.task.page.odoo.panel.unassigned', 'Unassigned')
+                label: translate('auto.components.odoo.ticket.toolbar.d60356cf84', 'Unassigned')
               },
               ...facets.assignees.map((option) => ({
                 value: String(option.id),
@@ -181,7 +178,7 @@ export function OdooTicketToolbar({
             options={[
               {
                 value: 'all',
-                label: translate('auto.components.task.page.odoo.panel.all_tags', 'All tags')
+                label: translate('auto.components.odoo.ticket.toolbar.484da6b802', 'All tags')
               },
               ...facets.tags.map((option) => ({ value: String(option.id), label: option.label }))
             ]}
@@ -196,10 +193,7 @@ export function OdooTicketToolbar({
           options={[
             {
               value: 'all',
-              label: translate(
-                'auto.components.task.page.odoo.panel.all_priorities',
-                'All priorities'
-              )
+              label: translate('auto.components.odoo.ticket.toolbar.7f31abc4a5', 'All priorities')
             },
             ...ODOO_PRIORITIES.map((priority) => ({
               value: priority,
@@ -240,7 +234,7 @@ export function OdooTicketToolbar({
         <div
           className="flex items-center gap-0.5 rounded-md border border-border/60 p-0.5"
           role="group"
-          aria-label={translate('auto.components.odoo.ticket.toolbar.view_label', 'Ticket view')}
+          aria-label={translate('auto.components.odoo.ticket.toolbar.7d46008d09', 'Ticket view')}
         >
           {/* Kanban leads: it is the panel's default view. */}
           <Button
@@ -248,8 +242,8 @@ export function OdooTicketToolbar({
             variant="ghost"
             size="icon"
             aria-pressed={view === 'kanban'}
-            title={translate('auto.components.odoo.ticket.toolbar.view_kanban', 'Kanban')}
-            aria-label={translate('auto.components.odoo.ticket.toolbar.view_kanban', 'Kanban')}
+            title={translate('auto.components.odoo.ticket.toolbar.53d7b66f1b', 'Kanban')}
+            aria-label={translate('auto.components.odoo.ticket.toolbar.53d7b66f1b', 'Kanban')}
             className={cn('size-6', view === 'kanban' && 'bg-accent')}
             onClick={() => onViewChange('kanban')}
           >
@@ -260,8 +254,8 @@ export function OdooTicketToolbar({
             variant="ghost"
             size="icon"
             aria-pressed={view === 'list'}
-            title={translate('auto.components.odoo.ticket.toolbar.view_list', 'List')}
-            aria-label={translate('auto.components.odoo.ticket.toolbar.view_list', 'List')}
+            title={translate('auto.components.odoo.ticket.toolbar.a65ddcf2d6', 'List')}
+            aria-label={translate('auto.components.odoo.ticket.toolbar.a65ddcf2d6', 'List')}
             className={cn('size-6', view === 'list' && 'bg-accent')}
             onClick={() => onViewChange('list')}
           >
@@ -274,13 +268,19 @@ export function OdooTicketToolbar({
               variant="ghost"
               size="icon"
               className="size-7"
+              // Tooltip content is not an accessible name, so the icon-only
+              // button carries its own label.
+              aria-label={translate(
+                'auto.components.odoo.ticket.toolbar.2fa7507b51',
+                'Auto-start workspaces'
+              )}
               onClick={() => setAutoWorkspaceOpen(true)}
             >
               <Zap className="size-3.5" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            {translate('auto.components.odoo.auto.workspace.title', 'Auto-start workspaces')}
+            {translate('auto.components.odoo.ticket.toolbar.2fa7507b51', 'Auto-start workspaces')}
           </TooltipContent>
         </Tooltip>
         <OdooAutoWorkspaceDialog
@@ -290,7 +290,13 @@ export function OdooTicketToolbar({
         />
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-7" onClick={onRefresh}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              aria-label={translate('auto.components.task.page.odoo.panel.56db121047', 'Refresh')}
+              onClick={onRefresh}
+            >
               <RefreshCw className={cn('size-3.5', loading && 'animate-spin')} />
             </Button>
           </TooltipTrigger>

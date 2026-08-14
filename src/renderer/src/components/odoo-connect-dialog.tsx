@@ -72,8 +72,14 @@ export function OdooConnectDialog({
     Boolean(apiKey.trim()) &&
     connectState !== 'connecting'
   const credentialStorageCopy = hasRemoteProviderRuntime(settings)
-    ? 'Your API key is sent to the selected remote runtime and stored there with runtime-supported encryption.'
-    : 'Your API key is stored locally and encrypted when local runtime storage supports it.'
+    ? translate(
+        'auto.components.odoo.connect.dialog.0d81b37e29',
+        'Your API key is sent to the selected remote runtime and stored there with runtime-supported encryption.'
+      )
+    : translate(
+        'auto.components.odoo.connect.dialog.5d8ac0509d',
+        'Your API key is stored locally and encrypted when local runtime storage supports it.'
+      )
 
   const clearErrorOnEdit = (): void => {
     if (connectState === 'error') {
@@ -129,7 +135,11 @@ export function OdooConnectDialog({
     } catch (error) {
       if (mountedRef.current) {
         setConnectState('error')
-        setConnectError(error instanceof Error ? error.message : 'Connection failed')
+        setConnectError(
+          error instanceof Error
+            ? error.message
+            : translate('auto.components.odoo.connect.dialog.53ad73eb2d', 'Connection failed')
+        )
       }
     }
   }
