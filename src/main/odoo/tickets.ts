@@ -106,7 +106,10 @@ export async function getTicket(
   const tickets = await forEachClient(instanceId, (client) =>
     readTickets(client, [['id', '=', id]], 1)
   )
-  return tickets[0] ?? null
+  // Why: task ids are per-database. Without an explicit instance this fans out to
+  // every connected one, and two of them can each hold an id 42 — taking the first
+  // hit would bind the workspace to the wrong ticket. Refuse the ambiguity instead.
+  return tickets.length === 1 ? (tickets[0] ?? null) : null
 }
 
 export async function createTicket(args: OdooCreateTicketArgs): Promise<OdooCreateTicketResult> {

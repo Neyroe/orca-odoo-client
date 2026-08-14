@@ -5,7 +5,11 @@ import { getSettingsForWorktreeRuntimeOwner } from '@/lib/worktree-runtime-owner
 import { useAllWorktrees } from '@/store/selectors'
 import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
-import { syncOdooBoardStatuses } from './workspace-board-odoo-status-sync'
+import { formatOdooBoardStatusSyncDescription } from './odoo-board-status-sync-report'
+import {
+  syncOdooBoardStatuses,
+  type OdooBoardStatusSyncResult
+} from './workspace-board-odoo-status-sync'
 import {
   getWorkspaceBoardTaskStatusSyncRequest,
   syncWorkspaceBoardTaskStatuses,
@@ -109,6 +113,27 @@ export function useWorkspaceStatusProviderSync(): (
     [allWorktrees]
   )
 
+  // Why: a stage that does not exist in Odoo used to fail into console.warn only,
+  // so the card moved locally and the ticket silently stayed put. Odoo now reports
+  // through the same toasts the Linear path already used.
+  const reportOdooResult = useCallback((result: OdooBoardStatusSyncResult) => {
+    if (result.failed === 0 && result.messages.length === 0) {
+      return
+    }
+    const description = formatOdooBoardStatusSyncDescription(result)
+    if (result.failed > 0) {
+      toast.error(
+        translate('auto.components.sidebar.WorkspaceKanbanDrawer.0a7e3c91bd', 'Odoo sync failed'),
+        { description }
+      )
+      return
+    }
+    toast.warning(
+      translate('auto.components.sidebar.WorkspaceKanbanDrawer.1b8f4da2ce', 'Odoo sync skipped'),
+      { description }
+    )
+  }, [])
+
   const reportResult = useCallback((result: WorkspaceBoardTaskStatusSyncResult) => {
     if (result.failed === 0 && result.messages.length === 0) {
       return
@@ -161,9 +186,16 @@ export function useWorkspaceStatusProviderSync(): (
           if (result.failed > 0) {
             console.warn('Workspace board Odoo stage sync result', result)
           }
+          reportOdooResult(result)
         })
         .catch((error: unknown) => {
           console.warn('Workspace board Odoo stage sync failed', error)
+          reportOdooResult({
+            updated: 0,
+            skipped: 0,
+            failed: request.worktreeIds.length,
+            messages: []
+          })
         })
       void syncWorkspaceBoardTaskStatuses(providerArgs)
         .then((result) => {
