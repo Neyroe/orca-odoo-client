@@ -12,7 +12,7 @@ import {
   searchTickets,
   updateTicket
 } from '../odoo/tickets'
-import { ODOO_PRIORITIES } from '../../shared/odoo-types'
+import { ODOO_PRIORITIES, ODOO_TICKET_STATES } from '../../shared/odoo-types'
 import {
   clampLimit,
   normalizeIdArray,
@@ -32,14 +32,7 @@ import type {
 } from '../../shared/odoo-types'
 const VALID_FILTERS = new Set<OdooTicketFilter>(['assigned', 'reported', 'all', 'done'])
 const VALID_PRIORITIES = new Set<OdooPriority>(ODOO_PRIORITIES)
-const VALID_STATES = new Set<OdooTicketState>([
-  '01_in_progress',
-  '02_changes_requested',
-  '03_approved',
-  '04_waiting_normal',
-  '1_done',
-  '1_canceled'
-])
+const VALID_STATES = new Set<OdooTicketState>(ODOO_TICKET_STATES)
 
 function normalizeTicketUpdate(value: unknown): OdooTicketUpdate | null {
   if (!value || typeof value !== 'object') {

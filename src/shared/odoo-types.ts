@@ -3,21 +3,24 @@
 // `project.task.type` stages. Enterprise-only `helpdesk.ticket` is not modeled.
 
 /** Odoo `project.task.priority` selection values, lowest to highest. */
-export type OdooPriority = '0' | '1' | '2' | '3'
+export const ODOO_PRIORITIES = ['0', '1', '2', '3'] as const
 
-export const ODOO_PRIORITIES: readonly OdooPriority[] = ['0', '1', '2', '3']
+export type OdooPriority = (typeof ODOO_PRIORITIES)[number]
 
 /**
  * Odoo `project.task.state` selection values. `1_done` and `1_canceled` are
  * Odoo's CLOSED_STATES; every other value counts as open.
  */
-export type OdooTicketState =
-  | '01_in_progress'
-  | '02_changes_requested'
-  | '03_approved'
-  | '04_waiting_normal'
-  | '1_done'
-  | '1_canceled'
+export const ODOO_TICKET_STATES = [
+  '01_in_progress',
+  '02_changes_requested',
+  '03_approved',
+  '04_waiting_normal',
+  '1_done',
+  '1_canceled'
+] as const
+
+export type OdooTicketState = (typeof ODOO_TICKET_STATES)[number]
 
 export const ODOO_CLOSED_STATES: readonly OdooTicketState[] = ['1_done', '1_canceled']
 

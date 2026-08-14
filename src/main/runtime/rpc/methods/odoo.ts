@@ -3,6 +3,7 @@ import {
   MAX_ODOO_ATTACHMENT_COUNT,
   ODOO_ATTACHMENT_UPLOAD_MAX_BASE64_LENGTH
 } from '../../../../shared/odoo-attachment-upload-limit'
+import { ODOO_PRIORITIES, ODOO_TICKET_STATES } from '../../../../shared/odoo-types'
 import { defineMethod, type RpcMethod } from '../core'
 import {
   OptionalFiniteNumber,
@@ -12,15 +13,6 @@ import {
 } from '../schemas'
 
 const VALID_FILTERS = ['assigned', 'reported', 'all', 'done'] as const
-const VALID_PRIORITIES = ['0', '1', '2', '3'] as const
-const VALID_STATES = [
-  '01_in_progress',
-  '02_changes_requested',
-  '03_approved',
-  '04_waiting_normal',
-  '1_done',
-  '1_canceled'
-] as const
 
 const InstanceSelection = z
   .object({
@@ -65,7 +57,7 @@ const CreateTicket = z.object({
   projectId: z.number().int().positive(),
   title: requiredString('Title is required'),
   description: OptionalPlainString,
-  priority: z.enum(VALID_PRIORITIES).optional(),
+  priority: z.enum(ODOO_PRIORITIES).optional(),
   stageId: z.number().int().positive().optional(),
   assigneeIds: z.array(z.number().int().positive()).optional()
 })
@@ -77,8 +69,8 @@ const UpdateTicket = z.object({
     title: OptionalString,
     description: OptionalString,
     stageId: z.number().int().positive().optional(),
-    priority: z.enum(VALID_PRIORITIES).optional(),
-    state: z.enum(VALID_STATES).optional(),
+    priority: z.enum(ODOO_PRIORITIES).optional(),
+    state: z.enum(ODOO_TICKET_STATES).optional(),
     assigneeIds: z.array(z.number().int().positive()).optional(),
     tagIds: z.array(z.number().int().positive()).optional(),
     deadline: z.union([z.string(), z.null()]).optional()
