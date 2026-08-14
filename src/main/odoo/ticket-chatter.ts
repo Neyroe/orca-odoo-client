@@ -18,6 +18,13 @@ import type {
   OdooMentionSuggestion,
   OdooMutationResult
 } from '../../shared/odoo-types'
+
+/**
+ * Caps one chatter read: an unbounded one transfers every body plus a base64
+ * avatar per distinct author on each refresh of a long-lived ticket.
+ */
+export const ODOO_TICKET_COMMENT_PAGE_SIZE = 200
+
 /** Resolves the session user's `res.partner` id, used to gate message edits and to attribute mentions. */
 async function resolveSessionPartnerId(client: OdooClientForInstance): Promise<number | null> {
   const rows = await executeKw<OdooRecord[]>(client, 'res.users', 'read', [[client.instance.uid]], {
@@ -251,9 +258,13 @@ export async function getTicketComments(
       ],
       {
         fields: ['id', 'body', 'date', 'author_id', 'subtype_id', 'attachment_ids'],
-        order: 'date asc'
+        // Newest-first so the cap keeps the recent page; reversed back to
+        // ascending below, which is the order the chatter panel renders.
+        order: 'date desc',
+        limit: ODOO_TICKET_COMMENT_PAGE_SIZE
       }
     )
+    rows.reverse()
 
     const distinctIds = (pick: (row: OdooRecord) => unknown): number[] => [
       ...new Set(
