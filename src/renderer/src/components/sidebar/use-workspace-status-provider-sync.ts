@@ -123,13 +123,19 @@ export function useWorkspaceStatusProviderSync(): (
     const description = formatOdooBoardStatusSyncDescription(result)
     if (result.failed > 0) {
       toast.error(
-        translate('auto.components.sidebar.WorkspaceKanbanDrawer.0a7e3c91bd', 'Odoo sync failed'),
+        translate(
+          'auto.components.sidebar.use.workspace.status.provider.sync.5af45b21e1',
+          'Odoo sync failed'
+        ),
         { description }
       )
       return
     }
     toast.warning(
-      translate('auto.components.sidebar.WorkspaceKanbanDrawer.1b8f4da2ce', 'Odoo sync skipped'),
+      translate(
+        'auto.components.sidebar.use.workspace.status.provider.sync.e82ea2f984',
+        'Odoo sync skipped'
+      ),
       { description }
     )
   }, [])

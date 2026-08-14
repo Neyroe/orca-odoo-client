@@ -8,37 +8,37 @@ export function formatOdooBoardStatusSyncMessage(message: OdooBoardStatusSyncMes
   switch (message.kind) {
     case 'ticket-read-failed':
       return translate(
-        'auto.components.sidebar.WorkspaceKanbanDrawer.a1c4e70b92',
+        'auto.components.sidebar.odoo.board.status.sync.report.4a5685040a',
         'Odoo ticket {{value0}} could not be read.',
         { value0: message.ticketRef }
       )
     case 'unmapped-status':
       return translate(
-        'auto.components.sidebar.WorkspaceKanbanDrawer.b2d5f81ca3',
+        'auto.components.sidebar.odoo.board.status.sync.report.9f53c5b352',
         'No Odoo stage is mapped to {{value0}}.',
         { value0: message.statusLabel }
       )
     case 'missing-stage':
       return translate(
-        'auto.components.sidebar.WorkspaceKanbanDrawer.c3e6a92db4',
+        'auto.components.sidebar.odoo.board.status.sync.report.e309459198',
         'Odoo has no stage named "{{value0}}" for {{value1}}.',
         { value0: message.stageName, value1: message.statusLabel }
       )
     case 'ambiguous-stage':
       return translate(
-        'auto.components.sidebar.WorkspaceKanbanDrawer.d4f7ba3ec5',
+        'auto.components.sidebar.odoo.board.status.sync.report.94098edcf0',
         'Several Odoo stages are named "{{value0}}", so {{value1}} is ambiguous.',
         { value0: message.stageName, value1: message.statusLabel }
       )
     case 'update-failed':
       return translate(
-        'auto.components.sidebar.WorkspaceKanbanDrawer.e5a8cb4fd6',
+        'auto.components.sidebar.odoo.board.status.sync.report.69cefc6a59',
         'Could not move Odoo ticket {{value0}}.',
         { value0: message.ticketRef }
       )
     case 'provider-error':
       return translate(
-        'auto.components.sidebar.WorkspaceKanbanDrawer.f6b9dc50e7',
+        'auto.components.sidebar.odoo.board.status.sync.report.3d200a7d84',
         'Could not sync Odoo ticket {{value0}}.',
         { value0: message.ticketRef }
       )
