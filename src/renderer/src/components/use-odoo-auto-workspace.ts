@@ -52,11 +52,17 @@ export function useOdooAutoWorkspace(): (tickets: readonly OdooTicket[]) => void
       // Never drop silently: a run that quietly ignored matches would read as
       // "the criteria are wrong" rather than "the cap held".
       toast.warning(
-        translate(
-          'auto.components.odoo.auto.workspace.capped',
-          '{{value0}} more matching tickets were skipped by the per-run limit.',
-          { value0: droppedByCap }
-        )
+        droppedByCap === 1
+          ? translate(
+              'auto.components.odoo.auto.workspace.capped_one',
+              '{{count}} more matching ticket was skipped by the per-run limit.',
+              { count: droppedByCap }
+            )
+          : translate(
+              'auto.components.odoo.auto.workspace.capped_other',
+              '{{count}} more matching tickets were skipped by the per-run limit.',
+              { count: droppedByCap }
+            )
       )
     }
 

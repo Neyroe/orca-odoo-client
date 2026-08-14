@@ -95,7 +95,7 @@ export default function WorkspaceKanbanSettingsMenu({
               </span>
               <span className="block text-[11px] leading-4 text-muted-foreground">
                 {translate(
-                  'auto.components.sidebar.WorkspaceKanbanSettingsMenu.sync_description',
+                  'auto.components.sidebar.WorkspaceKanbanSettingsMenu.48cdbe3cac',
                   'Moving a linked workspace updates its Linear issue status when a matching workflow state exists, and its Odoo ticket stage when the column below names one.'
                 )}
               </span>
