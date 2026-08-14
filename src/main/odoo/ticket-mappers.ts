@@ -2,6 +2,7 @@ import { chatterHtmlToMarkdown } from './chatter-html-markdown'
 import { executeKw, type OdooClientForInstance } from './json-rpc'
 import type {
   OdooCommentAttachment,
+  OdooMentionSuggestion,
   OdooPriority,
   OdooStage,
   OdooTag,
@@ -106,6 +107,31 @@ export function mapUser(raw: OdooRecord): OdooUser {
     displayName: readString(raw.name) ?? String(raw.id),
     login: readString(raw.login),
     avatarUrl: base64ImageDataUri(raw.avatar_128)
+  }
+}
+
+/**
+ * Maps a `res.users` row to a chatter mention candidate.
+ *
+ * The label is the user's own `name`, not the `partner_id` many2one's
+ * display_name: Odoo renders a company-scoped partner as "Acme, Marc Demo", and
+ * the composer only keeps a picked mention while its literal `@<name>` is still
+ * in the draft — so trimming the company prefix would silently drop the
+ * `partner_ids` entry with no feedback.
+ */
+export function mapMentionSuggestion(
+  raw: OdooRecord,
+  avatarById: ReadonlyMap<number, string>
+): OdooMentionSuggestion | null {
+  const partner = readMany2One(raw.partner_id)
+  if (!partner) {
+    return null
+  }
+  return {
+    id: partner.id,
+    name: readString(raw.name) ?? partner.name,
+    login: readString(raw.login),
+    avatarUrl: avatarById.get(partner.id)
   }
 }
 
