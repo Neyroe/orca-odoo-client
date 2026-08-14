@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { base64ImageDataUri, mapCommentAttachments, mapStage, mapUser } from './ticket-mappers'
+import {
+  base64ImageDataUri,
+  mapCommentAttachments,
+  mapMentionSuggestion,
+  mapStage,
+  mapUser
+} from './ticket-mappers'
 
 describe('base64ImageDataUri', () => {
   it('labels an Odoo SVG placeholder as svg+xml, not png', () => {
@@ -102,5 +108,47 @@ describe('mapCommentAttachments', () => {
   it('falls back to the numeric id as name when the attachment carries none', () => {
     const attachmentsById = new Map([[10, {}]])
     expect(mapCommentAttachments([10], attachmentsById, serverUrl)[0]?.name).toBe('10')
+  })
+})
+
+describe('mapMentionSuggestion', () => {
+  // Odoo returns partner_id as [id, display_name], and display_name carries the
+  // company prefix. The composer inserts the label verbatim as `@<name>`, so the
+  // prefix must not reach it.
+  const marc = {
+    id: 5,
+    name: 'Marc Demo',
+    login: 'marc',
+    partner_id: [9, 'YourCompany, Marc Demo']
+  }
+
+  it('labels the candidate with the plain user name, not the partner display name', () => {
+    expect(mapMentionSuggestion(marc, new Map())).toEqual({
+      id: 9,
+      name: 'Marc Demo',
+      login: 'marc',
+      avatarUrl: undefined
+    })
+  })
+
+  it('attaches the partner avatar when one was read', () => {
+    expect(
+      mapMentionSuggestion(marc, new Map([[9, 'data:image/png;base64,iVBORw0KGgo=']]))
+    ).toEqual({
+      id: 9,
+      name: 'Marc Demo',
+      login: 'marc',
+      avatarUrl: 'data:image/png;base64,iVBORw0KGgo='
+    })
+  })
+
+  it('falls back to the partner display name when the user has none', () => {
+    expect(mapMentionSuggestion({ ...marc, name: false }, new Map())?.name).toBe(
+      'YourCompany, Marc Demo'
+    )
+  })
+
+  it('drops a user with no partner, since partner_ids is what a mention needs', () => {
+    expect(mapMentionSuggestion({ ...marc, partner_id: false }, new Map())).toBeNull()
   })
 })

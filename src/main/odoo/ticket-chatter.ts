@@ -3,6 +3,7 @@ import { acquire, executeKw, getClients, release, type OdooClientForInstance } f
 import {
   base64ImageDataUri,
   mapCommentAttachments,
+  mapMentionSuggestion,
   readIdList,
   readMany2One,
   readString,
@@ -177,18 +178,8 @@ export async function searchMentionCandidates(
     }
 
     return users.flatMap((user) => {
-      const partner = readMany2One(user.partner_id)
-      if (!partner) {
-        return []
-      }
-      return [
-        {
-          id: partner.id,
-          name: partner.name,
-          login: readString(user.login),
-          avatarUrl: avatarById.get(partner.id)
-        }
-      ]
+      const suggestion = mapMentionSuggestion(user, avatarById)
+      return suggestion ? [suggestion] : []
     })
   } finally {
     release()
