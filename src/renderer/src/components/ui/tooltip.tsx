@@ -40,12 +40,9 @@ function TooltipContent({
       <TooltipPrimitive.Content
         data-slot="tooltip-content"
         sideOffset={sideOffset}
-        // Why: tooltip portals can be triggered from inside menus/popovers.
-        // Keep labels above those floating surfaces instead of hidden behind them.
-        // Why: the enter animation must be gated on the open states. An
-        // ungated `animate-in` keeps setting `animation-name: enter` while
-        // closing, so the exit animation never runs to completion and Radix
-        // tears the content down mid-flight.
+        // Why: tooltips portal out of menus/popovers, so z-[90] keeps them on top.
+        // Why: `animate-in` is gated on the open states; ungated it re-applies
+        // `animation-name: enter` while closing and the exit never completes.
         className={cn(
           'pointer-events-none z-[90] w-fit origin-(--radix-tooltip-content-transform-origin) rounded-md bg-foreground px-3 py-1.5 text-xs text-balance text-background',
           'fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
