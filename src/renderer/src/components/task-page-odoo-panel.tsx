@@ -395,6 +395,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
         <OdooTicketKanban
           tickets={visibleTickets}
           selectedTicketId={selectedTicket?.id ?? null}
+          selectedInstanceId={selectedTicket?.instanceId ?? null}
           showInstanceContext={instances.length > 1}
           onOpen={setSelectedTicket}
         />
