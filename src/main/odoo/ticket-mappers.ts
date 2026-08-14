@@ -1,5 +1,6 @@
 import { chatterHtmlToMarkdown } from './chatter-html-markdown'
 import { executeKw, type OdooClientForInstance } from './json-rpc'
+import { ODOO_PRIORITIES, ODOO_TICKET_STATES } from '../../shared/odoo-types'
 import type {
   OdooCommentAttachment,
   OdooMentionSuggestion,
@@ -66,28 +67,26 @@ export function base64ImageDataUri(value: unknown): string | undefined {
 }
 
 function readPriority(value: unknown): OdooPriority {
-  return value === '1' || value === '2' || value === '3' ? value : '0'
+  return ODOO_PRIORITIES.find((priority) => priority === value) ?? '0'
 }
-
-const TICKET_STATES: OdooTicketState[] = [
-  '01_in_progress',
-  '02_changes_requested',
-  '03_approved',
-  '04_waiting_normal',
-  '1_done',
-  '1_canceled'
-]
 
 function readState(value: unknown): OdooTicketState {
-  return TICKET_STATES.find((state) => state === value) ?? '01_in_progress'
+  return ODOO_TICKET_STATES.find((state) => state === value) ?? '01_in_progress'
 }
 
-/** Odoo datetimes are naive UTC strings (`YYYY-MM-DD HH:MM:SS`). */
+/**
+ * Odoo datetimes are naive UTC strings (`YYYY-MM-DD HH:MM:SS`); Date fields such
+ * as `date_deadline` are date-only, which needs a time part to stay RFC 3339.
+ */
 export function toIsoDate(value: unknown): string {
   if (typeof value !== 'string' || value.length === 0) {
     return new Date(0).toISOString()
   }
-  const normalized = value.includes('T') ? value : value.replace(' ', 'T')
+  const normalized = value.includes('T')
+    ? value
+    : value.includes(' ')
+      ? value.replace(' ', 'T')
+      : `${value}T00:00:00`
   return normalized.endsWith('Z') ? normalized : `${normalized}Z`
 }
 
