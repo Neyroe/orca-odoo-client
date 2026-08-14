@@ -109,7 +109,9 @@ export function parseSavedOdooTicketFilters(raw: string | null): OdooSavedTicket
       defaultClaimed = true
     }
   }
-  return entries.slice(0, MAX_SAVED_FILTERS)
+  // Keep the newest, matching what upsert evicts. Trimming from the other end
+  // would show the user a different set than the next save would preserve.
+  return entries.slice(-MAX_SAVED_FILTERS)
 }
 
 export function upsertSavedOdooTicketFilter(

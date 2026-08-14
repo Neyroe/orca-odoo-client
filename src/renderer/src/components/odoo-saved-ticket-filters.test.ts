@@ -117,7 +117,8 @@ describe('saved-filter cap', () => {
     expect(next[0]?.id).toBe('f1')
   })
 
-  it('keeps the first entries when a stored payload exceeds the cap', () => {
+  it('keeps the newest entries when a stored payload exceeds the cap', () => {
+    // Same end as upsert evicts from, so a read shows what the next save keeps.
     const raw = JSON.stringify(
       Array.from({ length: MAX_SAVED_FILTERS + 1 }, (_unused, index) => ({
         name: `F${index + 1}`,
@@ -127,8 +128,8 @@ describe('saved-filter cap', () => {
     )
     const parsed = parseSavedOdooTicketFilters(raw)
     expect(parsed).toHaveLength(MAX_SAVED_FILTERS)
-    expect(parsed[0]?.id).toBe('f1')
-    expect(parsed.map((entry) => entry.id)).not.toContain(`f${MAX_SAVED_FILTERS + 1}`)
+    expect(parsed.map((entry) => entry.id)).not.toContain('f1')
+    expect(parsed.at(-1)?.id).toBe(`f${MAX_SAVED_FILTERS + 1}`)
   })
 })
 
