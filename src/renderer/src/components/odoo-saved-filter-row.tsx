@@ -86,7 +86,7 @@ export function OdooSavedFilterRow({
           'size-6 shrink-0 transition-opacity',
           entry.pinned
             ? 'text-foreground opacity-100'
-            : 'text-muted-foreground opacity-0 hover:text-foreground group-hover:opacity-100'
+            : 'text-muted-foreground opacity-0 hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100'
         )}
         aria-label={translate(
           'auto.components.odoo.saved.filter.menu.toggle_pin',
@@ -105,7 +105,7 @@ export function OdooSavedFilterRow({
           'size-6 shrink-0 transition-opacity',
           entry.isDefault
             ? 'text-amber-500 opacity-100'
-            : 'text-muted-foreground opacity-0 hover:text-amber-500 group-hover:opacity-100'
+            : 'text-muted-foreground opacity-0 hover:text-amber-500 focus-visible:opacity-100 group-hover:opacity-100'
         )}
         aria-label={translate(
           'auto.components.odoo.saved.filter.menu.set_default',
@@ -119,7 +119,7 @@ export function OdooSavedFilterRow({
         type="button"
         variant="ghost"
         size="icon"
-        className="size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+        className="size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
         aria-label={translate(
           'auto.components.odoo.saved.filter.menu.delete',
           'Delete saved filter'
