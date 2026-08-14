@@ -86,7 +86,6 @@ describe.skipIf(!LIVE)('Odoo live round trips', () => {
     expect(mine, 'posted message not found when read back').toBeDefined()
     expect(mine?.attachments?.length, 'attachment did not land on the message').toBe(1)
     expect(mine?.attachments?.[0]?.name).toBe(`${RUN}.txt`)
-    // eslint-disable-next-line no-console
     console.log('ATTACHMENT PROOF', JSON.stringify(mine?.attachments))
   }, 90_000)
 
@@ -102,7 +101,6 @@ describe.skipIf(!LIVE)('Odoo live round trips', () => {
     const comments = await getTicketComments(TICKET_ID)
     const mine = comments.find((c) => c.body.includes(`Mention round trip ${RUN}`))
     expect(mine, 'mention message not found when read back').toBeDefined()
-    // eslint-disable-next-line no-console
     console.log('MENTION PROOF', JSON.stringify({ partner: target, body: mine?.body }))
   }, 90_000)
 
@@ -122,7 +120,6 @@ describe.skipIf(!LIVE)('Odoo live round trips', () => {
     const after = await getTicketComments(TICKET_ID)
     expect(after.filter((c) => c.body.includes(RUN) && c.id === target.id)).toHaveLength(1)
     expect(after.find((c) => c.id === target.id)?.body).toContain(`Edited body ${RUN}`)
-    // eslint-disable-next-line no-console
     console.log('EDIT PROOF', JSON.stringify({ id: target.id }))
   }, 90_000)
 
@@ -140,7 +137,6 @@ describe.skipIf(!LIVE)('Odoo live round trips', () => {
 
     const comments = await getTicketComments(TICKET_ID)
     expect(comments.length).toBeGreaterThan(0)
-    // eslint-disable-next-line no-console
     console.log('STAGE PROOF', JSON.stringify({ movedTo: target.name, id: target.id }))
   }, 90_000)
 })
