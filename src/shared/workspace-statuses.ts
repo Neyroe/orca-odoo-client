@@ -161,6 +161,14 @@ export function makeWorkspaceStatusId(
 /** Odoo caps `project.task.type.name` well below this; it only guards the store. */
 export const ODOO_STAGE_NAME_MAX_LENGTH = 128
 
+/** Cuts on code points so an emoji at the limit cannot persist a lone surrogate. */
+function truncateStageName(value: string): string {
+  const codePoints = Array.from(value)
+  return codePoints.length <= ODOO_STAGE_NAME_MAX_LENGTH
+    ? value
+    : codePoints.slice(0, ODOO_STAGE_NAME_MAX_LENGTH).join('')
+}
+
 function normalizeWorkspaceStatusesInternal(
   value: unknown,
   options: WorkspaceStatusNormalizationOptions
@@ -189,7 +197,7 @@ function normalizeWorkspaceStatusesInternal(
       color: sanitizeWorkspaceStatusColor(raw.color, id, label, statuses.length, options),
       icon: sanitizeWorkspaceStatusIcon(raw.icon, id, label, options),
       ...(typeof raw.odooStageName === 'string' && raw.odooStageName.trim()
-        ? { odooStageName: raw.odooStageName.trim().slice(0, ODOO_STAGE_NAME_MAX_LENGTH) }
+        ? { odooStageName: truncateStageName(raw.odooStageName.trim()) }
         : {})
     })
   }
