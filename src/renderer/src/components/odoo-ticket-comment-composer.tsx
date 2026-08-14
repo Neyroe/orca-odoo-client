@@ -10,6 +10,7 @@ import {
   type OdooMentionQuery
 } from '@/components/odoo-comment-mention-query'
 import {
+  odooAttachmentDraftSetKey,
   readOdooAttachmentAsBase64,
   validateOdooAttachmentSelection,
   type OdooAttachmentDraft
@@ -46,6 +47,11 @@ export function OdooTicketCommentComposer({
   const [attachmentDrafts, setAttachmentDrafts] = useState<OdooAttachmentDraft[]>([])
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  // Why: uploads happen before the post. Without remembering them, a failed post
+  // re-uploads the same files on the next submit and leaves an orphaned
+  // ir.attachment on the ticket for every retry. Keyed on the draft set so
+  // changing the selection invalidates it; only ever written from postComment.
+  const uploadedAttachmentsRef = useRef<{ draftKey: string; ids: number[] } | null>(null)
 
   const { suggestions, loading: mentionLoading } = useOdooMentionSuggestions(ticket, mentionQuery)
   const mentionOpen = mentionQuery !== null
@@ -111,24 +117,31 @@ export function OdooTicketCommentComposer({
     try {
       let attachmentIds: number[] | undefined
       if (attachmentDrafts.length > 0) {
-        const uploads = await Promise.all(
-          attachmentDrafts.map(async (draft) => ({
-            name: draft.name,
-            mimetype: draft.mimetype,
-            data: await readOdooAttachmentAsBase64(draft.file)
-          }))
-        )
-        const uploadResult = await odooUploadTicketAttachments(
-          settings,
-          ticket.id,
-          uploads,
-          ticket.instanceId
-        )
-        if (!uploadResult.ok) {
-          toast.error(uploadResult.error)
-          return
+        const draftKey = odooAttachmentDraftSetKey(attachmentDrafts)
+        const alreadyUploaded = uploadedAttachmentsRef.current
+        if (alreadyUploaded?.draftKey === draftKey) {
+          attachmentIds = alreadyUploaded.ids
+        } else {
+          const uploads = await Promise.all(
+            attachmentDrafts.map(async (draft) => ({
+              name: draft.name,
+              mimetype: draft.mimetype,
+              data: await readOdooAttachmentAsBase64(draft.file)
+            }))
+          )
+          const uploadResult = await odooUploadTicketAttachments(
+            settings,
+            ticket.id,
+            uploads,
+            ticket.instanceId
+          )
+          if (!uploadResult.ok) {
+            toast.error(uploadResult.error)
+            return
+          }
+          attachmentIds = uploadResult.ids
+          uploadedAttachmentsRef.current = { draftKey, ids: uploadResult.ids }
         }
-        attachmentIds = uploadResult.ids
       }
       const result = await odooAddTicketComment(
         settings,
@@ -146,6 +159,7 @@ export function OdooTicketCommentComposer({
       setCommentDraft('')
       setPickedMentions([])
       setAttachmentDrafts([])
+      uploadedAttachmentsRef.current = null
       toast.success(
         commentIsNote
           ? translate('auto.components.odoo.ticket.workspace.note_posted', 'Note logged.')
