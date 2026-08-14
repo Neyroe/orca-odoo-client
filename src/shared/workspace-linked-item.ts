@@ -1,3 +1,4 @@
+import { isTaskProvider } from './task-providers'
 import type { WorkspaceLinkedItem } from './worktree/types'
 
 export function areWorkspaceLinkedItemsEqual(
@@ -18,7 +19,9 @@ export function areWorkspaceLinkedItemsEqual(
     a.url === b.url &&
     (a.linearIdentifier ?? null) === (b.linearIdentifier ?? null) &&
     (a.jiraIdentifier ?? null) === (b.jiraIdentifier ?? null) &&
-    (a.repoId ?? null) === (b.repoId ?? null)
+    (a.repoId ?? null) === (b.repoId ?? null) &&
+    // Why: ticket ids repeat across Odoo instances.
+    (a.odooInstanceId ?? null) === (b.odooInstanceId ?? null)
   )
 }
 
@@ -27,12 +30,11 @@ export function normalizeWorkspaceLinkedItem(value: unknown): WorkspaceLinkedIte
     return null
   }
   const raw = value as Partial<WorkspaceLinkedItem>
-  if (
-    raw.provider !== 'github' &&
-    raw.provider !== 'gitlab' &&
-    raw.provider !== 'linear' &&
-    raw.provider !== 'jira'
-  ) {
+  // Why derived rather than a literal list: the hardcoded one dropped 'odoo',
+  // so every Odoo ticket failed worktree creation with "Invalid linked work
+  // item". TASK_PROVIDERS is the single source of truth, same as
+  // task-source-context.ts.
+  if (!isTaskProvider(raw.provider)) {
     return null
   }
   if (raw.type !== 'issue' && raw.type !== 'pr' && raw.type !== 'mr') {
@@ -62,6 +64,11 @@ export function normalizeWorkspaceLinkedItem(value: unknown): WorkspaceLinkedIte
       : {}),
     ...(typeof raw.repoId === 'string' && raw.repoId.trim().length > 0
       ? { repoId: raw.repoId.trim() }
+      : {}),
+    // Why: tickets are only addressable per instance; dropping this unlinks the
+    // ticket from the Odoo instance it was created against.
+    ...(typeof raw.odooInstanceId === 'string' && raw.odooInstanceId.trim().length > 0
+      ? { odooInstanceId: raw.odooInstanceId.trim() }
       : {})
   }
 }
