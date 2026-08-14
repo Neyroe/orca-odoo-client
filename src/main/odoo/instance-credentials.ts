@@ -204,12 +204,22 @@ export function deleteKey(instanceId: string): void {
   }
 }
 
+/** Thrown for a server URL Orca refuses on purpose, so `connect` can quote it. */
+export class OdooServerUrlError extends Error {}
+
 export function normalizeOdooServerUrl(serverUrl: string): string {
   const trimmed = serverUrl.trim()
   // Why: self-hosted Odoo is routinely served over plain http on a LAN or
   // localhost, so an unprefixed host cannot be assumed to be https.
   const withProtocol = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`
   const url = new URL(withProtocol)
+  // Userinfo survives `toString()` and would land in the plaintext instance
+  // file (and in `getStatus()`); the API key belongs in safeStorage only.
+  if (url.username || url.password) {
+    throw new OdooServerUrlError(
+      'Remove the credentials from the server URL — use the Login and API key fields.'
+    )
+  }
   url.pathname = url.pathname.replace(/\/+$/, '')
   url.search = ''
   url.hash = ''
