@@ -54,7 +54,7 @@ export function OdooTicketStartWorkspaceButton({
       // Why: composer drops Odoo tickets without matching source context — refuse rather than create unlinked.
       toast.error(
         translate(
-          'auto.components.odoo-ticket-start-workspace-button.sourceUnavailable',
+          'auto.components.odoo.ticket.start.workspace.button.a0cf1fc429',
           'Couldn’t link this ticket. Reconnect Odoo or pick the matching instance, then try again.'
         )
       )
@@ -96,7 +96,7 @@ export function OdooTicketStartWorkspaceButton({
     if (result === false) {
       toast.error(
         translate(
-          'auto.components.odoo-ticket-start-workspace-button.openFailed',
+          'auto.components.odoo.ticket.start.workspace.button.5c1ee6b176',
           'Unable to open the workspace attached to this ticket.'
         )
       )
@@ -120,12 +120,12 @@ export function OdooTicketStartWorkspaceButton({
               onClick={handleOpenOrUseWorkspace}
               className="gap-2"
               aria-label={translate(
-                'auto.components.odoo-ticket-start-workspace-button.openAria',
+                'auto.components.odoo.ticket.start.workspace.button.afad57a777',
                 'Open workspace attached to ticket'
               )}
             >
               {translate(
-                'auto.components.odoo-ticket-start-workspace-button.open',
+                'auto.components.odoo.ticket.start.workspace.button.1bf8ceb7d8',
                 'Open workspace'
               )}
               <ArrowRight className="size-4" />
@@ -135,7 +135,7 @@ export function OdooTicketStartWorkspaceButton({
                 type="button"
                 size="icon-sm"
                 aria-label={translate(
-                  'auto.components.odoo-ticket-start-workspace-button.moreAria',
+                  'auto.components.odoo.ticket.start.workspace.button.ca2a408c53',
                   'More ticket workspace actions'
                 )}
               >
@@ -147,7 +147,7 @@ export function OdooTicketStartWorkspaceButton({
             <DropdownMenuItem onSelect={startWorkspace}>
               <Plus className="size-4" />
               {translate(
-                'auto.components.odoo-ticket-start-workspace-button.startNew',
+                'auto.components.odoo.ticket.start.workspace.button.13e2780468',
                 'Start new workspace'
               )}
             </DropdownMenuItem>
@@ -160,12 +160,12 @@ export function OdooTicketStartWorkspaceButton({
           onClick={startWorkspace}
           className="gap-2"
           aria-label={translate(
-            'auto.components.odoo-ticket-start-workspace-button.startAria',
+            'auto.components.odoo.ticket.start.workspace.button.961543ead1',
             'Start workspace from ticket'
           )}
         >
           {translate(
-            'auto.components.odoo-ticket-start-workspace-button.start',
+            'auto.components.odoo.ticket.start.workspace.button.961543ead1',
             'Start workspace from ticket'
           )}
           <ArrowRight className="size-4" />

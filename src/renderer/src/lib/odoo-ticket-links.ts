@@ -12,8 +12,10 @@ export type OdooTicketLinkParse = {
 const RAW_INT_RE = /^\d+$/
 // `.../odoo/project/<pid>/task/<id>` — the Odoo 17 project kanban task route.
 const PROJECT_TASK_PATH_RE = /\/odoo\/project\/\d+\/task\/(\d+)/
-// `.../odoo/action-<n>/<id>` — task opened straight from a server action.
-const ACTION_PATH_RE = /\/odoo\/action-[^/]+\/(\d+)/
+// `.../odoo/action-project.<name>/<id>` — task opened straight from a project
+// action. Other action namespaces address other models, so accepting them would
+// mislink a workspace to an unrelated record id.
+const ACTION_PATH_RE = /\/odoo\/action-project[^/]*\/(\d+)/
 // Generic trailing `/task/<id>` fallback for other task-shaped routes.
 const GENERIC_TASK_PATH_RE = /\/task\/(\d+)(?:[/?#]|$)/
 

@@ -58,7 +58,7 @@ export function OdooSavedFilterRow({
         {...listeners}
         className="shrink-0 cursor-grab rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 active:cursor-grabbing"
         aria-label={translate(
-          'auto.components.odoo.saved.filter.menu.reorder',
+          'auto.components.odoo.saved.filter.row.6cba4187fd',
           'Reorder saved filter'
         )}
       >
@@ -89,7 +89,7 @@ export function OdooSavedFilterRow({
             : 'text-muted-foreground opacity-0 hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100'
         )}
         aria-label={translate(
-          'auto.components.odoo.saved.filter.menu.toggle_pin',
+          'auto.components.odoo.saved.filter.row.df9e217790',
           'Pin to the toolbar'
         )}
         onClick={() => onTogglePinned(entry.id)}
@@ -108,7 +108,7 @@ export function OdooSavedFilterRow({
             : 'text-muted-foreground opacity-0 hover:text-amber-500 focus-visible:opacity-100 group-hover:opacity-100'
         )}
         aria-label={translate(
-          'auto.components.odoo.saved.filter.menu.set_default',
+          'auto.components.odoo.saved.filter.row.eaec3d3a60',
           'Use as default filter'
         )}
         onClick={() => onSetDefault(entry.id)}
@@ -121,7 +121,7 @@ export function OdooSavedFilterRow({
         size="icon"
         className="size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
         aria-label={translate(
-          'auto.components.odoo.saved.filter.menu.delete',
+          'auto.components.odoo.saved.filter.row.2e129beeed',
           'Delete saved filter'
         )}
         onClick={() => onDelete(entry.id)}

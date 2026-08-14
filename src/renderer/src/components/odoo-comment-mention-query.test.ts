@@ -57,14 +57,15 @@ describe('applyOdooMentionSelection', () => {
     expect(result.caret).toBe(result.value.length)
   })
 
-  it('preserves text typed after the mention token', () => {
+  it('preserves text typed after the mention token without a space before punctuation', () => {
     const result = applyOdooMentionSelection(
       'hey @jo, thanks',
       7,
       { atIndex: 4, query: 'jo' },
       { id: 1, name: 'Jo' }
     )
-    expect(result.value).toBe('hey @Jo , thanks')
+    expect(result.value).toBe('hey @Jo, thanks')
+    expect(result.caret).toBe('hey @Jo'.length)
   })
 
   it('does not double a space already following the caret', () => {
@@ -86,6 +87,14 @@ describe('resolveOdooMentionMarkup', () => {
     const result = resolveOdooMentionMarkup('hey @Jo thanks', [jo])
     expect(result.body).toBe(
       'hey <a href="#" data-oe-model="res.partner" data-oe-id="1" class="o_mail_redirect">@Jo</a> thanks'
+    )
+    expect(result.partnerIds).toEqual([1])
+  })
+
+  it('still resolves a mention that punctuation follows', () => {
+    const result = resolveOdooMentionMarkup('hey @Jo, thanks', [jo])
+    expect(result.body).toBe(
+      'hey <a href="#" data-oe-model="res.partner" data-oe-id="1" class="o_mail_redirect">@Jo</a>, thanks'
     )
     expect(result.partnerIds).toEqual([1])
   })

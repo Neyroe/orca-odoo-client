@@ -34,6 +34,17 @@ describe('parseOdooTicketLink', () => {
     })
   })
 
+  it('ignores an action route for another model', () => {
+    expect(parseOdooTicketLink('https://acme.odoo.com/odoo/action-account.move/312')).toEqual({
+      id: null,
+      origin: null
+    })
+    expect(parseOdooTicketLink('acme.odoo.com/odoo/action-account.move/312')).toEqual({
+      id: null,
+      origin: null
+    })
+  })
+
   it('accepts the legacy web hash only when the model is project.task', () => {
     expect(
       parseOdooTicketLink('https://acme.odoo.com/web#id=44779&model=project.task&view_type=form')

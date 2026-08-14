@@ -88,11 +88,14 @@ export function OdooAutoWorkspaceDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {translate('auto.components.odoo.auto.workspace.title', 'Auto-start workspaces')}
+            {translate(
+              'auto.components.odoo.auto.workspace.dialog.def72a8110',
+              'Auto-start workspaces'
+            )}
           </DialogTitle>
           <DialogDescription>
             {translate(
-              'auto.components.odoo.auto.workspace.description',
+              'auto.components.odoo.auto.workspace.dialog.b32ad78d76',
               'Starts a workspace for matching tickets on each panel refresh. A ticket that already has one never starts a second.'
             )}
           </DialogDescription>
@@ -100,12 +103,12 @@ export function OdooAutoWorkspaceDialog({
 
         <div className="divide-y divide-border/60">
           <FieldRow
-            label={translate('auto.components.odoo.auto.workspace.enabled', 'Enabled')}
+            label={translate('auto.components.odoo.auto.workspace.dialog.6183b72801', 'Enabled')}
             hint={
               draft.repoId
                 ? undefined
                 : translate(
-                    'auto.components.odoo.auto.workspace.needsRepo',
+                    'auto.components.odoo.auto.workspace.dialog.94e897a5f6',
                     'Pick a target project first.'
                   )
             }
@@ -118,9 +121,9 @@ export function OdooAutoWorkspaceDialog({
           </FieldRow>
 
           <FieldRow
-            label={translate('auto.components.odoo.auto.workspace.repo', 'Project')}
+            label={translate('auto.components.odoo.auto.workspace.dialog.0abbef1e76', 'Project')}
             hint={translate(
-              'auto.components.odoo.auto.workspace.repoHint',
+              'auto.components.odoo.auto.workspace.dialog.d0ee9eab4f',
               'An Odoo ticket carries no repository, so the target is set here.'
             )}
           >
@@ -131,7 +134,7 @@ export function OdooAutoWorkspaceDialog({
               <SelectTrigger className="h-8 w-52 text-xs">
                 <SelectValue
                   placeholder={translate(
-                    'auto.components.odoo.auto.workspace.repoPlaceholder',
+                    'auto.components.odoo.auto.workspace.dialog.f80f5d71fc',
                     'Pick a project'
                   )}
                 />
@@ -147,9 +150,12 @@ export function OdooAutoWorkspaceDialog({
           </FieldRow>
 
           <FieldRow
-            label={translate('auto.components.odoo.auto.workspace.baseBranch', 'Base branch')}
+            label={translate(
+              'auto.components.odoo.auto.workspace.dialog.82f5c40202',
+              'Base branch'
+            )}
             hint={translate(
-              'auto.components.odoo.auto.workspace.baseBranchHint',
+              'auto.components.odoo.auto.workspace.dialog.b2506d68ee',
               "Empty uses the project's default branch."
             )}
           >
@@ -161,7 +167,10 @@ export function OdooAutoWorkspaceDialog({
           </FieldRow>
 
           <FieldRow
-            label={translate('auto.components.odoo.auto.workspace.assigned', 'Assigned to me')}
+            label={translate(
+              'auto.components.odoo.auto.workspace.dialog.e383dfcbe7',
+              'Assigned to me'
+            )}
           >
             <Switch
               checked={draft.criteria.assignedToMe}
@@ -170,9 +179,9 @@ export function OdooAutoWorkspaceDialog({
           </FieldRow>
 
           <FieldRow
-            label={translate('auto.components.odoo.auto.workspace.priority', 'Priority')}
+            label={translate('auto.components.odoo.auto.workspace.dialog.71667e4cd3', 'Priority')}
             hint={translate(
-              'auto.components.odoo.auto.workspace.priorityHint',
+              'auto.components.odoo.auto.workspace.dialog.d428eeeeb6',
               'Any priority when none is picked.'
             )}
           >
@@ -203,9 +212,12 @@ export function OdooAutoWorkspaceDialog({
           </FieldRow>
 
           <FieldRow
-            label={translate('auto.components.odoo.auto.workspace.deadline', 'Due within (days)')}
+            label={translate(
+              'auto.components.odoo.auto.workspace.dialog.1438887ad6',
+              'Due within (days)'
+            )}
             hint={translate(
-              'auto.components.odoo.auto.workspace.deadlineHint',
+              'auto.components.odoo.auto.workspace.dialog.ee831d45e1',
               'Overdue tickets always match. Empty ignores deadlines.'
             )}
           >
@@ -226,7 +238,7 @@ export function OdooAutoWorkspaceDialog({
 
           <FieldRow
             label={translate(
-              'auto.components.odoo.auto.workspace.requireDescription',
+              'auto.components.odoo.auto.workspace.dialog.3c57f063a0',
               'Require a description'
             )}
           >
@@ -237,23 +249,30 @@ export function OdooAutoWorkspaceDialog({
           </FieldRow>
 
           <FieldRow
-            label={translate('auto.components.odoo.auto.workspace.cap', 'Max per refresh')}
+            label={translate(
+              'auto.components.odoo.auto.workspace.dialog.b4667b375d',
+              'Max per refresh'
+            )}
             hint={translate(
-              'auto.components.odoo.auto.workspace.capHint',
+              'auto.components.odoo.auto.workspace.dialog.18d16befe4',
               'Bounds how many workspaces one over-broad rule can create.'
             )}
           >
             <Input
               type="number"
-              min={0}
+              min={1}
               max={ODOO_AUTO_WORKSPACE_MAX_PER_RUN}
               value={draft.maxPerRun}
               onChange={(event) => {
+                // `Number('')` is 0, and a cap of 0 selects no candidate at all —
+                // clearing the field must not silently disarm an enabled rule.
                 const raw = Number(event.target.value)
+                const cleared = event.target.value.trim() === ''
                 patch({
-                  maxPerRun: Number.isFinite(raw)
-                    ? Math.min(Math.max(Math.trunc(raw), 0), ODOO_AUTO_WORKSPACE_MAX_PER_RUN)
-                    : DEFAULT_ODOO_AUTO_WORKSPACE_SETTINGS.maxPerRun
+                  maxPerRun:
+                    cleared || !Number.isFinite(raw)
+                      ? DEFAULT_ODOO_AUTO_WORKSPACE_SETTINGS.maxPerRun
+                      : Math.min(Math.max(Math.trunc(raw), 1), ODOO_AUTO_WORKSPACE_MAX_PER_RUN)
                 })
               }}
               className="h-8 w-24 text-xs"
@@ -263,10 +282,10 @@ export function OdooAutoWorkspaceDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {translate('auto.components.odoo.auto.workspace.cancel', 'Cancel')}
+            {translate('auto.components.odoo.auto.workspace.dialog.06bb829452', 'Cancel')}
           </Button>
           <Button onClick={save}>
-            {translate('auto.components.odoo.auto.workspace.save', 'Save')}
+            {translate('auto.components.odoo.auto.workspace.dialog.f2040d28d3', 'Save')}
           </Button>
         </DialogFooter>
       </DialogContent>

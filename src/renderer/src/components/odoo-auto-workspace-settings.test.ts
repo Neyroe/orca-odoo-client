@@ -19,6 +19,20 @@ describe('parseOdooAutoWorkspaceSettings', () => {
     expect(parsed.repoId).toBeNull()
   })
 
+  it('treats a blank repo id as no target repo', () => {
+    const parsed = parseOdooAutoWorkspaceSettings(JSON.stringify({ enabled: true, repoId: '   ' }))
+    expect(parsed.repoId).toBeNull()
+    expect(parsed.enabled).toBe(false)
+  })
+
+  it('trims a padded repo id', () => {
+    const parsed = parseOdooAutoWorkspaceSettings(
+      JSON.stringify({ enabled: true, repoId: '  repo-1  ' })
+    )
+    expect(parsed.repoId).toBe('repo-1')
+    expect(parsed.enabled).toBe(true)
+  })
+
   it('keeps a fully configured payload', () => {
     const parsed = parseOdooAutoWorkspaceSettings(
       JSON.stringify({

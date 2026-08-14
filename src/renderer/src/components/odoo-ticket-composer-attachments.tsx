@@ -36,7 +36,7 @@ export function OdooTicketComposerAttachments({
             disabled={disabled}
             onClick={() => onRemove(draft.id)}
             aria-label={translate(
-              'auto.components.odoo.ticket.chatter.attachment_remove',
+              'auto.components.odoo.ticket.composer.attachments.3f7df129bf',
               'Remove attachment'
             )}
             className="shrink-0 rounded-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
