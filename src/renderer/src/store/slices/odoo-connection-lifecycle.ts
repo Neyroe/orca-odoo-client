@@ -42,6 +42,20 @@ type OdooConnectionLifecycle = Pick<
 
 const disconnectedStatus = (): OdooConnectionStatus => ({ connected: false, viewer: null })
 
+// Why: an instance rename, a moved server URL, or a re-auth leaves the row
+// count untouched, so comparing lengths would keep Settings on stale rows.
+const instanceSignature = (status: OdooConnectionStatus): string =>
+  JSON.stringify(
+    (status.instances ?? []).map((instance) => [
+      instance.id,
+      instance.serverUrl,
+      instance.database,
+      instance.login,
+      instance.uid,
+      instance.displayName
+    ])
+  )
+
 export function createOdooConnectionLifecycle({
   set,
   get,
@@ -70,7 +84,7 @@ export function createOdooConnectionLifecycle({
           prev.credentialError !== status.credentialError ||
           prev.viewer?.login !== status.viewer?.login ||
           getSelectedOdooInstanceId(prev) !== getSelectedOdooInstanceId(status) ||
-          (prev.instances?.length ?? 0) !== (status.instances?.length ?? 0)
+          instanceSignature(prev) !== instanceSignature(status)
         ) {
           set({ odooStatus: status, odooStatusChecked: true, odooStatusContextKey: contextKey })
         } else if (!get().odooStatusChecked || get().odooStatusContextKey !== contextKey) {

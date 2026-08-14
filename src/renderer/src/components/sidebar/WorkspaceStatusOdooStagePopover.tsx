@@ -3,13 +3,7 @@ import { Check, LoaderCircle } from 'lucide-react'
 
 import { OdooIcon } from '@/components/icons/OdooIcon'
 import { Button } from '@/components/ui/button'
-import {
-  Command,
-  CommandEmpty,
-  CommandInput,
-  CommandItem,
-  CommandList
-} from '@/components/ui/command'
+import { Command, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/store'
@@ -34,6 +28,8 @@ export default function WorkspaceStatusOdooStagePopover({
   const [query, setQuery] = useState('')
   const [names, setNames] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [failed, setFailed] = useState(false)
+  const [retryToken, setRetryToken] = useState(0)
 
   // Fetched on open rather than on mount: the settings menu renders one of
   // these per column, and none of them is worth a read until it is used.
@@ -43,13 +39,20 @@ export default function WorkspaceStatusOdooStagePopover({
     }
     let cancelled = false
     setLoading(true)
+    setFailed(false)
     void odooListStageNames(useAppStore.getState().settings, null)
       .then((rows) => {
         if (!cancelled) {
           setNames(rows)
         }
       })
-      .catch(() => undefined)
+      // A failed read must not look like "this instance has no stages": without
+      // a distinct state the list would silently render as empty.
+      .catch(() => {
+        if (!cancelled) {
+          setFailed(true)
+        }
+      })
       .finally(() => {
         if (!cancelled) {
           setLoading(false)
@@ -58,7 +61,7 @@ export default function WorkspaceStatusOdooStagePopover({
     return () => {
       cancelled = true
     }
-  }, [open, settings])
+  }, [open, settings, retryToken])
 
   const mapped = status.odooStageName?.trim() ?? ''
   const lowered = query.trim().toLowerCase()
@@ -88,17 +91,17 @@ export default function WorkspaceStatusOdooStagePopover({
           title={
             mapped
               ? translate(
-                  'auto.components.sidebar.WorkspaceStatusOdooStagePopover.mapped',
+                  'auto.components.sidebar.WorkspaceStatusOdooStagePopover.3f922ca608',
                   'Odoo stage: {{value0}}',
                   { value0: mapped }
                 )
               : translate(
-                  'auto.components.sidebar.WorkspaceStatusOdooStagePopover.pick',
+                  'auto.components.sidebar.WorkspaceStatusOdooStagePopover.fa5cb01247',
                   'Link an Odoo stage'
                 )
           }
           aria-label={translate(
-            'auto.components.sidebar.WorkspaceStatusOdooStagePopover.pick',
+            'auto.components.sidebar.WorkspaceStatusOdooStagePopover.fa5cb01247',
             'Link an Odoo stage'
           )}
         >
@@ -117,7 +120,7 @@ export default function WorkspaceStatusOdooStagePopover({
         {!odooConnected ? (
           <p className="px-3 py-3 text-[11px] text-muted-foreground">
             {translate(
-              'auto.components.sidebar.WorkspaceStatusOdooStagePopover.disconnected',
+              'auto.components.sidebar.WorkspaceStatusOdooStagePopover.433bed4d29',
               'Connect Odoo to pick a stage.'
             )}
           </p>
@@ -128,24 +131,47 @@ export default function WorkspaceStatusOdooStagePopover({
               value={query}
               onValueChange={setQuery}
               placeholder={translate(
-                'auto.components.sidebar.WorkspaceStatusOdooStagePopover.search',
+                'auto.components.sidebar.WorkspaceStatusOdooStagePopover.60dd4d219d',
                 'Search stages…'
               )}
               className="text-xs"
             />
             <CommandList>
+              {/* Rendered by hand rather than through CommandEmpty: the list
+                  always carries the "no stage" item, so cmdk never sees an
+                  empty result set. */}
               {loading && names.length === 0 ? (
                 <div className="flex items-center justify-center py-4">
                   <LoaderCircle className="size-4 animate-spin text-muted-foreground" />
                 </div>
-              ) : (
-                <CommandEmpty>
+              ) : failed ? (
+                <div className="flex flex-col items-center gap-1 py-3 text-[11px] text-muted-foreground">
+                  <span>
+                    {translate(
+                      'auto.components.sidebar.WorkspaceStatusOdooStagePopover.2c61457ed8',
+                      'Could not load stages.'
+                    )}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => setRetryToken((token) => token + 1)}
+                  >
+                    {translate(
+                      'auto.components.sidebar.WorkspaceStatusOdooStagePopover.49dcc01885',
+                      'Retry'
+                    )}
+                  </Button>
+                </div>
+              ) : options.length === 0 ? (
+                <div className="py-4 text-center text-[11px] text-muted-foreground">
                   {translate(
-                    'auto.components.sidebar.WorkspaceStatusOdooStagePopover.empty',
+                    'auto.components.sidebar.WorkspaceStatusOdooStagePopover.db8a7f7ae0',
                     'No stage matches.'
                   )}
-                </CommandEmpty>
-              )}
+                </div>
+              ) : null}
               <CommandItem
                 value="__none__"
                 onSelect={() => {
@@ -162,7 +188,7 @@ export default function WorkspaceStatusOdooStagePopover({
                 />
                 <span className="text-muted-foreground">
                   {translate(
-                    'auto.components.sidebar.WorkspaceStatusOdooStagePopover.none',
+                    'auto.components.sidebar.WorkspaceStatusOdooStagePopover.1282a439d8',
                     'No stage (do not sync)'
                   )}
                 </span>

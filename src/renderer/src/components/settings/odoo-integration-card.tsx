@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { AlertCircle, CheckCircle2, LoaderCircle, Unlink } from 'lucide-react'
+import { toast } from 'sonner'
 import { OdooConnectDialog } from '@/components/odoo-connect-dialog'
 import { OdooIcon } from '@/components/icons/OdooIcon'
 import { Button } from '@/components/ui/button'
@@ -51,8 +52,21 @@ export function OdooIntegrationCard({ className }: { className?: string }): Reac
   const subordinateRowClass = useIntegrationSubordinateRowClass('flex items-center gap-3')
   const accountScopeRowClass = useIntegrationSubordinateRowClass('text-xs')
 
+  // Why: `disconnectOdoo` rethrows runtime failures, and the click handler
+  // discards the promise — without this the user sees nothing at all.
   const handleDisconnect = async (instanceId?: string): Promise<void> => {
-    await disconnectOdoo(instanceId)
+    try {
+      await disconnectOdoo(instanceId)
+    } catch (error) {
+      toast.error(
+        translate(
+          'auto.components.settings.odoo.integration.card.disconnectFailed',
+          'Could not disconnect Odoo.'
+        ),
+        { description: error instanceof Error ? error.message : undefined }
+      )
+      return
+    }
     if (mountedRef.current) {
       setTestResultByInstance({})
     }
@@ -102,7 +116,14 @@ export function OdooIntegrationCard({ className }: { className?: string }): Reac
       }
       checking={checking}
       statusTone={connected ? 'connected' : 'attention'}
-      statusLabel={connected ? 'Connected' : 'Not connected'}
+      statusLabel={
+        connected
+          ? translate('auto.components.settings.odoo.integration.card.statusConnected', 'Connected')
+          : translate(
+              'auto.components.settings.odoo.integration.card.statusNotConnected',
+              'Not connected'
+            )
+      }
       actions={
         !checking ? (
           <Button
