@@ -7,10 +7,12 @@ import { OdooTicketCommentEditor } from '@/components/odoo-ticket-comment-editor
 import { OdooUserAvatar } from '@/components/odoo-user-avatar'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { translate } from '@/i18n/i18n'
+import { getIntlLocale, translate } from '@/i18n/i18n'
 import type { OdooComment, OdooTicket } from '../../../shared/odoo-types'
 function formatCommentDate(createdAt: string): string {
-  return new Date(createdAt).toLocaleString(undefined, {
+  // The app language, not the host locale, so the timestamp matches the labels
+  // rendered next to it.
+  return new Date(createdAt).toLocaleString(getIntlLocale(), {
     dateStyle: 'medium',
     timeStyle: 'short'
   })
@@ -80,8 +82,8 @@ export function OdooTicketCommentList({
                     <Mail className="size-2.5" />
                   )}
                   {comment.isNote
-                    ? translate('auto.components.odoo.ticket.workspace.note_label', 'Note')
-                    : translate('auto.components.odoo.ticket.workspace.message_label', 'Message')}
+                    ? translate('auto.components.odoo.ticket.comment.list.be65a1735f', 'Note')
+                    : translate('auto.components.odoo.ticket.comment.list.bfa6ff4ca4', 'Message')}
                 </span>
               </div>
               <div className="flex shrink-0 items-center gap-1">
@@ -93,16 +95,19 @@ export function OdooTicketCommentList({
                         type="button"
                         onClick={() => setEditingId(comment.id)}
                         aria-label={translate(
-                          'auto.components.odoo.ticket.chatter.edit_button',
+                          'auto.components.odoo.ticket.comment.list.ab0d9439e0',
                           'Edit message'
                         )}
-                        className="rounded-sm p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+                        className="rounded-sm p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
                       >
                         <Pencil className="size-3" />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="top" sideOffset={4}>
-                      {translate('auto.components.odoo.ticket.chatter.edit_button', 'Edit message')}
+                      {translate(
+                        'auto.components.odoo.ticket.comment.list.ab0d9439e0',
+                        'Edit message'
+                      )}
                     </TooltipContent>
                   </Tooltip>
                 ) : null}

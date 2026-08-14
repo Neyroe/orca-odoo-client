@@ -22,7 +22,7 @@ export function odooStageCountElementId(column: OdooTicketStageColumn): string {
 
 function columnLabel(column: OdooTicketStageColumn): string {
   return column.stageId === null
-    ? translate('auto.components.odoo.ticket.kanban.no_stage', 'No stage')
+    ? translate('auto.components.odoo.ticket.kanban.7f463f2d0d', 'No stage')
     : column.name
 }
 

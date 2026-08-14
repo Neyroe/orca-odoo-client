@@ -20,7 +20,14 @@ const ODOO_COLOR_BADGES: readonly string[] = [
 
 /** Badge classes for an Odoo color index (tags carry these directly). */
 export function odooColorBadgeClass(color: number | undefined): string {
-  if (typeof color !== 'number' || color < 0 || color >= ODOO_COLOR_BADGES.length) {
+  // Integer check, not just a range check: NaN and fractional indexes would slip
+  // through and make the array lookup return undefined.
+  if (
+    color === undefined ||
+    !Number.isInteger(color) ||
+    color < 0 ||
+    color >= ODOO_COLOR_BADGES.length
+  ) {
     return ODOO_COLOR_BADGES[0]
   }
   return ODOO_COLOR_BADGES[color]

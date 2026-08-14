@@ -171,7 +171,7 @@ export function OdooTicketHeader({
                 ODOO_CUSTOMER_BADGE_CLASS
               )}
             >
-              {translate('auto.components.odoo.ticket.workspace.customer', 'Customer')}:{' '}
+              {translate('auto.components.odoo.ticket.header.4d59a1b53f', 'Customer')}:{' '}
               <span className="truncate">{ticket.customer.name}</span>
             </span>
           ) : null}

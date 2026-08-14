@@ -29,12 +29,18 @@ export function OdooTicketMentionSuggestions({
       {loading && suggestions.length === 0 ? (
         <div className="flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground">
           <LoaderCircle className="size-3.5 animate-spin" />
-          {translate('auto.components.odoo.ticket.chatter.mention_loading', 'Searching people…')}
+          {translate(
+            'auto.components.odoo.ticket.mention.suggestions.bddabd09c6',
+            'Searching people…'
+          )}
         </div>
       ) : null}
       {!loading && suggestions.length === 0 ? (
         <div className="px-2 py-1.5 text-xs text-muted-foreground">
-          {translate('auto.components.odoo.ticket.chatter.mention_empty', 'No matching person')}
+          {translate(
+            'auto.components.odoo.ticket.mention.suggestions.43bd769377',
+            'No matching person'
+          )}
         </div>
       ) : null}
       {suggestions.map((candidate, index) => (

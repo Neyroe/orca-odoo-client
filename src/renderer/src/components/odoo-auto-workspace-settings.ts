@@ -83,7 +83,9 @@ export function parseOdooAutoWorkspaceSettings(raw: string | null): OdooAutoWork
   if (!isRecord(parsed)) {
     return DEFAULT_ODOO_AUTO_WORKSPACE_SETTINGS
   }
-  const repoId = typeof parsed.repoId === 'string' && parsed.repoId ? parsed.repoId : null
+  // A whitespace-only id is no target at all, so normalise it away before the
+  // `enabled` gate below reads it.
+  const repoId = typeof parsed.repoId === 'string' ? parsed.repoId.trim() || null : null
   const maxPerRun = Number.isSafeInteger(parsed.maxPerRun) ? (parsed.maxPerRun as number) : 3
   return {
     // Why: no target repo means nothing can be created, so treat it as off
