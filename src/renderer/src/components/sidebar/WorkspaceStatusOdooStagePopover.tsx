@@ -67,9 +67,11 @@ export default function WorkspaceStatusOdooStagePopover({
   const lowered = query.trim().toLowerCase()
   const visible = lowered ? names.filter((name) => name.toLowerCase().includes(lowered)) : names
   // A previously mapped stage may not exist any more (renamed, module removed);
-  // keeping it listed lets the user see and clear it. Gate on `names` rather than
-  // `visible`, or it reappears in searches it does not match.
-  const options = mapped && !names.includes(mapped) ? [mapped, ...visible] : visible
+  // keeping it listed lets the user see and clear it. It still has to match the
+  // query — cmdk runs with shouldFilter={false}, so nothing else would drop it.
+  const mappedMatches = !lowered || mapped.toLowerCase().includes(lowered)
+  const options =
+    mapped && !names.includes(mapped) && mappedMatches ? [mapped, ...visible] : visible
 
   return (
     <Popover
