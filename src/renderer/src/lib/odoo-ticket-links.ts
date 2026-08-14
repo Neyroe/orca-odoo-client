@@ -89,7 +89,10 @@ export function parseOdooTicketLink(input: string): OdooTicketLinkParse {
   }
   if (url) {
     const id = idFromOdooUrl(url)
-    return { id, origin: id !== null ? url.origin.toLowerCase() : null }
+    // A non-special scheme (`mycompany:8069/...`) parses but has the literal
+    // string `'null'` as its origin; the contract here is a real origin or null.
+    const origin = url.origin === 'null' ? null : url.origin.toLowerCase()
+    return { id, origin: id !== null ? origin : null }
   }
   // Protocol-less paste: still recover a ticket id, but there is no origin to
   // match, so instance resolution falls back to the selected instance.

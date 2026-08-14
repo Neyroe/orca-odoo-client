@@ -20,6 +20,7 @@ import {
   getOdooReadScope,
   getSelectedOdooInstanceId,
   isFresh,
+  looksLikeOdooAuthError,
   scopedOdooCacheKey,
   shouldRefreshOdooStatusAfterRead,
   type InflightOdooRead,
@@ -43,8 +44,7 @@ function listReadFallback(error: unknown): OdooTicket[] {
   // Credential/auth failures surface through connection state, so they keep
   // the empty-list contract. Other failures (network, 5xx, bad domain) reject
   // so the Tasks panel shows a real error, not a misleading "No tickets".
-  const message = error instanceof Error ? error.message : String(error)
-  if (/AccessDenied|rejected the credentials|authenticat|unauthorized|401|decrypt/i.test(message)) {
+  if (looksLikeOdooAuthError(error)) {
     return []
   }
   throw error
