@@ -87,9 +87,9 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   const maybeStartOdooAutoWorkspaces = useOdooAutoWorkspace()
   const forceNextReadRef = useRef(false)
   // Read inside the interval callback, which must not re-subscribe on every
-  // load toggle.
+  // load toggle. Mirrored in an effect rather than assigned during render:
+  // render must stay pure, React may replay or discard it.
   const loadingRef = useRef(false)
-  loadingRef.current = loading
   // The signed-in user seeds the assignee filter, but only once: switching
   // preset afterwards must not silently re-narrow the list back to them.
   // A starred filter is an explicit choice, so it outranks the viewer seed.
@@ -149,6 +149,10 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   }, [checkOdooConnection])
 
   useEffect(() => {
+    loadingRef.current = loading
+  }, [loading])
+
+  useEffect(() => {
     if (!odooStatus.connected) {
       return
     }
@@ -189,7 +193,8 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
     appliedSearch,
     refreshNonce,
     listOdooTickets,
-    searchOdooTickets
+    searchOdooTickets,
+    maybeStartOdooAutoWorkspaces
   ])
 
   // Unattended refresh. Reuses the Refresh button's exact path (force the next

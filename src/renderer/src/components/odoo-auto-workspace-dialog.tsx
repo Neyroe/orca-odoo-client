@@ -157,7 +157,6 @@ export function OdooAutoWorkspaceDialog({
             <Input
               value={draft.baseBranch}
               onChange={(event) => patch({ baseBranch: event.target.value })}
-              placeholder="main"
               className="h-8 w-52 text-xs"
             />
           </FieldRow>

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import { LoaderCircle, Mail, Paperclip, StickyNote } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -51,18 +51,23 @@ export function OdooTicketCommentComposer({
   const { suggestions, loading: mentionLoading } = useOdooMentionSuggestions(ticket, mentionQuery)
   const mentionOpen = mentionQuery !== null
 
-  const addAttachmentFiles = (files: readonly File[]): void => {
-    const existingBytes = attachmentDrafts.reduce((total, draft) => total + draft.size, 0)
-    const { accepted, errors } = validateOdooAttachmentSelection(
-      files,
-      attachmentDrafts.length,
-      existingBytes
-    )
-    if (accepted.length > 0) {
-      setAttachmentDrafts((prev) => [...prev, ...accepted])
-    }
-    errors.forEach((message) => toast.error(message))
-  }
+  // useCallback: the drop hook keeps this in a dependency, so a fresh
+  // function each render would re-subscribe the window listener every time.
+  const addAttachmentFiles = useCallback(
+    (files: readonly File[]): void => {
+      const existingBytes = attachmentDrafts.reduce((total, draft) => total + draft.size, 0)
+      const { accepted, errors } = validateOdooAttachmentSelection(
+        files,
+        attachmentDrafts.length,
+        existingBytes
+      )
+      if (accepted.length > 0) {
+        setAttachmentDrafts((prev) => [...prev, ...accepted])
+      }
+      errors.forEach((message) => toast.error(message))
+    },
+    [attachmentDrafts]
+  )
 
   const { isDragActive, contentRef, dragHandlers } = useOdooCommentFileDrop(
     true,

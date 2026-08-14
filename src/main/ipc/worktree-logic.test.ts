@@ -511,6 +511,8 @@ describe('mergeWorktree', () => {
       linkedBitbucketPR: null,
       linkedAzureDevOpsPR: null,
       linkedGiteaPR: null,
+      linkedOdooTicket: null,
+      linkedOdooInstanceId: null,
       linkedWorkItem: null,
       linkedTaskSourceContext: null,
       mobileDiffReview: undefined,
