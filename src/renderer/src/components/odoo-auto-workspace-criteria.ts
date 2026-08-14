@@ -1,5 +1,4 @@
-import type { OdooPriority, OdooTicket } from '../../../shared/types'
-
+import type { OdooPriority, OdooTicket } from '../../../shared/odoo-types'
 /**
  * Which loaded tickets deserve a workspace of their own, without asking.
  *

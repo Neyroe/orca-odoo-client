@@ -13,8 +13,7 @@ import type {
   OdooInstance,
   OdooInstanceSelection,
   OdooViewer
-} from '../../shared/types'
-
+} from '../../shared/odoo-types'
 type OdooInstanceFile = {
   version: 1
   activeInstanceId: string | null

@@ -29,8 +29,7 @@ import type {
   OdooTicketFilter,
   OdooTicketState,
   OdooTicketUpdate
-} from '../../shared/types'
-
+} from '../../shared/odoo-types'
 const VALID_FILTERS = new Set<OdooTicketFilter>(['assigned', 'reported', 'all', 'done'])
 const VALID_PRIORITIES = new Set<OdooPriority>(ODOO_PRIORITIES)
 const VALID_STATES = new Set<OdooTicketState>([

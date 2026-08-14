@@ -1,5 +1,4 @@
-import type { WorkspaceLinkedItem } from '../../../shared/types'
-
+import type { WorkspaceLinkedItem } from '../../../shared/worktree/types'
 export type OdooWorktreeLinkFields = {
   linkedOdooTicket: number
   linkedOdooInstanceId: string | null

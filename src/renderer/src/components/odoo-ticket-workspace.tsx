@@ -15,8 +15,12 @@ import { getProviderRuntimeContextKey } from '@/lib/provider-runtime-context'
 import { useAppStore } from '@/store'
 import { odooListStages, odooTicketComments, odooUpdateTicket } from '@/runtime/runtime-odoo-client'
 import { translate } from '@/i18n/i18n'
-import type { OdooComment, OdooStage, OdooTicket, OdooTicketUpdate } from '../../../shared/types'
-
+import type {
+  OdooComment,
+  OdooStage,
+  OdooTicket,
+  OdooTicketUpdate
+} from '../../../shared/odoo-types'
 type OdooTicketPosition = { index: number; total: number }
 
 type OdooTicketWorkspaceProps = {

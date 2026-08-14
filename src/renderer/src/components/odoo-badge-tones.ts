@@ -1,5 +1,4 @@
-import type { OdooStage } from '../../../shared/types'
-
+import type { OdooStage } from '../../../shared/odoo-types'
 // Odoo kanban color indexes (0-11). Index 0 is "no color" → neutral. The rest
 // mirror Odoo's palette order (red, orange, yellow, cyan, purple, …) as soft
 // badge tints. Data-viz colors like these sit outside the token set on purpose,

@@ -1,7 +1,6 @@
 import { getLinkedWorkItemSuggestedName } from '@/lib/new-workspace'
 import { slugifyForWorkspaceName } from '../../../shared/workspace-name'
-import type { OdooTicket } from '../../../shared/types'
-
+import type { OdooTicket } from '../../../shared/odoo-types'
 /** Mirrors getJiraIssueWorkspaceSeed's spirit (identifier + subject), using
  *  the ticket's `ref` (e.g. `#42`) in place of Jira's issue key. */
 export function getOdooTicketWorkspaceSeed(ticket: OdooTicket): string {

@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { resolveDashboardCardOdooTicket } from './dashboard-card-context'
-import type { Worktree } from '../../../../shared/types'
-
+import type { Worktree } from '../../../../shared/worktree/types'
 function worktree(overrides: Partial<Worktree>): Worktree {
   return { ...(overrides as Worktree) }
 }

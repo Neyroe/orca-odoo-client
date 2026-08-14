@@ -19,8 +19,12 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
-import type { OdooPriority, OdooStage, OdooTicket, OdooTicketUpdate } from '../../../shared/types'
-
+import type {
+  OdooPriority,
+  OdooStage,
+  OdooTicket,
+  OdooTicketUpdate
+} from '../../../shared/odoo-types'
 function getPriorityOptions(): { id: OdooPriority; label: string }[] {
   return [
     { id: '0', label: translate('auto.components.odoo.ticket.workspace.4411a54695', 'Low') },

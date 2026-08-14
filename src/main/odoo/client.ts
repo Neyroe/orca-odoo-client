@@ -16,8 +16,7 @@ import type {
   OdooInstance,
   OdooInstanceSelection,
   OdooViewer
-} from '../../shared/types'
-
+} from '../../shared/odoo-types'
 export { getStatus, normalizeOdooServerUrl } from './instance-credentials'
 export { isAuthError, OdooApiError, executeKw, acquire, release } from './json-rpc'
 export type { OdooClientForInstance } from './json-rpc'

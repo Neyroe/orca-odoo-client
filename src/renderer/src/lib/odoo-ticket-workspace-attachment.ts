@@ -1,4 +1,4 @@
-import type { Worktree } from '../../../shared/types'
+import type { Worktree } from '../../../shared/worktree/types'
 import { getWorktreeAttachmentLabel } from './worktree-attachment-label'
 
 /** Mirrors findGithubIssueWorkspaceAttachment: a ticket is only addressable

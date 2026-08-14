@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { useAppStore } from '@/store'
 import { odooSearchMentionCandidates } from '@/runtime/runtime-odoo-client'
-import type { OdooMentionSuggestion, OdooTicket } from '../../../shared/types'
+import type { OdooMentionSuggestion, OdooTicket } from '../../../shared/odoo-types'
 import type { OdooMentionQuery } from './odoo-comment-mention-query'
 
 const MENTION_SEARCH_DEBOUNCE_MS = 200

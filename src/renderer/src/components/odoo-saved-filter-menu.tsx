@@ -25,8 +25,7 @@ import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
-import type { OdooTicketFilter } from '../../../shared/types'
-
+import type { OdooTicketFilter } from '../../../shared/odoo-types'
 /** Recall, save and delete named preset+facet combinations for the ticket list. */
 export function OdooSavedFilterMenu({
   saved,

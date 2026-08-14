@@ -3,8 +3,7 @@ import {
   type OdooAutoWorkspaceCriteria
 } from './odoo-auto-workspace-criteria'
 import { ODOO_PRIORITIES } from '../../../shared/odoo-types'
-import type { OdooPriority } from '../../../shared/types'
-
+import type { OdooPriority } from '../../../shared/odoo-types'
 const STORAGE_KEY = 'odoo.autoWorkspace'
 /** Hard ceiling regardless of what is stored: a bad criterion must not be able
  *  to spawn an unbounded number of worktrees on one refresh. */

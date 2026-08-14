@@ -24,8 +24,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import { ODOO_PRIORITIES } from '../../../shared/odoo-types'
-import type { OdooInstance, OdooPriority, OdooTicketFilter } from '../../../shared/types'
-
+import type { OdooInstance, OdooPriority, OdooTicketFilter } from '../../../shared/odoo-types'
 export type OdooTicketToolbarProps = {
   presets: { id: OdooTicketFilter; label: string }[]
   preset: OdooTicketFilter

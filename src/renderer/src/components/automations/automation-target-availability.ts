@@ -12,7 +12,9 @@ import type { AutomationHostTarget } from './automation-host-client'
 import type { SshConnectionState } from '../../../../shared/ssh-types'
 import type { TaskSourceContext } from '../../../../shared/task-source-context'
 import type { RuntimeStatus } from '../../../../shared/runtime-types'
-import type { ProjectHostSetup, Repo, Worktree } from '../../../../shared/types'
+import type { ProjectHostSetup } from '../../../../shared/project-types'
+import type { Repo } from '../../../../shared/repo-types'
+import type { Worktree } from '../../../../shared/worktree/types'
 import type { TaskSourceHostAvailability } from '../task-source-context-summary'
 
 export type AutomationTargetAvailability =
@@ -249,19 +251,18 @@ function getAutomationSourceAvailability(
   return null
 }
 
+// Record rather than a switch: adding a provider without its label becomes a
+// compile error instead of a silently missing branch.
+const AUTOMATION_SOURCE_PROVIDER_LABELS: Record<TaskSourceContext['provider'], string> = {
+  github: 'GitHub',
+  gitlab: 'GitLab',
+  linear: 'Linear',
+  jira: 'Jira',
+  odoo: 'Odoo'
+}
+
 function getAutomationSourceProviderLabel(provider: TaskSourceContext['provider']): string {
-  switch (provider) {
-    case 'github':
-      return 'GitHub'
-    case 'gitlab':
-      return 'GitLab'
-    case 'linear':
-      return 'Linear'
-    case 'jira':
-      return 'Jira'
-    case 'odoo':
-      return 'Odoo'
-  }
+  return AUTOMATION_SOURCE_PROVIDER_LABELS[provider]
 }
 
 function getRuntimeAutomationAvailability(

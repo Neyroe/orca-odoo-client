@@ -1,7 +1,6 @@
 import { Paperclip } from 'lucide-react'
 
-import type { OdooCommentAttachment } from '../../../shared/types'
-
+import type { OdooCommentAttachment } from '../../../shared/odoo-types'
 /** Attachments already posted on a chatter message; click opens them via the OS handler. */
 export function OdooTicketCommentAttachmentList({
   attachments

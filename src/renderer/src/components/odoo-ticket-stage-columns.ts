@@ -1,5 +1,4 @@
-import type { OdooTicket } from '../../../shared/types'
-
+import type { OdooTicket } from '../../../shared/odoo-types'
 /** Column key for tickets carrying no stage (private todos, for instance). */
 export const ODOO_NO_STAGE_COLUMN = '__no_stage__'
 

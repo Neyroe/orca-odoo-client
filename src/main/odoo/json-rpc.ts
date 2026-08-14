@@ -1,8 +1,7 @@
 import { net, session } from 'electron'
 import { ensureElectronProxyFromEnvironment } from '../network/proxy-settings'
 import { withSpan } from '../observability/tracer'
-import type { OdooInstance } from '../../shared/types'
-
+import type { OdooInstance } from '../../shared/odoo-types'
 const MAX_CONCURRENT = 4
 let running = 0
 const queue: (() => void)[] = []

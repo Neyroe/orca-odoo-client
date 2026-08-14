@@ -28,8 +28,7 @@ import { Switch } from '@/components/ui/switch'
 import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
 import { ODOO_PRIORITIES } from '../../../shared/odoo-types'
-import type { OdooPriority } from '../../../shared/types'
-
+import type { OdooPriority } from '../../../shared/odoo-types'
 function FieldRow({
   label,
   hint,

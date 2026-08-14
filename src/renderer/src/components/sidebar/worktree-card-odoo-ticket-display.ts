@@ -1,6 +1,7 @@
 import { translate } from '@/i18n/i18n'
 import type { OdooTicket } from '../../../../shared/odoo-types'
-import type { Worktree, WorktreeCardProperty } from '../../../../shared/types'
+import type { Worktree } from '../../../../shared/worktree/types'
+import type { WorktreeCardProperty } from '../../../../shared/ui-chrome-types'
 import type { WorktreeCardOdooTicketDisplay } from './worktree-card-meta-types'
 
 /**

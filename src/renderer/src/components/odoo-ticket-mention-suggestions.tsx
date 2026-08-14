@@ -3,8 +3,7 @@ import { LoaderCircle } from 'lucide-react'
 import { OdooUserAvatar } from '@/components/odoo-user-avatar'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
-import type { OdooMentionSuggestion } from '../../../shared/types'
-
+import type { OdooMentionSuggestion } from '../../../shared/odoo-types'
 /**
  * Floating `@` mention picker anchored above the composer textarea. Follows the
  * hand-rolled inline-suggestion pattern used for GitHub @mentions in

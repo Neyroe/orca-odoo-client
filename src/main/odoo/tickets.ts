@@ -25,8 +25,7 @@ import type {
   OdooTicketFilter,
   OdooTicketUpdate,
   OdooUser
-} from '../../shared/types'
-
+} from '../../shared/odoo-types'
 type OdooDomain = unknown[]
 
 // Why: mirrors the domain on Odoo's own My/All Tasks actions, which hide

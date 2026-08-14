@@ -5,7 +5,7 @@ import type {
   OdooAttachmentUpload,
   OdooMentionSuggestion,
   OdooMutationResult
-} from '../../../shared/types'
+} from '../../../shared/odoo-types'
 import { describeOdooAttachmentUploadOverLimit } from '../../../shared/odoo-attachment-upload-limit'
 import { callRuntimeRpc } from './runtime-rpc-client'
 import { isRuntimeProviderSearchQueryWithinLimit } from './runtime-provider-search-bounds'

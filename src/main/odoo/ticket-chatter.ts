@@ -16,8 +16,7 @@ import type {
   OdooInstanceSelection,
   OdooMentionSuggestion,
   OdooMutationResult
-} from '../../shared/types'
-
+} from '../../shared/odoo-types'
 /** Resolves the session user's `res.partner` id, used to gate message edits and to attribute mentions. */
 async function resolveSessionPartnerId(client: OdooClientForInstance): Promise<number | null> {
   const rows = await executeKw<OdooRecord[]>(client, 'res.users', 'read', [[client.instance.uid]], {

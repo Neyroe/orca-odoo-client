@@ -13,7 +13,7 @@ import type {
   OdooTicketUpdate,
   OdooUser,
   OdooViewer
-} from '../../../shared/types'
+} from '../../../shared/odoo-types'
 import { callRuntimeRpc } from './runtime-rpc-client'
 import { isRuntimeProviderSearchQueryWithinLimit } from './runtime-provider-search-bounds'
 import { getOdooRuntimeTarget, type RuntimeOdooSettings } from './odoo-runtime-target'

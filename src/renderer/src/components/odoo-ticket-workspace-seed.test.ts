@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { getOdooTicketWorkspaceSeed } from './odoo-ticket-workspace-seed'
-import type { OdooTicket } from '../../../shared/types'
-
+import type { OdooTicket } from '../../../shared/odoo-types'
 function ticket(overrides: Partial<OdooTicket> = {}): OdooTicket {
   return {
     id: 42,

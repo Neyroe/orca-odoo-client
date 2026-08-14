@@ -3,8 +3,8 @@ import {
   normalizeTaskSourceContext,
   type TaskSourceContext
 } from '../../../shared/task-source-context'
-import type { GlobalSettings, OdooInstance, OdooTicket } from '../../../shared/types'
-
+import type { GlobalSettings } from '../../../shared/global-settings-types'
+import type { OdooInstance, OdooTicket } from '../../../shared/odoo-types'
 /** Mirrors bindTaskPageJiraItemSourceContext: the composer refuses to link a
  *  work item whose source identity can't be resolved, so this looks up the
  *  exact instance the ticket belongs to rather than trusting whichever

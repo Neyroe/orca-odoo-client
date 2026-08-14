@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button'
 import { useAppStore } from '@/store'
 import { odooUpdateTicketComment } from '@/runtime/runtime-odoo-client'
 import { translate } from '@/i18n/i18n'
-import type { OdooComment, OdooTicket } from '../../../shared/types'
-
+import type { OdooComment, OdooTicket } from '../../../shared/odoo-types'
 /** Inline edit form for an existing chatter message; Odoo-style pencil-to-textarea swap. */
 export function OdooTicketCommentEditor({
   comment,

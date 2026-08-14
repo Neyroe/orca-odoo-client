@@ -1,5 +1,4 @@
-import type { OdooPriority, OdooTicket } from '../../../shared/types'
-
+import type { OdooPriority, OdooTicket } from '../../../shared/odoo-types'
 export type OdooTicketFacetOption = { id: number; label: string }
 
 export type OdooTicketFacets = {

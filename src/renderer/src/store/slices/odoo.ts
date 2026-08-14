@@ -6,7 +6,7 @@ import type {
   OdooTicket,
   OdooTicketFilter,
   OdooViewer
-} from '../../../../shared/types'
+} from '../../../../shared/odoo-types'
 import type { CacheEntry } from './github'
 import { odooGetTicket, odooListTickets, odooSearchTickets } from '@/runtime/runtime-odoo-client'
 import {

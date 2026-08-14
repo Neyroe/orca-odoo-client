@@ -12,8 +12,7 @@ import {
   type WorkspaceBoardTaskStatusSyncMessage,
   type WorkspaceBoardTaskStatusSyncResult
 } from './workspace-board-task-status-sync'
-import type { WorkspaceStatus } from '../../../../shared/types'
-
+import type { WorkspaceStatus } from '../../../../shared/worktree/types'
 export function formatTaskStatusSyncMessage(message: WorkspaceBoardTaskStatusSyncMessage): string {
   switch (message.kind) {
     case 'issue-read-failed':

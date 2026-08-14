@@ -2,7 +2,7 @@
 // deduplication, and mutation/context generations. Jira inlines this pattern
 // per method; Odoo centralizes it so each slice read stays a thin wrapper.
 import type { AppState } from '../types'
-import type { OdooConnectionStatus, OdooInstanceSelection } from '../../../../shared/types'
+import type { OdooConnectionStatus, OdooInstanceSelection } from '../../../../shared/odoo-types'
 import type { CacheEntry } from './github'
 import { isIntegrationCredentialDecryptionError } from '../../../../shared/integration-credential-errors'
 import { getProviderRuntimeContextKey } from '@/lib/provider-runtime-context'

@@ -7,8 +7,8 @@ import { selectOdooAutoWorkspaceCandidates } from '@/components/odoo-auto-worksp
 import { readOdooAutoWorkspaceSettings } from '@/components/odoo-auto-workspace-settings'
 import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
-import type { OdooTicket, WorkspaceLinkedItem } from '../../../shared/types'
-
+import type { OdooTicket } from '../../../shared/odoo-types'
+import type { WorkspaceLinkedItem } from '../../../shared/worktree/types'
 /**
  * Starts a workspace for freshly loaded tickets that match the configured
  * criteria, without asking.

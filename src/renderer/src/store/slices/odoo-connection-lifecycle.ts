@@ -3,7 +3,7 @@
 // owns one concern (reads vs. connection state).
 import type { StoreApi } from 'zustand'
 import type { AppState } from '../types'
-import type { OdooConnectionStatus } from '../../../../shared/types'
+import type { OdooConnectionStatus } from '../../../../shared/odoo-types'
 // Type-only import: erased at compile time, so no runtime cycle with odoo.ts.
 import type { OdooSlice } from './odoo'
 import {

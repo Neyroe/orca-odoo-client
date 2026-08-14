@@ -5,8 +5,7 @@ import {
   matchesOdooAutoWorkspaceCriteria,
   selectOdooAutoWorkspaceCandidates
 } from './odoo-auto-workspace-criteria'
-import type { OdooTicket } from '../../../shared/types'
-
+import type { OdooTicket } from '../../../shared/odoo-types'
 const NOW = Date.parse('2026-08-13T12:00:00Z')
 
 function ticket(overrides: Partial<OdooTicket> = {}): OdooTicket {

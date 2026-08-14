@@ -15,8 +15,7 @@ import { cn } from '@/lib/utils'
 import { useAppStore } from '@/store'
 import { odooListStageNames } from '@/runtime/runtime-odoo-client'
 import { translate } from '@/i18n/i18n'
-import type { WorkspaceStatusDefinition } from '../../../../shared/types'
-
+import type { WorkspaceStatusDefinition } from '../../../../shared/worktree/types'
 /**
  * Picks the Odoo stage a board column maps to, from the stage names that
  * actually exist in the instance. Typing a name by hand was too easy to get

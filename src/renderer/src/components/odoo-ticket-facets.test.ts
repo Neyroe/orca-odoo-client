@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { deriveOdooTicketFacets, filterOdooTickets } from './odoo-ticket-facets'
-import type { OdooTicket } from '../../../shared/types'
-
+import type { OdooTicket } from '../../../shared/odoo-types'
 function ticket(overrides: Partial<OdooTicket>): OdooTicket {
   return {
     id: 1,

@@ -37,8 +37,7 @@ import {
   shouldRunScheduledOdooRefresh
 } from '@/components/odoo-ticket-panel-refresh-schedule'
 import { translate } from '@/i18n/i18n'
-import type { OdooTicket, OdooTicketFilter } from '../../../shared/types'
-
+import type { OdooTicket, OdooTicketFilter } from '../../../shared/odoo-types'
 const VIEW_STORAGE_KEY = 'odoo.ticketPanelView'
 
 // Kanban is the default: the stage columns are what the panel is for, and the

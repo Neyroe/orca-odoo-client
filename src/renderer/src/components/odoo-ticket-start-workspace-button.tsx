@@ -19,8 +19,8 @@ import { activateAndRevealWorktree } from '@/lib/worktree-activation'
 import { useAllWorktrees } from '@/store/selectors'
 import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
-import type { OdooTicket, WorkspaceLinkedItem } from '../../../shared/types'
-
+import type { OdooTicket } from '../../../shared/odoo-types'
+import type { WorkspaceLinkedItem } from '../../../shared/worktree/types'
 /** Reproduces the "Start workspace" control from GitHubItemDialog's
  *  GHEditSection for an Odoo ticket: a plain start button, or — once a
  *  workspace is attached — an Open/Start-new split button. */

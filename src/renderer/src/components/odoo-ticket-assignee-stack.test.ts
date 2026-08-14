@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { ODOO_ASSIGNEE_STACK_CAP, buildAssigneeStack } from './odoo-ticket-assignee-stack'
-import type { OdooUser } from '../../../shared/types'
-
+import type { OdooUser } from '../../../shared/odoo-types'
 function user(id: number): OdooUser {
   return { id, displayName: `User ${id}` }
 }

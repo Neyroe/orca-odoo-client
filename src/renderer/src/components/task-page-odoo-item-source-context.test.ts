@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { bindTaskPageOdooItemSourceContext } from './task-page-odoo-item-source-context'
-import type { OdooInstance, OdooTicket } from '../../../shared/types'
-
+import type { OdooInstance, OdooTicket } from '../../../shared/odoo-types'
 function ticket(overrides: Partial<OdooTicket> = {}): OdooTicket {
   return {
     id: 42,

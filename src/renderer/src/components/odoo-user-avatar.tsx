@@ -1,6 +1,5 @@
 import { cn } from '@/lib/utils'
-import type { OdooUser } from '../../../shared/types'
-
+import type { OdooUser } from '../../../shared/odoo-types'
 function initials(name: string): string {
   const trimmed = name.trim()
   return trimmed ? trimmed.slice(0, 1).toUpperCase() : '?'

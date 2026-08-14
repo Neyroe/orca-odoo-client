@@ -7,8 +7,7 @@ import {
   odooDeadlineBadgeClass
 } from '@/components/odoo-badge-tones'
 import { cn } from '@/lib/utils'
-import type { OdooTicket } from '../../../shared/types'
-
+import type { OdooTicket } from '../../../shared/odoo-types'
 const PRIORITY_TONES: Record<string, string> = {
   '0': 'bg-muted-foreground/40',
   '1': 'bg-sky-500/80',

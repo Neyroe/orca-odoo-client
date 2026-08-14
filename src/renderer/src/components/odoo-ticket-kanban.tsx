@@ -9,8 +9,7 @@ import {
 import { odooStageBadgeClass } from '@/components/odoo-badge-tones'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
-import type { OdooTicket } from '../../../shared/types'
-
+import type { OdooTicket } from '../../../shared/odoo-types'
 /** Stable DOM id for a stage column's ticket-count pill, so it can be targeted. */
 export function odooStageCountElementId(columnKey: string): string {
   return `odoo-stage-count-${columnKey === ODOO_NO_STAGE_COLUMN ? 'no-stage' : columnKey}`

@@ -23,8 +23,7 @@ import { cn } from '@/lib/utils'
 import { useAppStore } from '@/store'
 import { odooAddTicketComment, odooUploadTicketAttachments } from '@/runtime/runtime-odoo-client'
 import { translate } from '@/i18n/i18n'
-import type { OdooMentionSuggestion, OdooTicket } from '../../../shared/types'
-
+import type { OdooMentionSuggestion, OdooTicket } from '../../../shared/odoo-types'
 /** Composer with a Message / Log note toggle mirroring Odoo's chatter tabs. */
 export function OdooTicketCommentComposer({
   ticket,

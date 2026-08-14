@@ -1,8 +1,7 @@
 // Shared arg-normalization for the Odoo IPC surface (odoo.ts and
 // odoo-ticket-chatter.ts) — split out so neither handler file has to
 // duplicate these small, security-relevant coercions.
-import type { OdooInstanceSelection } from '../../shared/types'
-
+import type { OdooInstanceSelection } from '../../shared/odoo-types'
 export function normalizeInstanceId(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined
 }

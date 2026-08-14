@@ -8,8 +8,7 @@ import { OdooUserAvatar } from '@/components/odoo-user-avatar'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
-import type { OdooComment, OdooTicket } from '../../../shared/types'
-
+import type { OdooComment, OdooTicket } from '../../../shared/odoo-types'
 function formatCommentDate(createdAt: string): string {
   return new Date(createdAt).toLocaleString(undefined, {
     dateStyle: 'medium',

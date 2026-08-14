@@ -4,13 +4,8 @@ import {
   odooUpdateTicket,
   type RuntimeOdooSettings
 } from '@/runtime/runtime-odoo-client'
-import type {
-  OdooStage,
-  OdooTicket,
-  WorkspaceStatusDefinition,
-  Worktree
-} from '../../../../shared/types'
-
+import type { OdooStage, OdooTicket } from '../../../../shared/odoo-types'
+import type { WorkspaceStatusDefinition, Worktree } from '../../../../shared/worktree/types'
 export type OdooBoardStatusSyncResult = {
   updated: number
   skipped: number

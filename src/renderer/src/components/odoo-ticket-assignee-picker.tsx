@@ -17,8 +17,7 @@ import { cn } from '@/lib/utils'
 import { useAppStore } from '@/store'
 import { odooListAssignableUsers } from '@/runtime/runtime-odoo-client'
 import { translate } from '@/i18n/i18n'
-import type { OdooTicket, OdooUser } from '../../../shared/types'
-
+import type { OdooTicket, OdooUser } from '../../../shared/odoo-types'
 const SEARCH_DEBOUNCE_MS = 250
 
 function renderTriggerLabel(assignees: OdooUser[]): React.JSX.Element {

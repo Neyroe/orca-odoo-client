@@ -1,6 +1,5 @@
 import { DEFAULT_ODOO_TICKET_FILTERS, type OdooTicketListFilters } from './odoo-ticket-facets'
-import type { OdooTicketFilter } from '../../../shared/types'
-
+import type { OdooTicketFilter } from '../../../shared/odoo-types'
 const STORAGE_KEY = 'odoo.savedTicketFilters'
 // Separate marker so an empty list means "the user cleared them", not "never
 // seeded" — otherwise deleting the seeded entries would bring them straight back.

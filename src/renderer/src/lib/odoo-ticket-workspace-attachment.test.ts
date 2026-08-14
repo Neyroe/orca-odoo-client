@@ -4,8 +4,7 @@ import {
   findOdooTicketWorkspaceAttachment,
   getOdooTicketWorkspaceAttachmentLabel
 } from './odoo-ticket-workspace-attachment'
-import type { Worktree } from '../../../shared/types'
-
+import type { Worktree } from '../../../shared/worktree/types'
 function worktree(overrides: Partial<Worktree> = {}): Worktree {
   return {
     id: overrides.id ?? 'wt-1',

@@ -8,8 +8,7 @@ import type {
   OdooTicket,
   OdooTicketState,
   OdooUser
-} from '../../shared/types'
-
+} from '../../shared/odoo-types'
 export type OdooRecord = Record<string, unknown>
 
 export const TICKET_FIELDS = [

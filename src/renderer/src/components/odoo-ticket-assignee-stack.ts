@@ -1,5 +1,4 @@
-import type { OdooUser } from '../../../shared/types'
-
+import type { OdooUser } from '../../../shared/odoo-types'
 /** Beyond this the stack turns into `+N` so a crowded ticket cannot widen the header. */
 export const ODOO_ASSIGNEE_STACK_CAP = 3
 

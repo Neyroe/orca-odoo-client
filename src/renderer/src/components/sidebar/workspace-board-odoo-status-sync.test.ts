@@ -8,8 +8,8 @@ import {
   type OdooBoardStatusSyncDependencies,
   type SyncOdooBoardStatusArgs
 } from './workspace-board-odoo-status-sync'
-import type { OdooStage, OdooTicket, WorkspaceStatusDefinition } from '../../../../shared/types'
-
+import type { OdooStage, OdooTicket } from '../../../../shared/odoo-types'
+import type { WorkspaceStatusDefinition } from '../../../../shared/worktree/types'
 function stage(id: number, name: string): OdooStage {
   return { id, name, sequence: id, fold: false }
 }

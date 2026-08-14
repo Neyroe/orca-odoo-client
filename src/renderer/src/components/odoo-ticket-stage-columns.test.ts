@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { deriveOdooTicketStageColumns, ODOO_NO_STAGE_COLUMN } from './odoo-ticket-stage-columns'
-import type { OdooTicket } from '../../../shared/types'
-
+import type { OdooTicket } from '../../../shared/odoo-types'
 function ticket(id: number, stage?: OdooTicket['stage']): OdooTicket {
   return {
     id,

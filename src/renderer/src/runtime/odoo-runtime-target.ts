@@ -5,8 +5,7 @@ import {
   getTaskSourceRuntimeSettings,
   type TaskSourceContext
 } from '../../../shared/task-source-context'
-import type { GlobalSettings } from '../../../shared/types'
-
+import type { GlobalSettings } from '../../../shared/global-settings-types'
 export type RuntimeOdooSettings =
   | Pick<GlobalSettings, 'activeRuntimeEnvironmentId'>
   | TaskSourceContext

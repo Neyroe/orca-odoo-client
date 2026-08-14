@@ -7,8 +7,7 @@ import {
   uploadTicketAttachments
 } from '../odoo/ticket-chatter'
 import { normalizeIdArray, normalizeInstanceId, normalizeRecordId } from './odoo-ipc-args'
-import type { OdooAttachmentUpload } from '../../shared/types'
-
+import type { OdooAttachmentUpload } from '../../shared/odoo-types'
 /** Registers the ticket-chatter slice of the Odoo IPC surface: comments, @mentions, attachments. */
 export function registerOdooTicketChatterHandlers(): void {
   ipcMain.handle(
