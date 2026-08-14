@@ -13,7 +13,7 @@ import {
   taskProviderIdentityCachePart,
   type TaskProviderIdentity
 } from './task-provider-identity'
-import type { TaskProvider } from './task-providers'
+import { isTaskProvider, type TaskProvider } from './task-providers'
 import type { GlobalSettings, Repo } from './types'
 
 export type {
@@ -202,17 +202,11 @@ function getRepoHostId(repo: Pick<Repo, 'connectionId' | 'executionHostId'>): Ex
   return connectionId ? toSshExecutionHostId(connectionId) : LOCAL_EXECUTION_HOST_ID
 }
 
+// Why derived rather than a switch: this list silently dropped 'odoo' during a
+// rebase, which made every Odoo task source context normalize to null. Reusing
+// the single TASK_PROVIDERS source of truth makes that drift impossible.
 function normalizeTaskProvider(value: unknown): TaskProvider | null {
-  switch (value) {
-    case 'github':
-    case 'gitlab':
-    case 'linear':
-    case 'jira':
-    case 'odoo':
-      return value
-    default:
-      return null
-  }
+  return isTaskProvider(value) ? value : null
 }
 
 function normalizeNonEmptyString(value: unknown): string | null {
