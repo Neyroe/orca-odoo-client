@@ -5,6 +5,7 @@ import {
   getInstanceId,
   getStatus,
   normalizeOdooServerUrl,
+  OdooServerUrlError,
   readKey,
   saveKey,
   writeInstanceFile
@@ -73,8 +74,11 @@ export async function connect(
   let serverUrl: string
   try {
     serverUrl = normalizeOdooServerUrl(args.serverUrl)
-  } catch {
-    return { ok: false, error: 'Enter a valid Odoo server URL.' }
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof OdooServerUrlError ? error.message : 'Enter a valid Odoo server URL.'
+    }
   }
 
   const database = args.database.trim()
