@@ -111,4 +111,43 @@ describe('WorkspaceStatusOdooStagePopover', () => {
     expect(content()?.textContent).toContain('No stage matches.')
     expect(content()?.textContent).not.toContain('Could not load stages.')
   })
+
+  // A stage the server no longer returns is kept so the user can clear it, but
+  // cmdk runs with shouldFilter={false}, so nothing else keeps it out of a
+  // search it does not match.
+  it('hides a retained mapped stage from searches it does not match', async () => {
+    mocks.listStageNames.mockResolvedValue(['In Progress', 'Done'])
+    const { default: WorkspaceStatusOdooStagePopover } =
+      await import('./WorkspaceStatusOdooStagePopover')
+    await act(async () =>
+      root.render(
+        <WorkspaceStatusOdooStagePopover
+          status={{ ...status, odooStageName: 'Retired stage' }}
+          onChange={vi.fn()}
+        />
+      )
+    )
+    const trigger = document.querySelector<HTMLButtonElement>(
+      'button[aria-label="Link an Odoo stage"]'
+    )
+    await act(async () => {
+      trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    expect(content()?.textContent).toContain('Retired stage')
+
+    const search = content()?.querySelector('input')
+    if (!search) {
+      throw new Error('Missing stage search input')
+    }
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set?.call(
+        search,
+        'Done'
+      )
+      search.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+
+    expect(content()?.textContent).toContain('Done')
+    expect(content()?.textContent).not.toContain('Retired stage')
+  })
 })
