@@ -6,6 +6,7 @@ import {
 } from '../../../../shared/automation-precheck'
 import { normalizeExecutionHostId } from '../../../../shared/execution-host'
 import type { TaskProviderIdentity as SharedTaskProviderIdentity } from '../../../../shared/task-source-context'
+import { isTaskProvider, TASK_PROVIDERS } from '../../../../shared/task-providers'
 import { isTuiAgent } from '../../../../shared/tui-agent-config'
 import { defineMethod, type RpcMethod } from '../core'
 import {
@@ -54,13 +55,16 @@ const OptionalNullablePlainString = z
   .pipe(z.union([z.string(), z.null(), z.undefined()]))
   .optional()
 
+// Why derived rather than inline lists: both checks kept 'odoo' out while the
+// shared TaskSourceContext type gained it, so an Odoo-sourced automation was
+// unreachable over RPC. TASK_PROVIDERS is the single source of truth.
 const TaskProviderIdentity = z
   .custom<SharedTaskProviderIdentity>(
     (value) =>
       value !== null &&
       typeof value === 'object' &&
       'provider' in value &&
-      ['github', 'gitlab', 'linear', 'jira'].includes(String(value.provider))
+      isTaskProvider(value.provider)
   )
   .optional()
   .nullable()
@@ -68,7 +72,7 @@ const TaskProviderIdentity = z
 const TaskSourceContext = z
   .object({
     kind: z.literal('task-source'),
-    provider: z.enum(['github', 'gitlab', 'linear', 'jira']),
+    provider: z.enum(TASK_PROVIDERS),
     projectId: requiredString('Missing source project id'),
     hostId: ExecutionHostId,
     projectHostSetupId: OptionalNullablePlainString,
