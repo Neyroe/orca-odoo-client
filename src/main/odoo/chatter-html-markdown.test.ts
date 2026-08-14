@@ -96,3 +96,29 @@ describe('mention link round-trip', () => {
     )
   })
 })
+
+describe('attribute matching', () => {
+  it('reads the real href, not a `data-*` attribute that ends in the same name', () => {
+    // Odoo's editor emits data-orig-href on pasted links; without a left
+    // boundary the first regex hit in the tag was the prefixed attribute.
+    expect(
+      chatterHtmlToMarkdown(
+        '<p><a data-orig-href="https://tracker.example/redirect" href="https://odoo.com">le site</a></p>'
+      )
+    ).toBe('[le site](https://odoo.com)')
+  })
+
+  it('does not treat a `data-class` attribute as the mention marker class', () => {
+    expect(
+      chatterHtmlToMarkdown(
+        '<p><a data-class="o_mail_redirect" data-oe-model="res.partner" href="https://odoo.com">Nom</a></p>'
+      )
+    ).toBe('[Nom](https://odoo.com)')
+  })
+
+  it('still reads an attribute that opens the tag', () => {
+    expect(chatterHtmlToMarkdown('<p><img src="https://odoo.com/a.png" alt="shot"></p>')).toBe(
+      '![shot](https://odoo.com/a.png)'
+    )
+  })
+})
