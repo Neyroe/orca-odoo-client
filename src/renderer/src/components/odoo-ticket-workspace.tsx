@@ -86,6 +86,11 @@ export function OdooTicketWorkspace({
 }: OdooTicketWorkspaceProps): React.JSX.Element {
   const [panelWidth, setPanelWidth] = useState(readStoredPanelWidth)
   const widthRef = useRef(panelWidth)
+  const endResizeRef = useRef<(() => void) | null>(null)
+
+  // Why: a drag interrupted by unmount would otherwise leave the window
+  // listeners attached and `user-select: none` stuck on the whole app.
+  useEffect(() => () => endResizeRef.current?.(), [])
 
   const startResize = (event: React.PointerEvent): void => {
     event.preventDefault()
@@ -101,11 +106,15 @@ export function OdooTicketWorkspace({
     const onUp = (): void => {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+      endResizeRef.current = null
       document.body.style.userSelect = ''
       window.localStorage.setItem(PANEL_WIDTH_KEY, String(Math.round(widthRef.current)))
     }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    endResizeRef.current = onUp
   }
 
   return (
