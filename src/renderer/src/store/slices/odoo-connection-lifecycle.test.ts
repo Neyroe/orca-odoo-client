@@ -81,6 +81,18 @@ describe('checkOdooConnection instance comparison', () => {
     await harness.checkOdooConnection()
     const baseline = harness.setCount()
 
+    // One field at a time: changing both at once would still pass if the
+    // signature dropped either of them.
+    mocks.odooStatus.mockResolvedValue({
+      connected: true,
+      viewer: null,
+      instances: [instance({ displayName: 'Production EU' })]
+    })
+    await harness.checkOdooConnection()
+
+    expect(harness.setCount()).toBe(baseline + 1)
+    expect(harness.state().odooStatus.instances?.[0]?.displayName).toBe('Production EU')
+
     mocks.odooStatus.mockResolvedValue({
       connected: true,
       viewer: null,
@@ -88,8 +100,7 @@ describe('checkOdooConnection instance comparison', () => {
     })
     await harness.checkOdooConnection()
 
-    expect(harness.setCount()).toBe(baseline + 1)
-    expect(harness.state().odooStatus.instances?.[0]?.displayName).toBe('Production EU')
+    expect(harness.setCount()).toBe(baseline + 2)
     expect(harness.state().odooStatus.instances?.[0]?.serverUrl).toBe('https://eu.example.test')
   })
 

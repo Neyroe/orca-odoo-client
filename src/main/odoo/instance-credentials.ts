@@ -209,10 +209,16 @@ export class OdooServerUrlError extends Error {}
 
 export function normalizeOdooServerUrl(serverUrl: string): string {
   const trimmed = serverUrl.trim()
-  // Why: self-hosted Odoo is routinely served over plain http on a LAN or
-  // localhost, so an unprefixed host cannot be assumed to be https.
-  const withProtocol = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`
+  // Why https by default: `connect` sends the API key to whatever this resolves
+  // to, so an unprefixed host must not silently downgrade to plaintext. Plain
+  // http stays available for LAN and localhost, but only when typed explicitly.
+  const withProtocol = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
   const url = new URL(withProtocol)
+  // Anything else (ftp:, file:, …) cannot carry an Odoo JSON-RPC session and
+  // would hand the key to an unrelated transport.
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+    throw new OdooServerUrlError('The server URL must start with https:// or http://.')
+  }
   // Userinfo survives `toString()` and would land in the plaintext instance
   // file (and in `getStatus()`); the API key belongs in safeStorage only.
   if (url.username || url.password) {
