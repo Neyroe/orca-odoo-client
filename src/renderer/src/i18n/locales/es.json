@@ -4348,8 +4348,6 @@
           "keepDefaultBranchAria": "Mantener visible la rama predeterminada al ocultar los espacios de trabajo en reposo"
         },
         "SidebarWorkspaceOptionsMenu": {
-          "odooTicketOption": "Odoo ticket",
-          "odooTicketsOption": "Odoo tickets",
           "95c9754653": "Diseño de actividad del Agent",
           "3d4b9c4997": "Flotar",
           "ba87080fb7": "Mostrar propiedades",
@@ -4448,7 +4446,6 @@
           "ccbd1e2c69": "Personaliza la apariencia de {{value0}}"
         },
         "WorktreeCard": {
-          "odooTicketLoading": "Loading Odoo ticket...",
           "a88c92d0e3": "{{value0}}/{{value1}} ya existe.",
           "6f09f58541": "Eliminar espacio de trabajo",
           "0777de5970": "Worktree principal (directorio de clonación original)",
@@ -4485,8 +4482,6 @@
           "copyLink": "Copiar enlace"
         },
         "WorktreeCardMeta": {
-          "odooTicketDetail": "Odoo ticket {{value0}}",
-          "odooTicketView": "View on Odoo",
           "3e65e11cc6": "Metadatos del espacio de trabajo",
           "c7fa72ead0": "Editar notas",
           "93cbea12c2": "Notas",
@@ -4622,9 +4617,6 @@
           "failedUnnestWorkspace": "Error al expandir el espacio de trabajo"
         },
         "WorktreeMetaDialog": {
-          "odoo_ticket_label": "Odoo Ticket",
-          "odoo_ticket_placeholder": "Ticket # or Odoo URL",
-          "odoo_ticket_hint": "Paste an Odoo task URL, or enter a number. Leave blank to remove the link.",
           "3db0a2a593": "Cancelar",
           "b48c271d39": "para guardar, Mayús+Enter para una nueva línea.",
           "7f0be5e9a6": "Admite **markdown** — negrita, listas, `código`, enlaces. Pulsa Enter o",

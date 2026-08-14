@@ -4341,8 +4341,6 @@
           "keepDefaultBranchAria": "隐藏休眠工作区时仍显示默认分支"
         },
         "SidebarWorkspaceOptionsMenu": {
-          "odooTicketOption": "Odoo ticket",
-          "odooTicketsOption": "Odoo tickets",
           "95c9754653": "智能体活动布局",
           "3d4b9c4997": "悬停",
           "ba87080fb7": "显示属性",
@@ -4441,7 +4439,6 @@
           "ccbd1e2c69": "自定义 {{value0}} 外观"
         },
         "WorktreeCard": {
-          "odooTicketLoading": "Loading Odoo ticket...",
           "a88c92d0e3": "{{value0}}/{{value1}} 已存在。",
           "6f09f58541": "删除工作区",
           "0777de5970": "主工作树（原始克隆目录）",
@@ -4478,8 +4475,6 @@
           "copyLink": "复制链接"
         },
         "WorktreeCardMeta": {
-          "odooTicketDetail": "Odoo ticket {{value0}}",
-          "odooTicketView": "View on Odoo",
           "3e65e11cc6": "工作区元数据",
           "c7fa72ead0": "编辑笔记",
           "93cbea12c2": "笔记",
@@ -4615,9 +4610,6 @@
           "failedUnnestWorkspace": "展开工作区失败"
         },
         "WorktreeMetaDialog": {
-          "odoo_ticket_label": "Odoo Ticket",
-          "odoo_ticket_placeholder": "Ticket # or Odoo URL",
-          "odoo_ticket_hint": "Paste an Odoo task URL, or enter a number. Leave blank to remove the link.",
           "3db0a2a593": "取消",
           "b48c271d39": "要保存，请按 Shift+Enter 换行。",
           "7f0be5e9a6": "支持 **markdown** — 粗体、列表、“代码”、链接。按 Enter 或",
