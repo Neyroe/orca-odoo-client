@@ -220,8 +220,6 @@ describe.skipIf(!LIVE)('Odoo board status sync', () => {
   }, 180_000)
 
   it('step 4 control — an unmapped board column never writes a stage', async () => {
-    const stages = await listStages(PROJECT_ID)
-    const doneStageId = stageIdFor(stages, 'Done')
     useAppStore.setState({
       worktreesByRepo: { [REPO_ID]: [storeWorktree('completed')] },
       // Same columns, but "In review" no longer names an Odoo stage.
@@ -234,11 +232,15 @@ describe.skipIf(!LIVE)('Odoo board status sync', () => {
     const { result } = renderHook(() => useWorkspaceStatusProviderSync())
     const sync = result.current
     useAppStore.setState({ worktreesByRepo: { [REPO_ID]: [storeWorktree('in-review')] } })
+    // Why read rather than assume Done: this control must fail only when an
+    // unmapped column moves the ticket, not because a filtered run skipped the
+    // preceding test that put it there.
+    const before = await getTicket(TICKET_ID)
     sync([WORKTREE_ID], 'in-review')
 
     await new Promise((resolve) => setTimeout(resolve, 3_000))
     const ticket = await getTicket(TICKET_ID)
-    expect(ticket?.stage?.id, 'unmapped column moved the ticket anyway').toBe(doneStageId)
+    expect(ticket?.stage?.id, 'unmapped column moved the ticket anyway').toBe(before?.stage?.id)
     console.log('STEP4 CONTROL PROOF', JSON.stringify({ stayedOn: ticket?.stage }))
   }, 90_000)
 })

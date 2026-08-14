@@ -306,6 +306,15 @@ export function buildOdooTicketMetaUpdateForStatus(
   seededInput: string,
   status: OdooConnectionStatus
 ): Partial<WorktreeMeta> {
+  const trimmed = odooInput.trim()
+  if (trimmed === seededInput.trim()) {
+    return {}
+  }
+  // Why: clearing resolves no instance, so it must not sit behind the connection
+  // guard — otherwise a stale link can never be removed while Odoo is offline.
+  if (trimmed === '') {
+    return { linkedOdooTicket: null, linkedOdooInstanceId: null }
+  }
   if (!status.connected) {
     return {}
   }
