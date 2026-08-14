@@ -78,14 +78,30 @@ async function forEachClient<T>(
   }
 }
 
+/**
+ * `forEachClient` runs the read once per connected instance, so a flattened
+ * result holds up to `limit × instanceCount` tickets. Re-apply Odoo's own
+ * ordering across instances and cut back to the requested page, otherwise the
+ * caller's limit — and any page state derived from it — is wrong.
+ */
+function mergeInstancePages(tickets: OdooTicket[], limit?: number): OdooTicket[] {
+  if (limit === undefined || tickets.length <= limit) {
+    return tickets
+  }
+  return [...tickets]
+    .sort((a, b) => b.priority.localeCompare(a.priority) || b.updatedAt.localeCompare(a.updatedAt))
+    .slice(0, limit)
+}
+
 export async function listTickets(
   filter: OdooTicketFilter = 'assigned',
   limit?: number,
   instanceId?: OdooInstanceSelection | null
 ): Promise<OdooTicket[]> {
-  return forEachClient(instanceId, (client) =>
+  const tickets = await forEachClient(instanceId, (client) =>
     readTickets(client, filterDomain(filter, client.instance.uid), limit)
   )
+  return mergeInstancePages(tickets, limit)
 }
 
 /** Runs a raw Odoo domain, the closest analogue to Jira's JQL search. */
@@ -94,9 +110,10 @@ export async function searchTickets(
   limit?: number,
   instanceId?: OdooInstanceSelection | null
 ): Promise<OdooTicket[]> {
-  return forEachClient(instanceId, (client) =>
+  const tickets = await forEachClient(instanceId, (client) =>
     readTickets(client, [...BASE_DOMAIN, ...domain], limit)
   )
+  return mergeInstancePages(tickets, limit)
 }
 
 export async function getTicket(
