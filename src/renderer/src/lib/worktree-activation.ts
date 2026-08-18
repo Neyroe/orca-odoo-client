@@ -772,7 +772,8 @@ setWorktreeNavViewActivator((entry) => {
         openLinearIssue: undefined,
         openLinearSourceContext: undefined,
         openJiraIssue: undefined,
-        openJiraSourceContext: undefined
+        openJiraSourceContext: undefined,
+        openOdooTicket: undefined
       }
     }))
     return
@@ -792,7 +793,8 @@ setWorktreeNavViewActivator((entry) => {
         openLinearIssue: undefined,
         openLinearSourceContext: undefined,
         openJiraIssue: undefined,
-        openJiraSourceContext: undefined
+        openJiraSourceContext: undefined,
+        openOdooTicket: undefined
       }
     }))
     return
@@ -813,7 +815,8 @@ setWorktreeNavViewActivator((entry) => {
         openLinearIssue: undefined,
         openLinearSourceContext: undefined,
         openJiraIssue: undefined,
-        openJiraSourceContext: undefined
+        openJiraSourceContext: undefined,
+        openOdooTicket: undefined
       }
     }))
     return
@@ -852,7 +855,8 @@ setWorktreeNavViewActivator((entry) => {
       openLinearIssue: entry.issue,
       openLinearSourceContext: entry.sourceContext,
       openJiraIssue: undefined,
-      openJiraSourceContext: undefined
+      openJiraSourceContext: undefined,
+      openOdooTicket: undefined
     }
   }))
 })

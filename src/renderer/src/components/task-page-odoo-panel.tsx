@@ -5,6 +5,8 @@ import { toast } from 'sonner'
 import { OdooIcon } from '@/components/icons/OdooIcon'
 import { OdooConnectDialog } from '@/components/odoo-connect-dialog'
 import { OdooTicketWorkspace } from '@/components/odoo-ticket-workspace'
+import { useRequestedOdooTicket } from '@/components/use-requested-odoo-ticket'
+import type { OdooTicketTaskPageRequest } from '@/components/sidebar/worktree-card-odoo-ticket-request'
 import {
   DEFAULT_ODOO_TICKET_FILTERS,
   deriveOdooTicketFacets,
@@ -53,7 +55,14 @@ function odooPresetLabel(preset: OdooTicketFilter): string {
   return getOdooPresets().find((entry) => entry.id === preset)?.label ?? preset
 }
 
-export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JSX.Element {
+export function TaskPageOdooPanel({
+  onHide,
+  openTicket = null
+}: {
+  onHide?: () => void
+  /** A ticket the caller wants opened on mount — e.g. a workspace's linked ticket. */
+  openTicket?: OdooTicketTaskPageRequest | null
+}): React.JSX.Element {
   const odooStatus = useAppStore((s) => s.odooStatus)
   const odooStatusChecked = useAppStore((s) => s.odooStatusChecked)
   const checkOdooConnection = useAppStore((s) => s.checkOdooConnection)
@@ -146,6 +155,8 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   useEffect(() => {
     void checkOdooConnection()
   }, [checkOdooConnection])
+
+  useRequestedOdooTicket(openTicket, setSelectedTicket)
 
   useEffect(() => {
     loadingRef.current = loading

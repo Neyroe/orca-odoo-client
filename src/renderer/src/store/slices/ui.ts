@@ -680,6 +680,9 @@ export type UISlice = {
     openLinearSourceContext?: TaskSourceContext | null
     openJiraIssue?: JiraIssue
     openJiraSourceContext?: TaskSourceContext | null
+    // Why an id pair, not the ticket: the sidebar card only stores the linked
+    // ref, and tickets are addressable per instance.
+    openOdooTicket?: { id: number; instanceId?: string }
   }
   taskResumeState: TaskResumeState | undefined
   setTaskResumeState: (updates: Partial<TaskResumeState>) => void

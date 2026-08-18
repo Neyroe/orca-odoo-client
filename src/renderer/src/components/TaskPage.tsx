@@ -4350,7 +4350,8 @@ export default function TaskPage(): React.JSX.Element {
         openLinearIssue: undefined,
         openLinearSourceContext: undefined,
         openJiraIssue: undefined,
-        openJiraSourceContext: undefined
+        openJiraSourceContext: undefined,
+        openOdooTicket: undefined
       }
     }))
   }, [clearSelectedLinearIssue, setDialogWorkItem])
@@ -11009,7 +11010,10 @@ export default function TaskPage(): React.JSX.Element {
               </div>
             )
           ) : taskSource === 'odoo' ? (
-            <TaskPageOdooPanel onHide={() => hideTaskSource('odoo', 'Odoo')} />
+            <TaskPageOdooPanel
+              onHide={() => hideTaskSource('odoo', 'Odoo')}
+              openTicket={pageData.openOdooTicket ?? null}
+            />
           ) : taskSource === 'linear' && selectedLinearIssue ? (
             <LinearIssueWorkspace
               issue={selectedLinearIssue}

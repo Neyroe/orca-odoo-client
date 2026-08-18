@@ -2,6 +2,7 @@ import React, { useCallback } from 'react'
 
 import type { GitHubWorkItem } from '../../../../shared/github/work-item-types'
 import { hasWorktreeCardDetails } from './WorktreeCardMeta'
+import { buildOdooTicketTaskPageRequest } from './worktree-card-odoo-ticket-request'
 import { usePromptCacheCountdownStartedAt } from './CacheTimer'
 import { useWorktreeAgentRows } from './useWorktreeAgentRows'
 import type { WorktreeCardOdooTicketDisplay } from './worktree-card-meta-types'
@@ -187,6 +188,17 @@ export function useWorktreeCardSecondaryDetails({
     },
     [linearIssue, openTaskPage]
   )
+  const odooTicketRequest = buildOdooTicketTaskPageRequest(worktree)
+  const handleOpenOdooTicketInOrca = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      if (!odooTicketRequest) {
+        return
+      }
+      openTaskPage({ taskSource: 'odoo', openOdooTicket: odooTicketRequest })
+    },
+    [odooTicketRequest, openTaskPage]
+  )
   const hasDetails = hasWorktreeCardDetails({
     issue: metaIssue,
     linearIssue: metaLinearIssue,
@@ -226,6 +238,7 @@ export function useWorktreeCardSecondaryDetails({
     hasExplicitLinkedReview,
     handleUnlinkReview,
     handleOpenLinearIssueInOrca,
+    handleOpenOdooTicketInOrca: odooTicketRequest ? handleOpenOdooTicketInOrca : undefined,
     hasDetails,
     hasPorts,
     cacheStartedAt,
