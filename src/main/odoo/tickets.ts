@@ -1,6 +1,12 @@
 import { markdownToChatterHtml } from './chatter-html-markdown'
 import { acquire, executeKw, getClients, release, type OdooClientForInstance } from './client'
 import {
+  BASE_DOMAIN,
+  filterDomain,
+  projectScopeDomain,
+  type OdooDomain
+} from './ticket-read-domain'
+import {
   loadLookups,
   mapStage,
   mapTag,
@@ -12,13 +18,13 @@ import {
   TICKET_FIELDS,
   type OdooRecord
 } from './ticket-mappers'
-import { ODOO_CLOSED_STATES } from '../../shared/odoo-types'
 import type {
   OdooCreateTicketArgs,
   OdooCreateTicketResult,
   OdooInstanceSelection,
   OdooMutationResult,
   OdooProject,
+  OdooProjectScope,
   OdooStage,
   OdooTag,
   OdooTicket,
@@ -26,30 +32,6 @@ import type {
   OdooTicketUpdate,
   OdooUser
 } from '../../shared/odoo-types'
-type OdooDomain = unknown[]
-
-// Why: mirrors the domain on Odoo's own My/All Tasks actions, which hide
-// template tasks. Without it Orca would list tickets the Odoo UI never shows.
-const BASE_DOMAIN: OdooDomain = [
-  ['has_template_ancestor', '=', false],
-  ['has_project_template', '=', false]
-]
-
-const OPEN_STATE_DOMAIN: OdooDomain = [['state', 'not in', [...ODOO_CLOSED_STATES]]]
-
-function filterDomain(filter: OdooTicketFilter, uid: number): OdooDomain {
-  if (filter === 'done') {
-    return [...BASE_DOMAIN, ['state', 'in', [...ODOO_CLOSED_STATES]]]
-  }
-  if (filter === 'assigned') {
-    return [...BASE_DOMAIN, ...OPEN_STATE_DOMAIN, ['user_ids', 'in', [uid]]]
-  }
-  if (filter === 'reported') {
-    return [...BASE_DOMAIN, ...OPEN_STATE_DOMAIN, ['create_uid', '=', uid]]
-  }
-  return [...BASE_DOMAIN, ...OPEN_STATE_DOMAIN]
-}
-
 async function readTickets(
   client: OdooClientForInstance,
   domain: OdooDomain,
@@ -96,11 +78,17 @@ function mergeInstancePages(tickets: OdooTicket[], limit?: number): OdooTicket[]
 export async function listTickets(
   filter: OdooTicketFilter = 'assigned',
   limit?: number,
-  instanceId?: OdooInstanceSelection | null
+  instanceId?: OdooInstanceSelection | null,
+  projectScope?: OdooProjectScope | null
 ): Promise<OdooTicket[]> {
-  const tickets = await forEachClient(instanceId, (client) =>
-    readTickets(client, filterDomain(filter, client.instance.uid), limit)
-  )
+  const tickets = await forEachClient(instanceId, (client) => {
+    const scoped = projectScopeDomain(projectScope, client.instance.id)
+    // Out-of-scope instance: answer empty without spending a round trip on a
+    // read whose result could only be discarded.
+    return scoped === null
+      ? Promise.resolve([])
+      : readTickets(client, [...filterDomain(filter, client.instance.uid), ...scoped], limit)
+  })
   return mergeInstancePages(tickets, limit)
 }
 
@@ -108,11 +96,15 @@ export async function listTickets(
 export async function searchTickets(
   domain: OdooDomain,
   limit?: number,
-  instanceId?: OdooInstanceSelection | null
+  instanceId?: OdooInstanceSelection | null,
+  projectScope?: OdooProjectScope | null
 ): Promise<OdooTicket[]> {
-  const tickets = await forEachClient(instanceId, (client) =>
-    readTickets(client, [...BASE_DOMAIN, ...domain], limit)
-  )
+  const tickets = await forEachClient(instanceId, (client) => {
+    const scoped = projectScopeDomain(projectScope, client.instance.id)
+    return scoped === null
+      ? Promise.resolve([])
+      : readTickets(client, [...BASE_DOMAIN, ...domain, ...scoped], limit)
+  })
   return mergeInstancePages(tickets, limit)
 }
 

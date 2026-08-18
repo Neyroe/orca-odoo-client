@@ -3,6 +3,7 @@ import type { AppState } from '../types'
 import type {
   OdooConnectionStatus,
   OdooInstanceSelection,
+  OdooProjectScope,
   OdooTicket,
   OdooTicketFilter,
   OdooViewer
@@ -28,6 +29,12 @@ import {
 } from './odoo-read-coordination'
 
 type OdooReadOptions = { sourceContext?: TaskSourceContext | null; forceRefresh?: boolean }
+/**
+ * The list reads additionally accept a project scope. It is part of the question
+ * asked, not a delivery option, so it belongs in the cache key: a scoped page
+ * and an unscoped one must never satisfy each other.
+ */
+type OdooListReadOptions = OdooReadOptions & { projectScope?: OdooProjectScope | null }
 type OdooPatchOptions = { sourceContext?: TaskSourceContext | null }
 
 const inflightTicketRequests = new Map<string, InflightOdooRead<OdooTicket | null>>()
@@ -38,6 +45,23 @@ function clearOdooInflight(): void {
   inflightTicketRequests.clear()
   inflightSearchRequests.clear()
   inflightListRequests.clear()
+}
+
+/**
+ * Cache-key fragment for a project scope; '' when the read is unscoped.
+ *
+ * Ids are sorted so the same selection picked in a different order still hits one
+ * entry rather than re-reading under a second key.
+ */
+function projectScopeCacheKey(projectScope: OdooProjectScope | null | undefined): string {
+  if (!projectScope) {
+    return ''
+  }
+  const perInstance = [...projectScope.projectsByInstance]
+    .map((entry) => `${entry.instanceId}:${[...entry.projectIds].sort((a, b) => a - b).join(',')}`)
+    .sort()
+    .join(';')
+  return `::project::${perInstance}${projectScope.includeNoProject ? '::none' : ''}`
 }
 
 function listReadFallback(error: unknown): OdooTicket[] {
@@ -77,12 +101,12 @@ export type OdooSlice = {
   searchOdooTickets: (
     domain: unknown[],
     limit?: number,
-    options?: OdooReadOptions
+    options?: OdooListReadOptions
   ) => Promise<OdooTicket[]>
   listOdooTickets: (
     filter?: OdooTicketFilter,
     limit?: number,
-    options?: OdooReadOptions
+    options?: OdooListReadOptions
   ) => Promise<OdooTicket[]>
   patchOdooTicket: (
     ticketId: number,
@@ -172,7 +196,9 @@ export const createOdooSlice: StateCreator<AppState, [], [], OdooSlice> = (set, 
       const instanceId = getSelectedOdooInstanceId(get().odooStatus)
       const cacheKey = scopedOdooCacheKey(
         scope,
-        `${instanceId ?? 'default'}::search::${JSON.stringify(domain)}::${limit}`
+        `${instanceId ?? 'default'}::search::${JSON.stringify(domain)}::${limit}${projectScopeCacheKey(
+          options?.projectScope
+        )}`
       )
       return runListRead(
         inflightSearchRequests,
@@ -180,7 +206,7 @@ export const createOdooSlice: StateCreator<AppState, [], [], OdooSlice> = (set, 
         scope,
         instanceId,
         options?.forceRefresh ?? false,
-        () => odooSearchTickets(scope.settings, domain, limit, instanceId)
+        () => odooSearchTickets(scope.settings, domain, limit, instanceId, options?.projectScope)
       )
     },
 
@@ -189,7 +215,9 @@ export const createOdooSlice: StateCreator<AppState, [], [], OdooSlice> = (set, 
       const instanceId = getSelectedOdooInstanceId(get().odooStatus)
       const cacheKey = scopedOdooCacheKey(
         scope,
-        `${instanceId ?? 'default'}::list::${filter}::${limit}`
+        `${instanceId ?? 'default'}::list::${filter}::${limit}${projectScopeCacheKey(
+          options?.projectScope
+        )}`
       )
       return runListRead(
         inflightListRequests,
@@ -197,7 +225,7 @@ export const createOdooSlice: StateCreator<AppState, [], [], OdooSlice> = (set, 
         scope,
         instanceId,
         options?.forceRefresh ?? false,
-        () => odooListTickets(scope.settings, filter, limit, instanceId)
+        () => odooListTickets(scope.settings, filter, limit, instanceId, options?.projectScope)
       )
     },
 

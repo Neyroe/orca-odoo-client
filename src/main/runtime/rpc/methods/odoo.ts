@@ -36,11 +36,32 @@ const TicketId = z.object({
   instanceId: OptionalString
 })
 
+// Why ids are grouped by instance: `project.project` ids are per-database, so a
+// bare id would match a colliding one elsewhere. `includeNoProject` carries the
+// Odoo private-todo case, which no id can express.
+//
+// Both fields are REQUIRED on purpose. The param is optional as a whole, but a
+// payload that carries a scope in some older shape must be *rejected* here — with
+// optional fields zod would strip it to an empty object and the host would answer
+// unscoped while the client presented the reply as project-scoped.
+const ProjectScope = z
+  .object({
+    projectsByInstance: z.array(
+      z.object({
+        instanceId: requiredString('Instance ID is required'),
+        projectIds: z.array(z.number().int().positive())
+      })
+    ),
+    includeNoProject: z.boolean()
+  })
+  .optional()
+
 const ListTickets = z
   .object({
     filter: z.enum(VALID_FILTERS).optional(),
     limit: OptionalFiniteNumber,
-    instanceId: OptionalString
+    instanceId: OptionalString,
+    projectScope: ProjectScope
   })
   .optional()
 
@@ -49,7 +70,8 @@ const SearchTickets = z.object({
   // is validated server-side by Odoo itself.
   domain: z.array(z.unknown()),
   limit: OptionalFiniteNumber,
-  instanceId: OptionalString
+  instanceId: OptionalString,
+  projectScope: ProjectScope
 })
 
 const CreateTicket = z.object({
@@ -164,13 +186,18 @@ export const ODOO_METHODS: RpcMethod[] = [
     name: 'odoo.listTickets',
     params: ListTickets,
     handler: async (params, { runtime }) =>
-      runtime.odooListTickets(params?.filter, params?.limit, params?.instanceId)
+      runtime.odooListTickets(
+        params?.filter,
+        params?.limit,
+        params?.instanceId,
+        params?.projectScope
+      )
   }),
   defineMethod({
     name: 'odoo.searchTickets',
     params: SearchTickets,
     handler: async (params, { runtime }) =>
-      runtime.odooSearchTickets(params.domain, params.limit, params.instanceId)
+      runtime.odooSearchTickets(params.domain, params.limit, params.instanceId, params.projectScope)
   }),
   defineMethod({
     name: 'odoo.getTicket',

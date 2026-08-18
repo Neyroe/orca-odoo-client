@@ -237,6 +237,7 @@ import type {
   OdooMutationResult,
   OdooPriority,
   OdooProject,
+  OdooProjectScope,
   OdooStage,
   OdooTag,
   OdooTicket,
@@ -2046,12 +2047,14 @@ const api = {
       filter?: OdooTicketFilter
       limit?: number
       instanceId?: string
+      projectScope?: OdooProjectScope
     }): Promise<OdooTicket[]> => ipcRenderer.invoke('odoo:listTickets', args),
 
     searchTickets: (args: {
       domain: unknown[]
       limit?: number
       instanceId?: string
+      projectScope?: OdooProjectScope
     }): Promise<OdooTicket[]> => ipcRenderer.invoke('odoo:searchTickets', args),
 
     getTicket: (args: { id: number; instanceId?: string }): Promise<OdooTicket | null> =>

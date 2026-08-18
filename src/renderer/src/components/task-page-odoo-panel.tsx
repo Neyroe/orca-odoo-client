@@ -9,6 +9,7 @@ import {
   DEFAULT_ODOO_TICKET_FILTERS,
   deriveOdooTicketFacets,
   filterOdooTickets,
+  parseOdooProjectFilters,
   type OdooTicketListFilters
 } from '@/components/odoo-ticket-facets'
 import {
@@ -31,7 +32,9 @@ import { getOdooPresets, getOdooPriorityLabels } from '@/components/task-page-lo
 import { Button } from '@/components/ui/button'
 import { useAppStore } from '@/store'
 import { isWindowVisible } from '@/lib/window-visibility-interval'
+import { isOdooProjectScopeUnsupportedError } from '@/runtime/runtime-odoo-client'
 import { useOdooAutoWorkspace } from '@/components/use-odoo-auto-workspace'
+import { useOdooProjects } from '@/components/use-odoo-projects'
 import {
   ODOO_TICKET_PANEL_REFRESH_INTERVAL_MS,
   shouldRunScheduledOdooRefresh
@@ -101,7 +104,12 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   const instances = odooStatus.instances ?? []
   const selectedInstanceId = odooStatus.selectedInstanceId ?? odooStatus.activeInstanceId ?? null
 
-  const resetFilters = (): void => setFilters(DEFAULT_ODOO_TICKET_FILTERS)
+  // The project scope is a server-side narrowing, not a facet read off the loaded
+  // page, so switching preset or searching keeps it — "what is open on these
+  // projects" is the question the scope asks. Only an instance switch clears it,
+  // since project ids do not carry across databases.
+  const resetFilters = (): void =>
+    setFilters((current) => ({ ...DEFAULT_ODOO_TICKET_FILTERS, projects: current.projects }))
   const setFilter = <K extends keyof OdooTicketListFilters>(
     key: K,
     value: OdooTicketListFilters[K]
@@ -111,6 +119,16 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
     setSavedFilters(next)
     writeSavedOdooTicketFilters(next)
   }
+
+  const { projects } = useOdooProjects({
+    connected: odooStatus.connected,
+    instanceId: selectedInstanceId,
+    projectFilters: filters.projects,
+    onProjectFiltersResolved: (next) => setFilter('projects', next)
+  })
+  // Memoised on the selection: a fresh object every render would retrigger the
+  // read effect it feeds, which then sets state and renders again.
+  const projectScope = useMemo(() => parseOdooProjectFilters(filters.projects), [filters.projects])
 
   const facets = useMemo(() => deriveOdooTicketFacets(tickets), [tickets])
   const visibleTickets = useMemo(() => filterOdooTickets(tickets, filters), [tickets, filters])
@@ -139,7 +157,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
     }
     viewerAssigneeAppliedRef.current = true
     if (facets.assignees.some((option) => option.id === viewerUid)) {
-      setFilter('assignee', String(viewerUid))
+      setFilter('assignees', [String(viewerUid)])
     }
   }, [facets, tickets.length, viewerUid])
 
@@ -161,8 +179,8 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
     const forceRefresh = forceNextReadRef.current
     forceNextReadRef.current = false
     const read = appliedSearch
-      ? searchOdooTickets([['name', 'ilike', appliedSearch]], 50, { forceRefresh })
-      : listOdooTickets(preset, 50, { forceRefresh })
+      ? searchOdooTickets([['name', 'ilike', appliedSearch]], 50, { forceRefresh, projectScope })
+      : listOdooTickets(preset, 50, { forceRefresh, projectScope })
     read
       .then((result) => {
         if (!cancelled) {
@@ -173,9 +191,18 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
         }
       })
       .catch((readError: unknown) => {
-        if (!cancelled) {
-          setError(readError instanceof Error ? readError.message : String(readError))
+        if (cancelled) {
+          return
         }
+        // A refused project scope invalidates what is on screen: those rows were
+        // read under the previous scope, and leaving them under the banner shows
+        // another project's tickets as if they were this one's — the very thing
+        // the scope negotiation exists to prevent. Other failures keep the last
+        // good page, which is stale but still answers the same question.
+        if (isOdooProjectScopeUnsupportedError(readError)) {
+          setTickets([])
+        }
+        setError(readError instanceof Error ? readError.message : String(readError))
       })
       .finally(() => {
         if (!cancelled) {
@@ -190,6 +217,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
     selectedInstanceId,
     preset,
     appliedSearch,
+    projectScope,
     refreshNonce,
     listOdooTickets,
     searchOdooTickets,
@@ -282,7 +310,9 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
         onInstanceSelect={(instanceId) => {
           setSelectedTicket(null)
           setTickets([])
-          resetFilters()
+          // Full reset, project scope included: the new instance's project ids
+          // are unrelated to the old one's.
+          setFilters(DEFAULT_ODOO_TICKET_FILTERS)
           void selectOdooInstance(instanceId).catch(() => {
             toast.error(
               translate(
@@ -293,6 +323,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
           })
         }}
         facets={facets}
+        projects={projects}
         filters={filters}
         onFilterChange={setFilter}
         openFilter={openFilter}

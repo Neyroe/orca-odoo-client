@@ -7,6 +7,7 @@ import type {
   OdooPriority,
   OdooMutationResult,
   OdooProject,
+  OdooProjectScope,
   OdooStage,
   OdooTag,
   OdooTicket,
@@ -33,11 +34,13 @@ export type OdooApi = {
     filter?: OdooTicketFilter
     limit?: number
     instanceId?: string
+    projectScope?: OdooProjectScope
   }) => Promise<OdooTicket[]>
   searchTickets: (args: {
     domain: unknown[]
     limit?: number
     instanceId?: string
+    projectScope?: OdooProjectScope
   }) => Promise<OdooTicket[]>
   getTicket: (args: { id: number; instanceId?: string }) => Promise<OdooTicket | null>
   createTicket: (args: {

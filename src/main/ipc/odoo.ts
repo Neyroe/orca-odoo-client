@@ -18,6 +18,7 @@ import {
   normalizeIdArray,
   normalizeInstanceId,
   normalizeInstanceSelection,
+  normalizeProjectScope,
   normalizeRecordId
 } from './odoo-ipc-args'
 import { registerOdooTicketChatterHandlers } from './odoo-ticket-chatter'
@@ -26,6 +27,7 @@ import type {
   OdooCreateTicketArgs,
   OdooInstanceSelection,
   OdooPriority,
+  OdooProjectScope,
   OdooTicketFilter,
   OdooTicketState,
   OdooTicketUpdate
@@ -113,7 +115,12 @@ export function registerOdooHandlers(): void {
     'odoo:listTickets',
     async (
       _event,
-      args?: { filter?: OdooTicketFilter; limit?: number; instanceId?: OdooInstanceSelection }
+      args?: {
+        filter?: OdooTicketFilter
+        limit?: number
+        instanceId?: OdooInstanceSelection
+        projectScope?: OdooProjectScope
+      }
     ) => {
       const filter = VALID_FILTERS.has(args?.filter as OdooTicketFilter)
         ? (args?.filter as OdooTicketFilter)
@@ -121,7 +128,8 @@ export function registerOdooHandlers(): void {
       return listTickets(
         filter,
         clampLimit(args?.limit),
-        normalizeInstanceSelection(args?.instanceId)
+        normalizeInstanceSelection(args?.instanceId),
+        normalizeProjectScope(args?.projectScope)
       )
     }
   )
@@ -130,7 +138,12 @@ export function registerOdooHandlers(): void {
     'odoo:searchTickets',
     async (
       _event,
-      args: { domain: unknown[]; limit?: number; instanceId?: OdooInstanceSelection }
+      args: {
+        domain: unknown[]
+        limit?: number
+        instanceId?: OdooInstanceSelection
+        projectScope?: OdooProjectScope
+      }
     ) => {
       if (!Array.isArray(args?.domain)) {
         return []
@@ -138,7 +151,8 @@ export function registerOdooHandlers(): void {
       return searchTickets(
         args.domain,
         clampLimit(args.limit),
-        normalizeInstanceSelection(args.instanceId)
+        normalizeInstanceSelection(args.instanceId),
+        normalizeProjectScope(args.projectScope)
       )
     }
   )

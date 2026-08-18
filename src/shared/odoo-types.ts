@@ -167,6 +167,22 @@ export type OdooTicketUpdate = {
 
 export type OdooTicketFilter = 'assigned' | 'reported' | 'all' | 'done'
 
+/**
+ * Server-side project narrowing for a ticket read, appended to the preset or
+ * search domain rather than applied to the fetched page — the reads are
+ * limited, so post-filtering a truncated page would hide matching tickets.
+ *
+ * Selected ids are grouped by instance because `project.project` ids are
+ * per-database: id 5 on one instance is an unrelated project on the next, so a
+ * read must never match a foreign id. An instance absent from the list has
+ * nothing selected, and contributes no tickets.
+ */
+export type OdooProjectScope = {
+  projectsByInstance: { instanceId: string; projectIds: number[] }[]
+  /** Also match tickets that carry no project — Odoo's private todos. */
+  includeNoProject: boolean
+}
+
 export type OdooConnectArgs = {
   serverUrl: string
   database: string
