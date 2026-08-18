@@ -6,7 +6,9 @@ import {
   type OdooTicketFilterId
 } from '@/components/odoo-ticket-filter-select'
 import {
+  ODOO_NO_PROJECT_FILTER,
   ODOO_UNASSIGNED_FILTER,
+  odooProjectFilterOptions,
   type OdooTicketFacets,
   type OdooTicketListFilters
 } from '@/components/odoo-ticket-facets'
@@ -24,7 +26,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import { ODOO_PRIORITIES } from '../../../shared/odoo-types'
-import type { OdooInstance, OdooPriority, OdooTicketFilter } from '../../../shared/odoo-types'
+import type {
+  OdooInstance,
+  OdooPriority,
+  OdooProject,
+  OdooTicketFilter
+} from '../../../shared/odoo-types'
 export type OdooTicketToolbarProps = {
   presets: { id: OdooTicketFilter; label: string }[]
   preset: OdooTicketFilter
@@ -34,6 +41,8 @@ export type OdooTicketToolbarProps = {
   selectedInstanceId: string | null
   onInstanceSelect: (instanceId: string) => void
   facets: OdooTicketFacets
+  /** Projects of the scoped instance, for the project selector. */
+  projects: OdooProject[]
   filters: OdooTicketListFilters
   onFilterChange: <K extends keyof OdooTicketListFilters>(
     key: K,
@@ -71,6 +80,7 @@ export function OdooTicketToolbar({
   selectedInstanceId,
   onInstanceSelect,
   facets,
+  projects,
   filters,
   onFilterChange,
   openFilter,
@@ -134,29 +144,53 @@ export function OdooTicketToolbar({
             ]}
           />
         ) : null}
+        {projects.length > 0 ? (
+          <OdooTicketFilterMultiSelect
+            {...menu}
+            id="project"
+            triggerClassName="w-44"
+            contentClassName="w-72"
+            searchPlaceholder={translate(
+              'auto.components.odoo.ticket.toolbar.searchProjects',
+              'Search projects…'
+            )}
+            options={[
+              {
+                value: ODOO_NO_PROJECT_FILTER,
+                label: translate('auto.components.odoo.ticket.toolbar.noProject', 'No project')
+              },
+              ...odooProjectFilterOptions(projects, instances.length > 1)
+            ]}
+            selected={filters.projects}
+            onSelectedChange={(next) => onFilterChange('projects', next)}
+            allLabel={translate('auto.components.odoo.ticket.toolbar.allProjects', 'All projects')}
+          />
+        ) : null}
         {facets.stages.length > 0 ? (
           <OdooTicketFilterMultiSelect
             {...menu}
             id="stage"
             triggerClassName="w-36"
-            options={facets.stages}
+            searchPlaceholder={translate(
+              'auto.components.odoo.ticket.toolbar.searchStages',
+              'Search stages…'
+            )}
+            options={facets.stages.map((stage) => ({ value: stage, label: stage }))}
             selected={filters.stages}
             onSelectedChange={(next) => onFilterChange('stages', next)}
             allLabel={translate('auto.components.odoo.ticket.toolbar.9be2437ce8', 'All stages')}
           />
         ) : null}
         {facets.assignees.length > 0 ? (
-          <OdooTicketFilterSelect
+          <OdooTicketFilterMultiSelect
             {...menu}
             id="assignee"
             triggerClassName="w-36"
-            value={filters.assignee}
-            onValueChange={(value) => onFilterChange('assignee', value)}
+            searchPlaceholder={translate(
+              'auto.components.odoo.ticket.toolbar.searchAssignees',
+              'Search assignees…'
+            )}
             options={[
-              {
-                value: 'all',
-                label: translate('auto.components.odoo.ticket.toolbar.43754b421e', 'All assignees')
-              },
               {
                 value: ODOO_UNASSIGNED_FILTER,
                 label: translate('auto.components.odoo.ticket.toolbar.d60356cf84', 'Unassigned')
@@ -166,40 +200,45 @@ export function OdooTicketToolbar({
                 label: option.label
               }))
             ]}
+            selected={filters.assignees}
+            onSelectedChange={(next) => onFilterChange('assignees', next)}
+            allLabel={translate('auto.components.odoo.ticket.toolbar.43754b421e', 'All assignees')}
           />
         ) : null}
         {facets.tags.length > 0 ? (
-          <OdooTicketFilterSelect
+          <OdooTicketFilterMultiSelect
             {...menu}
             id="tag"
             triggerClassName="w-32"
-            value={filters.tag}
-            onValueChange={(value) => onFilterChange('tag', value)}
-            options={[
-              {
-                value: 'all',
-                label: translate('auto.components.odoo.ticket.toolbar.484da6b802', 'All tags')
-              },
-              ...facets.tags.map((option) => ({ value: String(option.id), label: option.label }))
-            ]}
+            searchPlaceholder={translate(
+              'auto.components.odoo.ticket.toolbar.searchTags',
+              'Search tags…'
+            )}
+            options={facets.tags.map((option) => ({
+              value: String(option.id),
+              label: option.label
+            }))}
+            selected={filters.tags}
+            onSelectedChange={(next) => onFilterChange('tags', next)}
+            allLabel={translate('auto.components.odoo.ticket.toolbar.484da6b802', 'All tags')}
           />
         ) : null}
-        <OdooTicketFilterSelect
+        <OdooTicketFilterMultiSelect
           {...menu}
           id="priority"
           triggerClassName="w-28"
-          value={filters.priority}
-          onValueChange={(value) => onFilterChange('priority', value as OdooPriority | 'all')}
-          options={[
-            {
-              value: 'all',
-              label: translate('auto.components.odoo.ticket.toolbar.7f31abc4a5', 'All priorities')
-            },
-            ...ODOO_PRIORITIES.map((priority) => ({
-              value: priority,
-              label: priorityLabels[priority]
-            }))
-          ]}
+          contentClassName="w-44"
+          searchPlaceholder={translate(
+            'auto.components.odoo.ticket.toolbar.searchPriorities',
+            'Search priorities…'
+          )}
+          options={ODOO_PRIORITIES.map((priority) => ({
+            value: priority,
+            label: priorityLabels[priority]
+          }))}
+          selected={filters.priorities}
+          onSelectedChange={(next) => onFilterChange('priorities', next as OdooPriority[])}
+          allLabel={translate('auto.components.odoo.ticket.toolbar.7f31abc4a5', 'All priorities')}
         />
         <OdooSavedFilterMenu
           saved={savedFilters}

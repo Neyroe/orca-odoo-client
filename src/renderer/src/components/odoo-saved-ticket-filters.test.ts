@@ -19,7 +19,12 @@ import {
 } from './odoo-saved-ticket-filters'
 import { DEFAULT_ODOO_TICKET_FILTERS } from './odoo-ticket-facets'
 
-const MINE = { ...DEFAULT_ODOO_TICKET_FILTERS, stages: ['Review'], assignee: '5', tag: '9' }
+const MINE = {
+  ...DEFAULT_ODOO_TICKET_FILTERS,
+  stages: ['Review'],
+  assignees: ['5'],
+  tags: ['9']
+}
 
 function saved(
   name: string,
@@ -182,6 +187,67 @@ describe('legacy payload migration', () => {
     ])
     expect(parseSavedOdooTicketFilters(raw)[0]?.filters.stages).toEqual(['Review'])
   })
+
+  it('widens an entry saved before the project selector to every project', () => {
+    const raw = JSON.stringify([{ name: 'Old', preset: 'all', filters: { stages: [] } }])
+    expect(parseSavedOdooTicketFilters(raw)[0]?.filters.projects).toEqual([])
+  })
+
+  it('lifts a pre-multi-select single project into the array', () => {
+    const raw = JSON.stringify([{ name: 'Old', preset: 'all', filters: { project: 'inst-a:7' } }])
+    expect(parseSavedOdooTicketFilters(raw)[0]?.filters.projects).toEqual(['inst-a:7'])
+  })
+
+  it("treats the legacy 'all' project sentinel as no project filter", () => {
+    const raw = JSON.stringify([{ name: 'Old', preset: 'all', filters: { project: 'all' } }])
+    expect(parseSavedOdooTicketFilters(raw)[0]?.filters.projects).toEqual([])
+  })
+
+  it.each([
+    ['assignee', '5', 'assignees'],
+    ['tag', '9', 'tags'],
+    ['priority', '3', 'priorities']
+  ])('lifts the pre-multi-select single %s into the array', (legacyKey, value, arrayKey) => {
+    const raw = JSON.stringify([{ name: 'Old', preset: 'all', filters: { [legacyKey]: value } }])
+    const parsed = parseSavedOdooTicketFilters(raw)[0]?.filters as unknown as Record<
+      string,
+      string[]
+    >
+    expect(parsed[arrayKey]).toEqual([value])
+  })
+
+  it.each(['assignee', 'tag', 'priority'])(
+    "treats the legacy 'all' %s sentinel as no filter",
+    (legacyKey) => {
+      const raw = JSON.stringify([{ name: 'Old', preset: 'all', filters: { [legacyKey]: 'all' } }])
+      expect(parseSavedOdooTicketFilters(raw)[0]?.filters).toEqual(DEFAULT_ODOO_TICKET_FILTERS)
+    }
+  )
+
+  it('drops an unknown priority code rather than storing it', () => {
+    const raw = JSON.stringify([
+      { name: 'Odd', preset: 'all', filters: { priorities: ['3', '9', 'nope'] } }
+    ])
+    expect(parseSavedOdooTicketFilters(raw)[0]?.filters.priorities).toEqual(['3'])
+  })
+
+  it('does not let two saved entries alias any facet array', () => {
+    // One copy per facet: five aliasing bugs are possible here, not one.
+    const filters = {
+      ...DEFAULT_ODOO_TICKET_FILTERS,
+      stages: ['Review'],
+      priorities: ['3' as const],
+      assignees: ['5'],
+      tags: ['9'],
+      projects: ['inst-a:7']
+    }
+    const once = upsertSavedOdooTicketFilter([], { name: 'A', preset: 'all', filters })
+    const twice = upsertSavedOdooTicketFilter(once, { name: 'B', preset: 'all', filters })
+    for (const facet of ['stages', 'priorities', 'assignees', 'tags', 'projects'] as const) {
+      expect(twice[0]?.filters[facet]).not.toBe(twice[1]?.filters[facet])
+      expect(twice[0]?.filters[facet]).not.toBe(filters[facet])
+    }
+  })
 })
 
 describe('setDefaultSavedOdooTicketFilter', () => {
@@ -308,7 +374,76 @@ describe('isSavedOdooTicketFilterActive', () => {
     const entry = saved('Mine', { preset: 'all', filters: MINE })
     expect(isSavedOdooTicketFilterActive(entry, 'all', MINE)).toBe(true)
     expect(isSavedOdooTicketFilterActive(entry, 'assigned', MINE)).toBe(false)
-    expect(isSavedOdooTicketFilterActive(entry, 'all', { ...MINE, tag: 'all' })).toBe(false)
+    expect(isSavedOdooTicketFilterActive(entry, 'all', { ...MINE, tags: [] })).toBe(false)
     expect(isSavedOdooTicketFilterActive(entry, 'all', { ...MINE, stages: [] })).toBe(false)
+  })
+})
+
+describe('project scope in saved filters', () => {
+  it('round trips a project selection through storage', () => {
+    const scoped = { ...DEFAULT_ODOO_TICKET_FILTERS, projects: ['inst-a:7', 'inst-a:9'] }
+    const stored = upsertSavedOdooTicketFilter([], {
+      name: 'Acme work',
+      preset: 'assigned',
+      filters: scoped
+    })
+    const parsed = parseSavedOdooTicketFilters(JSON.stringify(stored))
+    expect(parsed[0]?.filters.projects).toEqual(['inst-a:7', 'inst-a:9'])
+  })
+
+  it('does not let two saved entries alias one projects array', () => {
+    const filters = { ...DEFAULT_ODOO_TICKET_FILTERS, projects: ['inst-a:7'] }
+    const once = upsertSavedOdooTicketFilter([], { name: 'A', preset: 'all', filters })
+    const twice = upsertSavedOdooTicketFilter(once, { name: 'B', preset: 'all', filters })
+    expect(twice[0]?.filters.projects).not.toBe(twice[1]?.filters.projects)
+    expect(twice[0]?.filters.projects).not.toBe(filters.projects)
+  })
+
+  it('drops non-string entries from a stored projects array', () => {
+    const raw = JSON.stringify([
+      { name: 'Odd', preset: 'all', filters: { projects: ['inst-a:7', 7, 'inst-a:7'] } }
+    ])
+    expect(parseSavedOdooTicketFilters(raw)[0]?.filters.projects).toEqual(['inst-a:7'])
+  })
+
+  it('reads as inactive while the toolbar sits on a different selection', () => {
+    const entry = saved('Acme work', {
+      filters: { ...DEFAULT_ODOO_TICKET_FILTERS, projects: ['inst-a:7'] }
+    })
+    expect(
+      isSavedOdooTicketFilterActive(entry, 'assigned', {
+        ...DEFAULT_ODOO_TICKET_FILTERS,
+        projects: ['inst-a:7']
+      })
+    ).toBe(true)
+    // Same preset and facets, different project: the chip must not read as active.
+    expect(
+      isSavedOdooTicketFilterActive(entry, 'assigned', {
+        ...DEFAULT_ODOO_TICKET_FILTERS,
+        projects: ['inst-a:8']
+      })
+    ).toBe(false)
+    // A superset is not the saved view either.
+    expect(
+      isSavedOdooTicketFilterActive(entry, 'assigned', {
+        ...DEFAULT_ODOO_TICKET_FILTERS,
+        projects: ['inst-a:7', 'inst-a:8']
+      })
+    ).toBe(false)
+    expect(isSavedOdooTicketFilterActive(entry, 'assigned', DEFAULT_ODOO_TICKET_FILTERS)).toBe(
+      false
+    )
+  })
+
+  it('ignores selection order when matching', () => {
+    const entry = saved('Two', {
+      filters: { ...DEFAULT_ODOO_TICKET_FILTERS, projects: ['inst-a:7', 'inst-a:9'] }
+    })
+    expect(
+      isSavedOdooTicketFilterActive(entry, 'assigned', {
+        ...DEFAULT_ODOO_TICKET_FILTERS,
+        projects: ['inst-a:9', 'inst-a:7']
+      })
+    ).toBe(true)
   })
 })

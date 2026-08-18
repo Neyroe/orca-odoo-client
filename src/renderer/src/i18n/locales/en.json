@@ -15285,7 +15285,8 @@
             "multi": {
               "select": {
                 "93e80c55c9": "{{value0}} +{{value1}}",
-                "3a02612aab": "Nothing to filter on."
+                "3a02612aab": "Nothing to filter on.",
+                "searchPlaceholder": "Search…"
               }
             }
           },
@@ -15305,7 +15306,14 @@
             "7f31abc4a5": "All priorities",
             "7d46008d09": "Ticket view",
             "53d7b66f1b": "Kanban",
-            "a65ddcf2d6": "List"
+            "a65ddcf2d6": "List",
+            "allProjects": "All projects",
+            "noProject": "No project",
+            "searchProjects": "Search projects…",
+            "searchStages": "Search stages…",
+            "searchAssignees": "Search assignees…",
+            "searchTags": "Search tags…",
+            "searchPriorities": "Search priorities…"
           },
           "comment": {
             "composer": {

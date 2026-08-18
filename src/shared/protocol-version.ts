@@ -44,6 +44,22 @@ export const FOLDER_WORKSPACE_PATH_STATUS_RUNTIME_CAPABILITY =
   'folder-workspace.path-status.v1' as const
 export const LINEAR_ISSUE_ATTRIBUTE_FILTER_RUNTIME_CAPABILITY =
   'linear.issue-attribute-filter.v1' as const
+// Why: signals the host applies a ticket read's project scope to the Odoo domain.
+//
+// Rule 1 of docs/reference/remote-wire-compatibility.md would allow shipping
+// `projectScope` as a plain optional RPC param — but only while every reader may
+// treat it as optional, and this client cannot: an older host strips the unknown
+// param and answers with an *unscoped* page, which the client would then present
+// and cache as the project's. That is Rule 2 territory, so the scope is negotiated
+// here instead. Post-filtering the reply client-side is not the fallback it looks
+// like: the reads are limited, so it cannot tell a small project from a truncated
+// page.
+//
+// v2, not v1: the payload changed from one project to a per-instance id list when
+// multi-select landed. Reusing v1 would have let a peer advertise support for a
+// shape it cannot parse — the id is part of the contract, so a new shape earns a
+// new id. Whoever changes the payload again bumps this the same way.
+export const ODOO_PROJECT_SCOPE_RUNTIME_CAPABILITY = 'odoo.project-scope.v2' as const
 // Why: signals the host exposes the Agent Session History scanner over RPC
 // (aiVault.listSessions). Registered unconditionally for every build, so it is a
 // STATIC capability advertised by getStatus() automatically — NOT a runtime
@@ -114,6 +130,7 @@ export const RUNTIME_CAPABILITIES = [
   WORKTREE_LINKED_WORK_ITEM_CONTEXT_RUNTIME_CAPABILITY,
   FOLDER_WORKSPACE_PATH_STATUS_RUNTIME_CAPABILITY,
   LINEAR_ISSUE_ATTRIBUTE_FILTER_RUNTIME_CAPABILITY,
+  ODOO_PROJECT_SCOPE_RUNTIME_CAPABILITY,
   AI_VAULT_RUNTIME_CAPABILITY,
   AI_VAULT_SESSION_TITLES_RUNTIME_CAPABILITY,
   TERMINAL_QUERY_REPLY_INPUT_RUNTIME_CAPABILITY,

@@ -6,6 +6,7 @@ import type {
   OdooInstanceSelection,
   OdooMutationResult,
   OdooProject,
+  OdooProjectScope,
   OdooStage,
   OdooTag,
   OdooTicket,
@@ -14,7 +15,9 @@ import type {
   OdooUser,
   OdooViewer
 } from '../../../shared/odoo-types'
-import { callRuntimeRpc } from './runtime-rpc-client'
+import { callRuntimeRpc, runtimeEnvironmentSupportsCapability } from './runtime-rpc-client'
+import { ODOO_PROJECT_SCOPE_RUNTIME_CAPABILITY } from '../../../shared/protocol-version'
+import type { RuntimeClientTarget } from './runtime-client-target'
 import { isRuntimeProviderSearchQueryWithinLimit } from './runtime-provider-search-bounds'
 import { getOdooRuntimeTarget, type RuntimeOdooSettings } from './odoo-runtime-target'
 
@@ -29,6 +32,43 @@ export {
 export { getOdooRuntimeTarget, type RuntimeOdooSettings } from './odoo-runtime-target'
 
 export type OdooConnectResult = { ok: true; viewer: OdooViewer } | { ok: false; error: string }
+
+// Why: a host predating the project scope strips the unknown param and answers
+// with an unscoped page. Presenting that as a project view would be wrong rather
+// than merely stale, and post-filtering it locally would silently truncate the
+// project to whatever fits the read's limit. The store rethrows this so the panel
+// can say the remote needs updating instead of showing the wrong rows.
+export class OdooProjectScopeUnsupportedError extends Error {
+  constructor(message = 'This remote runtime must be updated to filter Odoo tickets by project.') {
+    super(message)
+    this.name = 'OdooProjectScopeUnsupportedError'
+  }
+}
+
+export function isOdooProjectScopeUnsupportedError(
+  error: unknown
+): error is OdooProjectScopeUnsupportedError {
+  return error instanceof OdooProjectScopeUnsupportedError
+}
+
+/** Refuses a project-scoped read the paired host cannot honour. Local targets
+ *  ship main and renderer together, so they are never skewed. */
+async function assertProjectScopeSupported(
+  target: RuntimeClientTarget,
+  projectScope: OdooProjectScope | null | undefined
+): Promise<void> {
+  if (target.kind !== 'environment' || !projectScope) {
+    return
+  }
+  const supported = await runtimeEnvironmentSupportsCapability(
+    target.environmentId,
+    ODOO_PROJECT_SCOPE_RUNTIME_CAPABILITY,
+    30_000
+  )
+  if (!supported) {
+    throw new OdooProjectScopeUnsupportedError()
+  }
+}
 
 export async function odooStatus(settings: RuntimeOdooSettings): Promise<OdooConnectionStatus> {
   const target = getOdooRuntimeTarget(settings)
@@ -98,10 +138,17 @@ export async function odooListTickets(
   settings: RuntimeOdooSettings,
   filter?: OdooTicketFilter,
   limit?: number,
-  instanceId?: OdooInstanceSelection | null
+  instanceId?: OdooInstanceSelection | null,
+  projectScope?: OdooProjectScope | null
 ): Promise<OdooTicket[]> {
   const target = getOdooRuntimeTarget(settings)
-  const args = { filter, limit, instanceId: instanceId ?? undefined }
+  await assertProjectScopeSupported(target, projectScope)
+  const args = {
+    filter,
+    limit,
+    instanceId: instanceId ?? undefined,
+    ...(projectScope ? { projectScope } : {})
+  }
   return target.kind === 'environment'
     ? callRuntimeRpc<OdooTicket[]>(target, 'odoo.listTickets', args, { timeoutMs: 30_000 })
     : window.api.odoo.listTickets(args)
@@ -111,10 +158,17 @@ export async function odooSearchTickets(
   settings: RuntimeOdooSettings,
   domain: unknown[],
   limit?: number,
-  instanceId?: OdooInstanceSelection | null
+  instanceId?: OdooInstanceSelection | null,
+  projectScope?: OdooProjectScope | null
 ): Promise<OdooTicket[]> {
   const target = getOdooRuntimeTarget(settings)
-  const args = { domain, limit, instanceId: instanceId ?? undefined }
+  await assertProjectScopeSupported(target, projectScope)
+  const args = {
+    domain,
+    limit,
+    instanceId: instanceId ?? undefined,
+    ...(projectScope ? { projectScope } : {})
+  }
   return target.kind === 'environment'
     ? callRuntimeRpc<OdooTicket[]>(target, 'odoo.searchTickets', args, { timeoutMs: 30_000 })
     : window.api.odoo.searchTickets(args)

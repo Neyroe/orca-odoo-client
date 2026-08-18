@@ -1,6 +1,12 @@
 import { DEFAULT_ODOO_TICKET_FILTERS, type OdooTicketListFilters } from './odoo-ticket-facets'
-import { ODOO_PRIORITIES } from '../../../shared/odoo-types'
-import type { OdooPriority, OdooTicketFilter } from '../../../shared/odoo-types'
+import {
+  parseAssignees,
+  parsePriorities,
+  parseProjects,
+  parseStages,
+  parseTags
+} from './odoo-saved-ticket-filter-migrations'
+import type { OdooTicketFilter } from '../../../shared/odoo-types'
 const STORAGE_KEY = 'odoo.savedTicketFilters'
 // Separate marker so an empty list means "the user cleared them", not "never
 // seeded" — otherwise deleting the seeded entries would bring them straight back.
@@ -26,6 +32,21 @@ export const ODOO_SEEDED_FILTER_PRESETS: readonly OdooTicketFilter[] = ['assigne
 
 const PRESETS: readonly OdooTicketFilter[] = ['assigned', 'reported', 'all', 'done']
 
+function copyFilters(filters: OdooTicketListFilters): OdooTicketListFilters {
+  return {
+    stages: [...filters.stages],
+    priorities: [...filters.priorities],
+    assignees: [...filters.assignees],
+    tags: [...filters.tags],
+    projects: [...filters.projects]
+  }
+}
+
+/** Order-insensitive set equality — the selection is a set, not a sequence. */
+function sameSelection(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((value) => right.includes(value))
+}
+
 /**
  * Identity is the normalised name, so re-saving under an existing name updates
  * that entry instead of piling up near-duplicates.
@@ -38,31 +59,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-/**
- * Reads both shapes: `stages: string[]` and the pre-multi-select `stage: string`
- * where 'all' meant "no filter". Entries saved before stages became multiple
- * must keep working rather than silently widen to every stage.
- */
-function parseStages(value: Record<string, unknown>): string[] {
-  if (Array.isArray(value.stages)) {
-    return [...new Set(value.stages.filter((entry): entry is string => typeof entry === 'string'))]
-  }
-  const legacy = value.stage
-  return typeof legacy === 'string' && legacy !== 'all' ? [legacy] : []
-}
-
 function parseFilters(value: unknown): OdooTicketListFilters {
   if (!isRecord(value)) {
     return DEFAULT_ODOO_TICKET_FILTERS
   }
-  const { priority, assignee, tag } = value
   return {
     stages: parseStages(value),
-    priority: ODOO_PRIORITIES.includes(priority as OdooPriority)
-      ? (priority as OdooPriority)
-      : 'all',
-    assignee: typeof assignee === 'string' ? assignee : 'all',
-    tag: typeof tag === 'string' ? tag : 'all'
+    priorities: parsePriorities(value),
+    assignees: parseAssignees(value),
+    tags: parseTags(value),
+    projects: parseProjects(value)
   }
 }
 
@@ -128,7 +134,9 @@ export function upsertSavedOdooTicketFilter(
     id,
     name,
     preset: entry.preset,
-    filters: { ...entry.filters, stages: [...entry.filters.stages] },
+    // One copy per facet: sharing any of these arrays would make two saved
+    // entries alias one selection.
+    filters: copyFilters(entry.filters),
     // Re-saving under an existing name keeps its star and pin rather than
     // demoting them.
     ...(existingIndex !== -1 && saved[existingIndex]?.isDefault ? { isDefault: true } : {}),
@@ -222,11 +230,11 @@ export function isSavedOdooTicketFilterActive(
 ): boolean {
   return (
     entry.preset === preset &&
-    entry.filters.stages.length === filters.stages.length &&
-    entry.filters.stages.every((stage) => filters.stages.includes(stage)) &&
-    entry.filters.priority === filters.priority &&
-    entry.filters.assignee === filters.assignee &&
-    entry.filters.tag === filters.tag
+    sameSelection(entry.filters.stages, filters.stages) &&
+    sameSelection(entry.filters.priorities, filters.priorities) &&
+    sameSelection(entry.filters.assignees, filters.assignees) &&
+    sameSelection(entry.filters.tags, filters.tags) &&
+    sameSelection(entry.filters.projects, filters.projects)
   )
 }
 
@@ -277,7 +285,7 @@ export function seedDefaultSavedOdooTicketFilters(
       id: odooSavedTicketFilterId(name),
       name,
       preset,
-      filters: { ...DEFAULT_ODOO_TICKET_FILTERS, stages: [] },
+      filters: copyFilters(DEFAULT_ODOO_TICKET_FILTERS),
       pinned: true,
       ...(index === 0 ? { isDefault: true } : {})
     }

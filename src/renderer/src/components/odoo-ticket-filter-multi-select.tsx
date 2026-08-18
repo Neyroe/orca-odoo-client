@@ -3,31 +3,62 @@ import { Check, ChevronsUpDown } from 'lucide-react'
 
 import type { OdooTicketFilterId } from '@/components/odoo-ticket-filter-select'
 import { Button } from '@/components/ui/button'
-import { Command, CommandEmpty, CommandItem, CommandList } from '@/components/ui/command'
+import {
+  Command,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList
+} from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 
-function triggerLabel(selected: readonly string[], allLabel: string): string {
+export type OdooTicketFilterMultiOption = {
+  value: string
+  label: string
+  /**
+   * Text the search box matches on, when it should be wider than the label —
+   * a project also matches on its instance name. Must be unique per option:
+   * Command keys its items by this, so two same-named projects on different
+   * instances would otherwise collapse into one row.
+   */
+  searchText?: string
+}
+
+function optionSearchText(option: OdooTicketFilterMultiOption): string {
+  return option.searchText ?? option.label
+}
+
+function triggerLabel(
+  selected: readonly string[],
+  options: readonly OdooTicketFilterMultiOption[],
+  allLabel: string
+): string {
   if (selected.length === 0) {
     return allLabel
   }
+  const labelFor = (value: string): string =>
+    options.find((option) => option.value === value)?.label ?? value
   const [first] = selected
-  return selected.length === 1
-    ? (first ?? allLabel)
-    : translate(
-        'auto.components.odoo.ticket.filter.multi.select.93e80c55c9',
-        '{{value0}} +{{value1}}',
-        {
-          value0: first,
-          value1: selected.length - 1
-        }
-      )
+  if (selected.length === 1) {
+    return first ? labelFor(first) : allLabel
+  }
+  return translate(
+    'auto.components.odoo.ticket.filter.multi.select.93e80c55c9',
+    '{{value0}} +{{value1}}',
+    { value0: labelFor(first ?? ''), value1: selected.length - 1 }
+  )
 }
 
 /**
- * Multi-value facet dropdown. Shares the toolbar's single open slot with the
- * single-value selects so opening one still closes the others.
+ * Multi-value facet dropdown for the ticket toolbar. Shares the toolbar's single
+ * open slot with the instance select, so opening one still closes the others.
+ *
+ * Every facet carries a filter box, short lists included. Gating it on option
+ * count was tried and rejected: whether a search field appeared then depended on
+ * how many stages a project happened to have, and one consistent interaction on
+ * every filter is what was asked for.
  */
 export function OdooTicketFilterMultiSelect({
   id,
@@ -37,22 +68,24 @@ export function OdooTicketFilterMultiSelect({
   selected,
   onSelectedChange,
   allLabel,
-  triggerClassName
+  searchPlaceholder,
+  triggerClassName,
+  contentClassName
 }: {
   id: string
   openFilter: OdooTicketFilterId
   onOpenFilterChange: (next: OdooTicketFilterId) => void
-  options: readonly string[]
+  options: readonly OdooTicketFilterMultiOption[]
   selected: readonly string[]
   onSelectedChange: (next: string[]) => void
   allLabel: string
+  searchPlaceholder?: string
   triggerClassName?: string
+  contentClassName?: string
 }): React.JSX.Element {
-  const toggle = (option: string): void => {
+  const toggle = (value: string): void => {
     onSelectedChange(
-      selected.includes(option)
-        ? selected.filter((entry) => entry !== option)
-        : [...selected, option]
+      selected.includes(value) ? selected.filter((entry) => entry !== value) : [...selected, value]
     )
   }
 
@@ -66,12 +99,24 @@ export function OdooTicketFilterMultiSelect({
           aria-expanded={openFilter === id}
           className={cn('h-7 justify-between gap-1 px-2 text-xs font-normal', triggerClassName)}
         >
-          <span className="min-w-0 truncate">{triggerLabel(selected, allLabel)}</span>
+          <span className="min-w-0 truncate">{triggerLabel(selected, options, allLabel)}</span>
           <ChevronsUpDown className="size-3.5 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-56 p-0">
-        <Command shouldFilter={false}>
+      <PopoverContent align="start" className={cn('w-56 p-0', contentClassName)}>
+        {/* Command's own filtering drives the search box, so each item's `value` is
+            the searchable text and selection goes through onSelect. */}
+        <Command>
+          <CommandInput
+            placeholder={
+              searchPlaceholder ??
+              translate(
+                'auto.components.odoo.ticket.filter.multi.select.searchPlaceholder',
+                'Search…'
+              )
+            }
+            className="h-8 text-xs"
+          />
           <CommandList>
             <CommandEmpty>
               {translate(
@@ -79,14 +124,16 @@ export function OdooTicketFilterMultiSelect({
                 'Nothing to filter on.'
               )}
             </CommandEmpty>
+            {/* The clear-all row keeps the `all` wording rather than a checkbox: it
+                is the absence of a selection, not another value to combine. */}
             <CommandItem
-              value="__all__"
+              value={allLabel}
               onSelect={() => onSelectedChange([])}
               className="items-center gap-2 px-2 py-1.5 text-xs"
             >
               <Check
                 className={cn(
-                  'size-3 text-muted-foreground',
+                  'size-3 shrink-0 text-muted-foreground',
                   selected.length === 0 ? 'opacity-70' : 'opacity-0'
                 )}
               />
@@ -94,18 +141,20 @@ export function OdooTicketFilterMultiSelect({
             </CommandItem>
             {options.map((option) => (
               <CommandItem
-                key={option}
-                value={option}
-                onSelect={() => toggle(option)}
+                key={option.value}
+                value={optionSearchText(option)}
+                onSelect={() => toggle(option.value)}
                 className="items-center gap-2 px-2 py-1.5 text-xs"
               >
                 <Check
                   className={cn(
-                    'size-3 text-muted-foreground',
-                    selected.includes(option) ? 'opacity-70' : 'opacity-0'
+                    'size-3 shrink-0 text-muted-foreground',
+                    selected.includes(option.value) ? 'opacity-70' : 'opacity-0'
                   )}
                 />
-                <span className="min-w-0 truncate">{option}</span>
+                <span className="min-w-0 truncate" title={option.label}>
+                  {option.label}
+                </span>
               </CommandItem>
             ))}
           </CommandList>

@@ -241,6 +241,7 @@ import type {
   OdooConnectArgs,
   OdooCreateTicketArgs,
   OdooInstanceSelection,
+  OdooProjectScope,
   OdooTicketFilter,
   OdooTicketUpdate
 } from '../../shared/odoo-types'
@@ -35763,17 +35764,19 @@ export class OrcaRuntimeService {
   odooListTickets(
     filter?: OdooTicketFilter,
     limit = 30,
-    instanceId?: OdooInstanceSelection
+    instanceId?: OdooInstanceSelection,
+    projectScope?: OdooProjectScope
   ): ReturnType<typeof listOdooTickets> {
-    return listOdooTickets(filter, Math.min(Math.max(1, limit), 100), instanceId)
+    return listOdooTickets(filter, Math.min(Math.max(1, limit), 100), instanceId, projectScope)
   }
 
   odooSearchTickets(
     domain: unknown[],
     limit = 30,
-    instanceId?: OdooInstanceSelection
+    instanceId?: OdooInstanceSelection,
+    projectScope?: OdooProjectScope
   ): ReturnType<typeof searchOdooTickets> {
-    return searchOdooTickets(domain, Math.min(Math.max(1, limit), 100), instanceId)
+    return searchOdooTickets(domain, Math.min(Math.max(1, limit), 100), instanceId, projectScope)
   }
 
   odooGetTicket(id: number, instanceId?: string): ReturnType<typeof getOdooTicket> {

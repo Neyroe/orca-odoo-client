@@ -20,6 +20,7 @@
     "../src/main/odoo/instance-credentials.ts",
     "../src/main/odoo/json-rpc.ts",
     "../src/main/odoo/ticket-mappers.ts",
+    "../src/main/odoo/ticket-read-domain.ts",
     "../src/main/odoo/tickets.ts",
     "../src/main/ipc/worktree-branch-name.ts",
     "../src/main/ipc/worktree-logic.ts",
