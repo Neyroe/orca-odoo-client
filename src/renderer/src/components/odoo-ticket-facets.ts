@@ -176,10 +176,10 @@ export function odooProjectFilterOptions(
       showInstance && project.instanceName
         ? `${project.name} (${project.instanceName})`
         : project.name
-    // The value is appended so two same-named projects on different instances stay
-    // distinct Command items; nobody types a base64url instance id, so it never
-    // widens a search in practice.
-    return [{ value, label, searchText: `${project.name} ${project.instanceName ?? ''} ${value}` }]
+    // Only what a user would type: the id stays out of the searchable text, since
+    // every project of one instance shares it and a filter matching it matches all
+    // of them. Same-named projects stay distinct rows through `value`.
+    return [{ value, label, searchText: `${project.name} ${project.instanceName ?? ''}`.trim() }]
   })
 }
 

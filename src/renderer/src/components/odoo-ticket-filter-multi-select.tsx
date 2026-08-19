@@ -1,6 +1,7 @@
 import React from 'react'
 import { Check, ChevronsUpDown } from 'lucide-react'
 
+import { odooFilterOptionMatches } from '@/components/odoo-ticket-filter-option-search'
 import type { OdooTicketFilterId } from '@/components/odoo-ticket-filter-select'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,9 +20,8 @@ export type OdooTicketFilterMultiOption = {
   label: string
   /**
    * Text the search box matches on, when it should be wider than the label —
-   * a project also matches on its instance name. Must be unique per option:
-   * Command keys its items by this, so two same-named projects on different
-   * instances would otherwise collapse into one row.
+   * a project also matches on its instance name. Never carries an id: it is
+   * matched against what the user typed, and Command keys its rows by `value`.
    */
   searchText?: string
 }
@@ -88,6 +88,12 @@ export function OdooTicketFilterMultiSelect({
       selected.includes(value) ? selected.filter((entry) => entry !== value) : [...selected, value]
     )
   }
+  // Rows are keyed by the opaque option value, so the search box is handed the
+  // human-readable text for that key instead — never the key itself.
+  const searchTextByValue = React.useMemo(
+    () => new Map(options.map((option) => [option.value, optionSearchText(option)])),
+    [options]
+  )
 
   return (
     <Popover open={openFilter === id} onOpenChange={(next) => onOpenFilterChange(next ? id : null)}>
@@ -104,9 +110,14 @@ export function OdooTicketFilterMultiSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className={cn('w-56 p-0', contentClassName)}>
-        {/* Command's own filtering drives the search box, so each item's `value` is
-            the searchable text and selection goes through onSelect. */}
-        <Command>
+        {/* Command's own filtering drives the search box; the explicit filter keeps
+            it a substring match on the option text, and selection goes through
+            onSelect. The clear-all row falls back to its own label. */}
+        <Command
+          filter={(value, search) =>
+            odooFilterOptionMatches(searchTextByValue.get(value) ?? value, search) ? 1 : 0
+          }
+        >
           <CommandInput
             placeholder={
               searchPlaceholder ??
@@ -142,7 +153,7 @@ export function OdooTicketFilterMultiSelect({
             {options.map((option) => (
               <CommandItem
                 key={option.value}
-                value={optionSearchText(option)}
+                value={option.value}
                 onSelect={() => toggle(option.value)}
                 className="items-center gap-2 px-2 py-1.5 text-xs"
               >
