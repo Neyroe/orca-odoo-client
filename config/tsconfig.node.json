@@ -8,6 +8,7 @@
     // Leaf renderer modules (shared types only, no DOM) the Odoo live proof drives directly.
     "../src/renderer/src/components/odoo-auto-workspace-criteria.ts",
     "../src/renderer/src/components/odoo-comment-mention-query.ts",
+    "../src/renderer/src/components/task-page-odoo-item-source-context.ts",
     "../src/preload/**/*",
     "../src/shared/**/*",
     "../src/relay/**/*",
