@@ -4,6 +4,7 @@ import {
   DEFAULT_ODOO_TICKET_FILTERS,
   deriveOdooTicketFacets,
   filterOdooTickets,
+  odooProjectFilterOptions,
   odooProjectFilterValue,
   parseOdooProjectFilters,
   retainResolvableOdooProjectFilters,
@@ -260,5 +261,47 @@ describe('retainResolvableOdooProjectFilters', () => {
 
   it('drops a value naming a project with no instance id', () => {
     expect(retainResolvableOdooProjectFilters([':7'], [{ id: 7, name: 'Acme' }])).toEqual([])
+  })
+})
+
+describe('odooProjectFilterOptions', () => {
+  const projects = [
+    { id: 7, name: 'Acme', instanceId: 'inst-a', instanceName: 'Acme SA' },
+    { id: 7, name: 'Acme', instanceId: 'inst-b', instanceName: 'Acme SAS' }
+  ]
+
+  it('keeps the id out of the searchable text', () => {
+    // Every project of an instance shares that id, so matching on it matched all.
+    expect(odooProjectFilterOptions(projects, false).map((option) => option.searchText)).toEqual([
+      'Acme Acme SA',
+      'Acme Acme SAS'
+    ])
+  })
+
+  it('still gives same-named projects distinct values', () => {
+    expect(odooProjectFilterOptions(projects, false).map((option) => option.value)).toEqual([
+      'inst-a:7',
+      'inst-b:7'
+    ])
+  })
+
+  it('names the instance in the label only when several are connected', () => {
+    expect(odooProjectFilterOptions(projects, false).map((option) => option.label)).toEqual([
+      'Acme',
+      'Acme'
+    ])
+    expect(odooProjectFilterOptions(projects, true).map((option) => option.label)).toEqual([
+      'Acme (Acme SA)',
+      'Acme (Acme SAS)'
+    ])
+  })
+
+  it('drops a project no filter value can address', () => {
+    expect(odooProjectFilterOptions([{ id: 7, name: 'Acme' }], false)).toEqual([])
+  })
+
+  it('leaves no trailing separator when the instance name is unknown', () => {
+    const options = odooProjectFilterOptions([{ id: 7, name: 'Acme', instanceId: 'inst-a' }], false)
+    expect(options.map((option) => option.searchText)).toEqual(['Acme'])
   })
 })
