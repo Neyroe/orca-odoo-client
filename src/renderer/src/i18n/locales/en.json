@@ -5497,6 +5497,12 @@
               }
             }
           }
+        },
+        "WorkspaceLinkedOdooTicketMenuItem": {
+          "storedTicket": "Odoo ticket {{value0}}",
+          "unavailable": "Odoo could not be read, so {{value0}} cannot open in Orca right now.",
+          "openInBrowser": "Open in Odoo",
+          "open": "Open Odoo ticket {{value0}}"
         }
       },
       "shared": {

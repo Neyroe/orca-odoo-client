@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react'
 
 import type { GitHubWorkItem } from '../../../../shared/github/work-item-types'
+import type { OdooTicket } from '../../../../shared/odoo-types'
 import { hasWorktreeCardDetails } from './WorktreeCardMeta'
 import { usePromptCacheCountdownStartedAt } from './CacheTimer'
 import { useWorktreeAgentRows } from './useWorktreeAgentRows'
@@ -32,6 +33,7 @@ export function useWorktreeCardSecondaryDetails({
   linearIssue,
   linearIssueDisplay,
   jiraIssueDisplay,
+  odooTicket,
   odooTicketDisplay,
   prDisplay,
   linkedGitLabMR,
@@ -63,6 +65,7 @@ export function useWorktreeCardSecondaryDetails({
     ReviewDetails,
     'prDisplay' | 'linkedGitLabMR' | 'linkedBitbucketPR' | 'linkedAzureDevOpsPR' | 'linkedGiteaPR'
   > & {
+    odooTicket: OdooTicket | null
     odooTicketDisplay: WorktreeCardOdooTicketDisplay | null
     showStatus: boolean
     showIssue: boolean
@@ -187,10 +190,22 @@ export function useWorktreeCardSecondaryDetails({
     },
     [linearIssue, openTaskPage]
   )
+  // The ticket the badge already loaded, so opening it in Orca needs no second read.
+  const handleOpenOdooTicketInOrca = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      if (!odooTicket) {
+        return
+      }
+      openTaskPage({ taskSource: 'odoo', openOdooTicket: odooTicket })
+    },
+    [odooTicket, openTaskPage]
+  )
   const hasDetails = hasWorktreeCardDetails({
     issue: metaIssue,
     linearIssue: metaLinearIssue,
     jiraIssue: metaJiraIssue,
+    odooTicket: metaOdooTicket,
     review: newCardStyle ? null : metaReview,
     comment: metaComment,
     automationProvenance: metaAutomationProvenance,
@@ -226,6 +241,7 @@ export function useWorktreeCardSecondaryDetails({
     hasExplicitLinkedReview,
     handleUnlinkReview,
     handleOpenLinearIssueInOrca,
+    handleOpenOdooTicketInOrca,
     hasDetails,
     hasPorts,
     cacheStartedAt,

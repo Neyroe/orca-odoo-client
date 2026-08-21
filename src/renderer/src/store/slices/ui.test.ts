@@ -9,6 +9,7 @@ import {
 import type { GitHubWorkItem } from '../../../../shared/github/work-item-types'
 import type { JiraIssue } from '../../../../shared/jira-types'
 import type { LinearIssue } from '../../../../shared/linear/issue-types'
+import type { OdooTicket } from '../../../../shared/odoo-types'
 import type { PersistedUIState } from '../../../../shared/persisted-ui-state-types'
 import type { Repo } from '../../../../shared/repo-types'
 import type { TerminalTab } from '../../../../shared/terminal-tab-types'
@@ -2323,6 +2324,28 @@ describe('createUISlice page navigation history', () => {
     expect(store.getState().taskPageData).toEqual({})
     expect(store.getState().githubTaskDrawerWorkItem).toBeNull()
     expect(store.getState().worktreeNavHistoryIndex).toBe(0)
+  })
+
+  it('opens an Odoo ticket detail and keeps one history entry per ticket', () => {
+    const store = createUIStore()
+    const ticket = { id: 45514, ref: '#45514', instanceId: 'prod' } as OdooTicket
+    store.setState({ worktreesByRepo: { 'repo-1': [makeWorktree('a')] } })
+
+    store.getState().recordWorktreeVisit('a')
+    store.getState().openTaskPage({ taskSource: 'odoo', openOdooTicket: ticket })
+
+    expect(store.getState().activeView).toBe('tasks')
+    expect(store.getState().taskPageData.openOdooTicket).toBe(ticket)
+    expect(store.getState().worktreeNavHistory).toEqual([
+      'a',
+      'tasks',
+      { kind: 'task-detail', source: 'odoo', ticket }
+    ])
+
+    // Reopening the same ticket must not stack a second entry, even though the
+    // read hands back a fresh object.
+    store.getState().openTaskPage({ taskSource: 'odoo', openOdooTicket: { ...ticket } })
+    expect(store.getState().worktreeNavHistory).toHaveLength(3)
   })
 
   it('records provider-depth interactions for direct Tasks detail opens', () => {
