@@ -772,7 +772,8 @@ setWorktreeNavViewActivator((entry) => {
         openLinearIssue: undefined,
         openLinearSourceContext: undefined,
         openJiraIssue: undefined,
-        openJiraSourceContext: undefined
+        openJiraSourceContext: undefined,
+        openOdooTicket: undefined
       }
     }))
     return
@@ -792,7 +793,8 @@ setWorktreeNavViewActivator((entry) => {
         openLinearIssue: undefined,
         openLinearSourceContext: undefined,
         openJiraIssue: undefined,
-        openJiraSourceContext: undefined
+        openJiraSourceContext: undefined,
+        openOdooTicket: undefined
       }
     }))
     return
@@ -813,7 +815,8 @@ setWorktreeNavViewActivator((entry) => {
         openLinearIssue: undefined,
         openLinearSourceContext: undefined,
         openJiraIssue: undefined,
-        openJiraSourceContext: undefined
+        openJiraSourceContext: undefined,
+        openOdooTicket: undefined
       }
     }))
     return
@@ -833,7 +836,29 @@ setWorktreeNavViewActivator((entry) => {
         openLinearIssue: undefined,
         openLinearSourceContext: undefined,
         openJiraIssue: entry.issue,
-        openJiraSourceContext: entry.sourceContext
+        openJiraSourceContext: entry.sourceContext,
+        openOdooTicket: undefined
+      }
+    }))
+    return
+  }
+  if (entry.source === 'odoo') {
+    useAppStore.setState((state) => ({
+      activeView: 'tasks',
+      githubTaskDrawerWorkItem: null,
+      taskPageData: {
+        ...state.taskPageData,
+        taskSource: 'odoo',
+        openGitHubWorkItem: undefined,
+        openGitHubSourceContext: undefined,
+        openGitHubInitialTab: undefined,
+        openGitLabWorkItem: undefined,
+        openGitLabSourceContext: undefined,
+        openLinearIssue: undefined,
+        openLinearSourceContext: undefined,
+        openJiraIssue: undefined,
+        openJiraSourceContext: undefined,
+        openOdooTicket: entry.ticket
       }
     }))
     return
@@ -852,7 +877,8 @@ setWorktreeNavViewActivator((entry) => {
       openLinearIssue: entry.issue,
       openLinearSourceContext: entry.sourceContext,
       openJiraIssue: undefined,
-      openJiraSourceContext: undefined
+      openJiraSourceContext: undefined,
+      openOdooTicket: undefined
     }
   }))
 })

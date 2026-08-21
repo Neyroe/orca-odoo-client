@@ -8,6 +8,7 @@ import {
 } from './worktree-nav-history'
 import type { GitHubWorkItem } from '../../../../shared/github/work-item-types'
 import type { JiraIssue } from '../../../../shared/jira-types'
+import type { OdooTicket } from '../../../../shared/odoo-types'
 import type { LinearIssue } from '../../../../shared/linear/issue-types'
 import type { PersistedTrustedOrcaHooks } from '../../../../shared/orca-yaml-hook-types'
 import type { PersistedUIState } from '../../../../shared/persisted-ui-state-types'
@@ -680,6 +681,8 @@ export type UISlice = {
     openLinearSourceContext?: TaskSourceContext | null
     openJiraIssue?: JiraIssue
     openJiraSourceContext?: TaskSourceContext | null
+    /** Odoo carries the whole ticket: the panel opens it without waiting for its list read. */
+    openOdooTicket?: OdooTicket
   }
   taskResumeState: TaskResumeState | undefined
   setTaskResumeState: (updates: Partial<TaskResumeState>) => void
@@ -1301,7 +1304,13 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
                 issue: data.openJiraIssue,
                 sourceContext: data.openJiraSourceContext
               } as const)
-            : null
+            : data.openOdooTicket
+              ? ({
+                  kind: 'task-detail',
+                  source: 'odoo',
+                  ticket: data.openOdooTicket
+                } as const)
+              : null
     const currentEntry = get().worktreeNavHistory[get().worktreeNavHistoryIndex]
     const currentIsTaskStack =
       currentEntry === 'tasks' ||

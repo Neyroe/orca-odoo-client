@@ -64,6 +64,7 @@ import {
   useWorkspaceLineageMenuActions
 } from './workspace-lineage-menu-actions'
 import { WorkspaceSleepMenuItems } from './WorkspaceSleepMenuItems'
+import { WorkspaceLinkedOdooTicketMenuItem } from './WorkspaceLinkedOdooTicketMenuItem'
 import { isEventTargetInsideCurrentTarget } from './worktree-card-dom-events'
 import { translate } from '@/i18n/i18n'
 import { parseWorkspaceKey, worktreeWorkspaceKey } from '../../../../shared/workspace-scope'
@@ -901,6 +902,7 @@ const WorktreeContextMenu = React.memo(function WorktreeContextMenu({
                 connectionId={repo?.connectionId ?? null}
                 disabled={isDeleting}
               />
+              <WorkspaceLinkedOdooTicketMenuItem worktree={worktree} disabled={isDeleting} />
               <DropdownMenuItem onSelect={handleCopyPath} disabled={isDeleting}>
                 <Copy className="size-3.5" />
                 {translate('auto.components.sidebar.WorktreeContextMenu.3350101edb', 'Copy Path')}

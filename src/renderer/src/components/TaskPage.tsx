@@ -4350,7 +4350,8 @@ export default function TaskPage(): React.JSX.Element {
         openLinearIssue: undefined,
         openLinearSourceContext: undefined,
         openJiraIssue: undefined,
-        openJiraSourceContext: undefined
+        openJiraSourceContext: undefined,
+        openOdooTicket: undefined
       }
     }))
   }, [clearSelectedLinearIssue, setDialogWorkItem])

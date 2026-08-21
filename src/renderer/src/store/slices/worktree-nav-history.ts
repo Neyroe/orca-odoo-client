@@ -4,6 +4,7 @@ import { findWorktreeById } from './worktree-helpers'
 import type { GitHubWorkItem } from '../../../../shared/github/work-item-types'
 import type { JiraIssue } from '../../../../shared/jira-types'
 import type { LinearIssue } from '../../../../shared/linear/issue-types'
+import type { OdooTicket } from '../../../../shared/odoo-types'
 import type { GitLabWorkItem } from '../../../../shared/gitlab-types'
 import {
   getTaskSourceCacheScope,
@@ -41,6 +42,11 @@ export type WorktreeNavHistoryTaskDetailEntry =
       source: 'jira'
       issue: JiraIssue
       sourceContext?: TaskSourceContext | null
+    }
+  | {
+      kind: 'task-detail'
+      source: 'odoo'
+      ticket: OdooTicket
     }
 export type WorktreeNavHistoryViewEntry =
   | WorktreeNavHistorySimpleViewEntry
@@ -110,6 +116,10 @@ function getHistoryEntryKey(entry: WorktreeNavHistoryEntry): string {
         ? getTaskSourceCacheScope(entry.sourceContext)
         : 'legacy'
     return `view:task-detail:jira:${sourceScope}:${entry.issue.siteId ?? 'selected'}:${entry.issue.key}`
+  }
+  if (entry.source === 'odoo') {
+    // Numeric ticket ids collide across instances, so the instance is part of the key.
+    return `view:task-detail:odoo:${entry.ticket.instanceId ?? 'selected'}:${entry.ticket.id}`
   }
   const sourceScope =
     entry.sourceContext?.provider === 'linear'
