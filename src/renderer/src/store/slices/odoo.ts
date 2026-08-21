@@ -9,7 +9,12 @@ import type {
   OdooViewer
 } from '../../../../shared/odoo-types'
 import type { CacheEntry } from './github'
-import { odooGetTicket, odooListTickets, odooSearchTickets } from '@/runtime/runtime-odoo-client'
+import {
+  odooGetTicket,
+  odooListTickets,
+  odooSearchTickets,
+  type OdooUpdatableInstance
+} from '@/runtime/runtime-odoo-client'
 import {
   getTaskSourceCacheScope,
   type TaskSourceContext
@@ -22,6 +27,7 @@ import {
   getSelectedOdooInstanceId,
   isFresh,
   looksLikeOdooAuthError,
+  rejectedOdooCredential,
   scopedOdooCacheKey,
   shouldRefreshOdooStatusAfterRead,
   type InflightOdooRead,
@@ -78,6 +84,8 @@ export type OdooSlice = {
   odooStatus: OdooConnectionStatus
   odooStatusChecked: boolean
   odooStatusContextKey: string | null
+  /** Instance whose stored API key the server rejected, for the Settings fix-it path. */
+  odooRejectedCredential: OdooUpdatableInstance | null
   odooTicketCache: Record<string, CacheEntry<OdooTicket>>
   odooTicketListCache: Record<string, CacheEntry<OdooTicket[]>>
 
@@ -90,6 +98,10 @@ export type OdooSlice = {
   }) => Promise<{ ok: true; viewer: OdooViewer } | { ok: false; error: string }>
   testOdooConnection: (
     instanceId?: string | null
+  ) => Promise<{ ok: true; viewer: OdooViewer } | { ok: false; error: string }>
+  updateOdooApiKey: (
+    instance: OdooUpdatableInstance,
+    apiKey: string
   ) => Promise<{ ok: true; viewer: OdooViewer } | { ok: false; error: string }>
   selectOdooInstance: (instanceId: OdooInstanceSelection) => Promise<void>
   disconnectOdoo: (instanceId?: string | null) => Promise<void>
@@ -117,6 +129,15 @@ export type OdooSlice = {
 }
 
 export const createOdooSlice: StateCreator<AppState, [], [], OdooSlice> = (set, get) => {
+  // Why the snapshot: the wipe below drops `instances`, and a rejected key never
+  // re-polls status (it decrypts fine, so `shouldRefreshOdooStatusAfterRead` is
+  // false), so Settings would otherwise have nothing left to offer a fix on.
+  const noteAuthLost = (instanceId: OdooInstanceSelection | null | undefined): void =>
+    set((s) => ({
+      odooStatus: { connected: false, viewer: null },
+      odooRejectedCredential: rejectedOdooCredential(s.odooStatus, instanceId)
+    }))
+
   const runListRead = (
     inflight: Map<string, InflightOdooRead<OdooTicket[]>>,
     cacheKey: string,
@@ -142,7 +163,7 @@ export const createOdooSlice: StateCreator<AppState, [], [], OdooSlice> = (set, 
             [cacheKey]: { data: tickets, fetchedAt: Date.now() }
           })
         })),
-      onAuthLost: () => set({ odooStatus: { connected: false, viewer: null } }),
+      onAuthLost: () => noteAuthLost(instanceId),
       refreshStatus: () => void get().checkOdooConnection(),
       shouldRefreshAfterRead: shouldRefreshOdooStatusAfterRead(instanceId, get().odooStatus),
       fallback: listReadFallback
@@ -153,6 +174,7 @@ export const createOdooSlice: StateCreator<AppState, [], [], OdooSlice> = (set, 
     odooStatus: { connected: false, viewer: null },
     odooStatusChecked: false,
     odooStatusContextKey: null,
+    odooRejectedCredential: null,
     odooTicketCache: {},
     odooTicketListCache: {},
 
@@ -184,7 +206,7 @@ export const createOdooSlice: StateCreator<AppState, [], [], OdooSlice> = (set, 
             })
           }))
         },
-        onAuthLost: () => set({ odooStatus: { connected: false, viewer: null } }),
+        onAuthLost: () => noteAuthLost(instanceId),
         refreshStatus: () => void get().checkOdooConnection(),
         shouldRefreshAfterRead: shouldRefreshOdooStatusAfterRead(instanceId, get().odooStatus),
         fallback: () => null

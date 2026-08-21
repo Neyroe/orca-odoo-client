@@ -31,6 +31,11 @@ const SelectInstance = z.object({
   instanceId: requiredString('Instance ID is required')
 })
 
+const UpdateApiKey = z.object({
+  instanceId: requiredString('Instance ID is required'),
+  apiKey: requiredString('API key is required')
+})
+
 const TicketId = z.object({
   id: z.number().int().positive(),
   instanceId: OptionalString
@@ -181,6 +186,15 @@ export const ODOO_METHODS: RpcMethod[] = [
     name: 'odoo.testConnection',
     params: InstanceSelection,
     handler: async (params, { runtime }) => runtime.odooTestConnection(params?.instanceId)
+  }),
+  defineMethod({
+    name: 'odoo.updateApiKey',
+    params: UpdateApiKey,
+    handler: async (params, { runtime }) =>
+      runtime.odooUpdateApiKey({
+        instanceId: params.instanceId.trim(),
+        apiKey: params.apiKey.trim()
+      })
   }),
   defineMethod({
     name: 'odoo.listTickets',

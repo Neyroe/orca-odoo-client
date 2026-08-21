@@ -190,6 +190,12 @@ export type OdooConnectArgs = {
   apiKey: string
 }
 
+/** Replaces the stored key for an existing instance; the triple stays main-side. */
+export type OdooUpdateApiKeyArgs = {
+  instanceId: string
+  apiKey: string
+}
+
 export type OdooCreateTicketArgs = {
   instanceId?: string
   projectId: number
