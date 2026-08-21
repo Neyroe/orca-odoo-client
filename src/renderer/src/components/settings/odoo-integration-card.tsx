@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AlertCircle, CheckCircle2, LoaderCircle, Unlink } from 'lucide-react'
+import { AlertCircle, CheckCircle2, KeyRound, LoaderCircle, Unlink } from 'lucide-react'
 import { toast } from 'sonner'
 import { OdooConnectDialog } from '@/components/odoo-connect-dialog'
 import { OdooIcon } from '@/components/icons/OdooIcon'
@@ -10,6 +10,7 @@ import {
   hasRemoteProviderRuntime
 } from '@/lib/provider-runtime-context'
 import { useAppStore } from '@/store'
+import type { OdooUpdatableInstance } from '@/runtime/runtime-odoo-client'
 import { IntegrationCardDetails, IntegrationCardShell } from './integration-card-shell'
 import { useIntegrationSubordinateRowClass } from './integration-card-presentation'
 import { getProviderAccountScope } from './provider-account-scope'
@@ -25,10 +26,13 @@ export function OdooIntegrationCard({ className }: { className?: string }): Reac
   const checkOdooConnection = useAppStore((s) => s.checkOdooConnection)
   const disconnectOdoo = useAppStore((s) => s.disconnectOdoo)
   const testOdooConnection = useAppStore((s) => s.testOdooConnection)
+  const rejectedCredential = useAppStore((s) => s.odooRejectedCredential)
   const settings = useAppStore((s) => s.settings)
   const mountedRef = useMountedRef()
 
   const [dialogOpen, setDialogOpen] = useState(false)
+  // Non-null puts the dialog in key-rotation mode for that instance.
+  const [updateInstance, setUpdateInstance] = useState<OdooUpdatableInstance | null>(null)
   const [testingInstanceId, setTestingInstanceId] = useState<string | null>(null)
   const [testResultByInstance, setTestResultByInstance] = useState<
     Record<string, VerificationResult>
@@ -51,6 +55,16 @@ export function OdooIntegrationCard({ className }: { className?: string }): Reac
       )
   const subordinateRowClass = useIntegrationSubordinateRowClass('flex items-center gap-3')
   const accountScopeRowClass = useIntegrationSubordinateRowClass('text-xs')
+
+  const openConnectDialog = (): void => {
+    setUpdateInstance(null)
+    setDialogOpen(true)
+  }
+
+  const openUpdateDialog = (instance: OdooUpdatableInstance): void => {
+    setUpdateInstance(instance)
+    setDialogOpen(true)
+  }
 
   // Why: `disconnectOdoo` rethrows runtime failures, and the click handler
   // discards the promise — without this the user sees nothing at all.
@@ -126,11 +140,7 @@ export function OdooIntegrationCard({ className }: { className?: string }): Reac
       }
       actions={
         !checking ? (
-          <Button
-            variant={connected ? 'outline' : 'default'}
-            size="sm"
-            onClick={() => setDialogOpen(true)}
-          >
+          <Button variant={connected ? 'outline' : 'default'} size="sm" onClick={openConnectDialog}>
             {connected
               ? translate(
                   'auto.components.settings.odoo.integration.card.addInstance',
@@ -155,6 +165,30 @@ export function OdooIntegrationCard({ className }: { className?: string }): Reac
             <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
             <span>{odooStatus.credentialError}</span>
           </p>
+        ) : null}
+        {/* Why outside the instance rows: a rejected key flips the card to
+        disconnected, which drops those rows, so the fix has to live here. */}
+        {rejectedCredential ? (
+          <div className="flex flex-wrap items-start gap-2 text-xs text-destructive">
+            <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
+            <span className="min-w-0 flex-1">
+              {translate(
+                'auto.components.settings.odoo.integration.card.keyRejected',
+                'Odoo rejected the stored API key for {{value0}}. Replace it to restore access.',
+                { value0: rejectedCredential.database }
+              )}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => openUpdateDialog(rejectedCredential)}
+            >
+              {translate(
+                'auto.components.settings.odoo.integration.card.updateApiKey',
+                'Update API key'
+              )}
+            </Button>
+          </div>
         ) : null}
         {connected && instances.length > 0 ? (
           <div className="space-y-2">
@@ -206,6 +240,22 @@ export function OdooIntegrationCard({ className }: { className?: string }): Reac
                         'auto.components.settings.task.tracker.integration.cards.c24e56c532',
                         'Test'
                       )
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openUpdateDialog(instance)}
+                    aria-label={translate(
+                      'auto.components.settings.odoo.integration.card.updateApiKeyFor',
+                      'Update the API key for {{value0}}',
+                      { value0: instance.database }
+                    )}
+                  >
+                    <KeyRound className="size-3.5 mr-1.5" />
+                    {translate(
+                      'auto.components.settings.odoo.integration.card.updateKey',
+                      'Update key'
                     )}
                   </Button>
                   <button
@@ -268,6 +318,7 @@ export function OdooIntegrationCard({ className }: { className?: string }): Reac
       <OdooConnectDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+        instance={updateInstance ?? undefined}
         onConnected={() => setTestResultByInstance({})}
         overlayClassName="z-[110]"
         contentClassName="z-[120]"

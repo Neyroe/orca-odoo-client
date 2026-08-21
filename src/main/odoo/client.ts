@@ -16,6 +16,7 @@ import type {
   OdooConnectionStatus,
   OdooInstance,
   OdooInstanceSelection,
+  OdooUpdateApiKeyArgs,
   OdooViewer
 } from '../../shared/odoo-types'
 export { getStatus, normalizeOdooServerUrl } from './instance-credentials'
@@ -115,6 +116,58 @@ export async function connect(
         { ...instance, displayName: viewer.displayName },
         ...file.instances.filter((entry) => entry.id !== id)
       ]
+    })
+    return { ok: true, viewer }
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'Connection failed.' }
+  } finally {
+    release()
+  }
+}
+
+/**
+ * Replaces the stored API key of an existing instance after validating it.
+ *
+ * Why not `connect`: the server URL, database, and login identify the instance
+ * and are read here instead of trusted from the caller, and the instance order,
+ * active id, and selection are preserved — `connect` rewrites all three, which
+ * would silently retarget an 'all' selection on a routine key rotation.
+ */
+export async function updateApiKey(
+  args: OdooUpdateApiKeyArgs
+): Promise<{ ok: true; viewer: OdooViewer } | { ok: false; error: string }> {
+  const instanceId = args.instanceId.trim()
+  const apiKey = args.apiKey.trim()
+  if (!instanceId) {
+    return { ok: false, error: 'Instance is required.' }
+  }
+  if (!apiKey) {
+    return { ok: false, error: 'API key is required.' }
+  }
+  const existing = getInstanceFile().instances.find((instance) => instance.id === instanceId)
+  if (!existing) {
+    return { ok: false, error: 'Not connected to Odoo.' }
+  }
+
+  await acquire()
+  try {
+    // A rejected key throws here, before any write, so the working key survives.
+    const uid = await authenticate(existing.serverUrl, existing.database, existing.login, apiKey)
+    const instance: OdooInstance = { ...existing, uid }
+    const viewer = await readViewer({ instance, apiKey }, existing.login)
+
+    // Re-read: a disconnect during the round trip must not be undone by saving
+    // the key back, which would resurrect the instance on the next file read.
+    const file = getInstanceFile()
+    if (!file.instances.some((entry) => entry.id === instanceId)) {
+      return { ok: false, error: 'Not connected to Odoo.' }
+    }
+    saveKey(instanceId, apiKey)
+    writeInstanceFile({
+      ...file,
+      instances: file.instances.map((entry) =>
+        entry.id === instanceId ? { ...entry, uid, displayName: viewer.displayName } : entry
+      )
     })
     return { ok: true, viewer }
   } catch (error) {

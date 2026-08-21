@@ -243,7 +243,8 @@ import type {
   OdooInstanceSelection,
   OdooProjectScope,
   OdooTicketFilter,
-  OdooTicketUpdate
+  OdooTicketUpdate,
+  OdooUpdateApiKeyArgs
 } from '../../shared/odoo-types'
 import type { Tab, TabGroupLayoutNode } from '../../shared/tab-types'
 import type { TerminalQuickCommand } from '../../shared/terminal-quick-command-types'
@@ -861,7 +862,8 @@ import {
   disconnect as disconnectOdoo,
   getStatus as getOdooStatus,
   selectInstance as selectOdooInstance,
-  testConnection as testOdooConnection
+  testConnection as testOdooConnection,
+  updateApiKey as updateOdooApiKey
 } from '../odoo/client'
 import {
   addTicketComment as addOdooTicketComment,
@@ -35759,6 +35761,10 @@ export class OrcaRuntimeService {
 
   odooTestConnection(instanceId?: string): ReturnType<typeof testOdooConnection> {
     return testOdooConnection(instanceId)
+  }
+
+  odooUpdateApiKey(args: OdooUpdateApiKeyArgs): ReturnType<typeof updateOdooApiKey> {
+    return updateOdooApiKey(args)
   }
 
   odooListTickets(

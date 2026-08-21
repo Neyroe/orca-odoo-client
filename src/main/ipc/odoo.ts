@@ -1,5 +1,12 @@
 import { ipcMain } from 'electron'
-import { connect, disconnect, getStatus, selectInstance, testConnection } from '../odoo/client'
+import {
+  connect,
+  disconnect,
+  getStatus,
+  selectInstance,
+  testConnection,
+  updateApiKey
+} from '../odoo/client'
 import {
   createTicket,
   getTicket,
@@ -30,7 +37,8 @@ import type {
   OdooProjectScope,
   OdooTicketFilter,
   OdooTicketState,
-  OdooTicketUpdate
+  OdooTicketUpdate,
+  OdooUpdateApiKeyArgs
 } from '../../shared/odoo-types'
 const VALID_FILTERS = new Set<OdooTicketFilter>(['assigned', 'reported', 'all', 'done'])
 const VALID_PRIORITIES = new Set<OdooPriority>(ODOO_PRIORITIES)
@@ -110,6 +118,14 @@ export function registerOdooHandlers(): void {
   ipcMain.handle('odoo:testConnection', async (_event, args?: { instanceId?: string }) =>
     testConnection(normalizeInstanceId(args?.instanceId))
   )
+
+  ipcMain.handle('odoo:updateApiKey', async (_event, args: OdooUpdateApiKeyArgs) => {
+    const instanceId = normalizeInstanceId(args?.instanceId)
+    if (!instanceId || typeof args?.apiKey !== 'string') {
+      return { ok: false, error: 'Instance and API key are required.' }
+    }
+    return updateApiKey({ instanceId, apiKey: args.apiKey })
+  })
 
   ipcMain.handle(
     'odoo:listTickets',

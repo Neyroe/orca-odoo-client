@@ -15,12 +15,20 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { hasRemoteProviderRuntime } from '@/lib/provider-runtime-context'
+import type { OdooUpdatableInstance } from '@/runtime/runtime-odoo-client'
 import { translate } from '@/i18n/i18n'
 
 type OdooConnectDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   onConnected?: () => void
+  /**
+   * Switches the dialog to rotating one instance's API key: the triple that
+   * identifies the instance is prefilled and read-only, and only the key is
+   * submitted. The main side re-reads the triple from its own store, so locking
+   * it here is a courtesy, not the guarantee.
+   */
+  instance?: OdooUpdatableInstance
   overlayClassName?: string
   contentClassName?: string
 }
@@ -31,10 +39,12 @@ export function OdooConnectDialog({
   open,
   onOpenChange,
   onConnected,
+  instance,
   overlayClassName,
   contentClassName
 }: OdooConnectDialogProps): React.JSX.Element {
   const connectOdoo = useAppStore((s) => s.connectOdoo)
+  const updateOdooApiKey = useAppStore((s) => s.updateOdooApiKey)
   const settings = useAppStore((s) => s.settings)
   const mountedRef = useMountedRef()
   const serverUrlId = useId()
@@ -52,24 +62,27 @@ export function OdooConnectDialog({
 
   // Start every open with a clean slate so a previously-typed secret or old
   // error can't linger across reopens. Runs before paint so a stale credential
-  // never renders for a frame.
+  // never renders for a frame. The key stays empty in both modes.
   useLayoutEffect(() => {
     if (!open) {
       return
     }
-    setServerUrl('')
-    setDatabase('')
-    setLogin('')
+    setServerUrl(instance?.serverUrl ?? '')
+    setDatabase(instance?.database ?? '')
+    setLogin(instance?.login ?? '')
     setApiKey('')
     setConnectState('idle')
     setConnectError(null)
-  }, [open])
+  }, [open, instance?.id, instance?.serverUrl, instance?.database, instance?.login])
 
+  const updatingKey = Boolean(instance)
+  // In rotation mode only the key is the user's to fill; gating on the seeded
+  // triple would let an oddly stored value block a rotation the main side would
+  // have accepted.
   const canSubmit =
-    Boolean(serverUrl.trim()) &&
-    Boolean(database.trim()) &&
-    Boolean(login.trim()) &&
     Boolean(apiKey.trim()) &&
+    (updatingKey ||
+      (Boolean(serverUrl.trim()) && Boolean(database.trim()) && Boolean(login.trim()))) &&
     connectState !== 'connecting'
   const credentialStorageCopy = hasRemoteProviderRuntime(settings)
     ? translate(
@@ -80,6 +93,10 @@ export function OdooConnectDialog({
         'auto.components.odoo.connect.dialog.5d8ac0509d',
         'Your API key is stored locally and encrypted when local runtime storage supports it.'
       )
+
+  // Locked identity fields: read-only rather than disabled so the values stay
+  // selectable and announced while only the key is editable.
+  const lockedFieldProps = updatingKey ? { readOnly: true, className: 'text-muted-foreground' } : {}
 
   const clearErrorOnEdit = (): void => {
     if (connectState === 'error') {
@@ -99,31 +116,26 @@ export function OdooConnectDialog({
     const trimmedDatabase = database.trim()
     const trimmedLogin = login.trim()
     const trimmedKey = apiKey.trim()
-    if (
-      !trimmedServer ||
-      !trimmedDatabase ||
-      !trimmedLogin ||
-      !trimmedKey ||
-      connectState === 'connecting'
-    ) {
+    const missingConnectFields =
+      !updatingKey && (!trimmedServer || !trimmedDatabase || !trimmedLogin)
+    if (missingConnectFields || !trimmedKey || connectState === 'connecting') {
       return
     }
     setConnectState('connecting')
     setConnectError(null)
     try {
-      const result = await connectOdoo({
-        serverUrl: trimmedServer,
-        database: trimmedDatabase,
-        login: trimmedLogin,
-        apiKey: trimmedKey
-      })
+      const result = instance
+        ? await updateOdooApiKey(instance, trimmedKey)
+        : await connectOdoo({
+            serverUrl: trimmedServer,
+            database: trimmedDatabase,
+            login: trimmedLogin,
+            apiKey: trimmedKey
+          })
       if (!mountedRef.current) {
         return
       }
       if (result.ok) {
-        setServerUrl('')
-        setDatabase('')
-        setLogin('')
         setApiKey('')
         setConnectState('idle')
         onOpenChange(false)
@@ -152,13 +164,24 @@ export function OdooConnectDialog({
       >
         <DialogHeader className="gap-3">
           <DialogTitle className="leading-tight">
-            {translate('auto.components.odoo.connect.dialog.e4c06861c0', 'Connect Odoo server')}
+            {updatingKey
+              ? translate(
+                  'auto.components.odoo.connect.dialog.updateKeyTitle',
+                  'Update Odoo API key'
+                )
+              : translate('auto.components.odoo.connect.dialog.e4c06861c0', 'Connect Odoo server')}
           </DialogTitle>
           <DialogDescription>
-            {translate(
-              'auto.components.odoo.connect.dialog.79831c1057',
-              'Use your Odoo server URL, database, login, and API key to browse tickets.'
-            )}
+            {updatingKey
+              ? translate(
+                  'auto.components.odoo.connect.dialog.updateKeyDescription',
+                  'Enter a new API key for {{value0}}. The server, database, and login stay as they are.',
+                  { value0: instance?.database ?? '' }
+                )
+              : translate(
+                  'auto.components.odoo.connect.dialog.79831c1057',
+                  'Use your Odoo server URL, database, login, and API key to browse tickets.'
+                )}
           </DialogDescription>
         </DialogHeader>
         <form
@@ -176,7 +199,8 @@ export function OdooConnectDialog({
               </Label>
               <Input
                 id={serverUrlId}
-                autoFocus
+                autoFocus={!updatingKey}
+                {...lockedFieldProps}
                 placeholder={translate(
                   'auto.components.odoo.connect.dialog.b9ff33a00d',
                   'https://odoo.example.com'
@@ -195,6 +219,7 @@ export function OdooConnectDialog({
               </Label>
               <Input
                 id={databaseId}
+                {...lockedFieldProps}
                 placeholder={translate(
                   'auto.components.odoo.connect.dialog.17acc54e0a',
                   'mycompany'
@@ -213,6 +238,7 @@ export function OdooConnectDialog({
               </Label>
               <Input
                 id={loginId}
+                {...lockedFieldProps}
                 placeholder={translate(
                   'auto.components.odoo.connect.dialog.0dc046475d',
                   'you@example.com'
@@ -232,6 +258,7 @@ export function OdooConnectDialog({
               <Input
                 id={apiKeyId}
                 type="password"
+                autoFocus={updatingKey}
                 placeholder={translate(
                   'auto.components.odoo.connect.dialog.c24a2b6fe2',
                   'Odoo API key'
@@ -277,6 +304,8 @@ export function OdooConnectDialog({
                   <LoaderCircle className="size-4 animate-spin" />
                   {translate('auto.components.odoo.connect.dialog.b8d4744f56', 'Verifying…')}
                 </>
+              ) : updatingKey ? (
+                translate('auto.components.odoo.connect.dialog.updateKeySubmit', 'Update key')
               ) : (
                 translate('auto.components.odoo.connect.dialog.ceb0150103', 'Connect')
               )}

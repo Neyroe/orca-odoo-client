@@ -30,6 +30,10 @@ export type OdooApi = {
   testConnection: (args?: {
     instanceId?: string
   }) => Promise<{ ok: true; viewer: OdooViewer } | { ok: false; error: string }>
+  updateApiKey: (args: {
+    instanceId: string
+    apiKey: string
+  }) => Promise<{ ok: true; viewer: OdooViewer } | { ok: false; error: string }>
   listTickets: (args?: {
     filter?: OdooTicketFilter
     limit?: number

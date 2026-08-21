@@ -15,6 +15,12 @@ type StoreState = {
   }
   odooStatusChecked: boolean
   odooStatusContextKey: string | null
+  odooRejectedCredential: {
+    id: string
+    serverUrl: string
+    database: string
+    login: string
+  } | null
   checkOdooConnection: () => Promise<void>
   disconnectOdoo: (instanceId?: string) => Promise<void>
   testOdooConnection: (instanceId: string) => Promise<{ ok: boolean; error?: string }>
@@ -25,7 +31,10 @@ type StoreState = {
 
 const mocks = vi.hoisted(() => ({
   store: { current: null as StoreState | null },
-  toastError: vi.fn()
+  toastError: vi.fn(),
+  // The dialog is stubbed, so its props are the only proof of which mode and
+  // which instance the card opened it for.
+  dialogProps: { current: null as Record<string, unknown> | null }
 }))
 
 vi.mock('@/store', () => ({
@@ -42,7 +51,10 @@ vi.mock('sonner', () => ({
 }))
 
 vi.mock('@/components/odoo-connect-dialog', () => ({
-  OdooConnectDialog: () => null
+  OdooConnectDialog: (props: Record<string, unknown>) => {
+    mocks.dialogProps.current = props
+    return null
+  }
 }))
 
 let root: Root | null = null
@@ -65,6 +77,7 @@ function installStore(overrides: Partial<StoreState> = {}): StoreState {
     },
     odooStatusChecked: true,
     odooStatusContextKey: getProviderRuntimeContextKey(settings),
+    odooRejectedCredential: null,
     checkOdooConnection: vi.fn(async () => {}),
     disconnectOdoo: vi.fn(async () => {}),
     testOdooConnection: vi.fn(async () => ({ ok: true })),
@@ -99,6 +112,7 @@ describe('OdooIntegrationCard', () => {
     container = null
     mocks.store.current = null
     mocks.toastError.mockReset()
+    mocks.dialogProps.current = null
   })
 
   it('renders a localized status label', async () => {
@@ -115,6 +129,67 @@ describe('OdooIntegrationCard', () => {
     const rendered = await renderCard()
 
     expect(rendered.textContent).toContain('Not connected')
+  })
+
+  it('opens the dialog in rotation mode for the row it was clicked on', async () => {
+    installStore()
+
+    const rendered = await renderCard()
+    const update = rendered.querySelector<HTMLButtonElement>(
+      'button[aria-label="Update the API key for prod"]'
+    )
+    expect(update).not.toBeNull()
+
+    await act(async () => {
+      update?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(mocks.dialogProps.current?.open).toBe(true)
+    expect(mocks.dialogProps.current?.instance).toMatchObject({ id: 'inst-1', database: 'prod' })
+  })
+
+  it('leaves the dialog in connect mode for Add Odoo instance', async () => {
+    installStore()
+
+    const rendered = await renderCard()
+    const add = [...rendered.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Add Odoo instance'
+    )
+    expect(add).not.toBeUndefined()
+
+    await act(async () => {
+      add?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(mocks.dialogProps.current?.open).toBe(true)
+    expect(mocks.dialogProps.current?.instance).toBeUndefined()
+  })
+
+  it('offers the rotation action while the rejected key leaves it disconnected', async () => {
+    // The rejection wipes the instance rows, so the banner is the only path.
+    installStore({
+      odooStatus: { connected: false, viewer: null },
+      odooRejectedCredential: {
+        id: 'inst-1',
+        serverUrl: 'https://odoo.example.test',
+        database: 'prod',
+        login: 'dev@example.test'
+      }
+    })
+
+    const rendered = await renderCard()
+
+    expect(rendered.textContent).toContain('Odoo rejected the stored API key for prod')
+    const update = [...rendered.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Update API key'
+    )
+    expect(update).not.toBeUndefined()
+
+    await act(async () => {
+      update?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(mocks.dialogProps.current?.instance).toMatchObject({ id: 'inst-1' })
   })
 
   it('surfaces a failed disconnect instead of dropping the rejection', async () => {
