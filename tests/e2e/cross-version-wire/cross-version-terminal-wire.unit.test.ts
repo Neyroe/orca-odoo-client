@@ -1,5 +1,9 @@
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
-import { resolveBaselineReleaseRef, selectLatestStableReleaseTag } from './release-checkout'
+import {
+  missingBaselineReleaseSkipReason,
+  resolveBaselineReleaseRef,
+  selectLatestStableReleaseTag
+} from './release-checkout'
 import {
   JOURNEY_INPUTS,
   JOURNEY_STEPS,
@@ -43,16 +47,15 @@ let baselineRef: string
 let current: TerminalWireBuild
 let baseline: TerminalWireBuild
 
-beforeAll(async () => {
-  baselineRef = resolveBaselineReleaseRef()
-  current = await loadTerminalWireBuild(WORKING_TREE)
-  baseline = await loadTerminalWireBuild(baselineRef)
-}, SUITE_TIMEOUT_MS)
-
-afterEach(() => {
-  // Each journey installs and removes its own window stub; fail loudly if one leaked.
-  expect(typeof globalThis.window).toBe('undefined')
-})
+// A clone that never fetched tags has no baseline to pair against; skip with the
+// remedy in the suite name instead of failing the file. CI still gets the hard throw.
+const baselineSkipReason = missingBaselineReleaseSkipReason()
+const BASELINE_SUITE = baselineSkipReason
+  ? 'paired against the latest release — skipped: run `git fetch --tags`'
+  : 'paired against the latest release'
+if (baselineSkipReason) {
+  console.warn(`Cross-version wire harness: ${baselineSkipReason}`)
+}
 
 function expectJourneyActuallyRan(record: JourneyRecord): void {
   // The anti-vacuous-pass oracle. A harness that connects and then does nothing
@@ -104,45 +107,58 @@ describe('cross-version remote terminal wire', () => {
     ).toBe('v1.4.176')
   })
 
-  it(
-    'skews current code against a real published release',
-    () => {
-      expect(baselineRef).toMatch(/^v?\d/)
-      expect(baseline.revision).toMatch(/^[0-9a-f]{40}$/)
-      expect(baseline.revision).not.toBe(current.revision)
-    },
-    SUITE_TIMEOUT_MS
-  )
+  describe.skipIf(baselineSkipReason !== null)(BASELINE_SUITE, () => {
+    beforeAll(async () => {
+      baselineRef = resolveBaselineReleaseRef()
+      current = await loadTerminalWireBuild(WORKING_TREE)
+      baseline = await loadTerminalWireBuild(baselineRef)
+    }, SUITE_TIMEOUT_MS)
 
-  it(
-    'current client against current server completes the journey',
-    async () => {
-      const record = await runTerminalSkewJourney({ hostBuild: current, clientBuild: current })
-      expectJourneyActuallyRan(record)
-      expectWireCompatible(record)
-    },
-    SUITE_TIMEOUT_MS
-  )
+    afterEach(() => {
+      // Each journey installs and removes its own window stub; fail loudly if one leaked.
+      expect(typeof globalThis.window).toBe('undefined')
+    })
 
-  it(
-    'old client against new server completes the journey',
-    async () => {
-      const record = await runTerminalSkewJourney({ hostBuild: current, clientBuild: baseline })
-      expect(record.clientRevision).toBe(baseline.revision)
-      expectJourneyActuallyRan(record)
-      expectWireCompatible(record)
-    },
-    SUITE_TIMEOUT_MS
-  )
+    it(
+      'skews current code against a real published release',
+      () => {
+        expect(baselineRef).toMatch(/^v?\d/)
+        expect(baseline.revision).toMatch(/^[0-9a-f]{40}$/)
+        expect(baseline.revision).not.toBe(current.revision)
+      },
+      SUITE_TIMEOUT_MS
+    )
 
-  it(
-    'new client against old server completes the journey',
-    async () => {
-      const record = await runTerminalSkewJourney({ hostBuild: baseline, clientBuild: current })
-      expect(record.hostRevision).toBe(baseline.revision)
-      expectJourneyActuallyRan(record)
-      expectWireCompatible(record)
-    },
-    SUITE_TIMEOUT_MS
-  )
+    it(
+      'current client against current server completes the journey',
+      async () => {
+        const record = await runTerminalSkewJourney({ hostBuild: current, clientBuild: current })
+        expectJourneyActuallyRan(record)
+        expectWireCompatible(record)
+      },
+      SUITE_TIMEOUT_MS
+    )
+
+    it(
+      'old client against new server completes the journey',
+      async () => {
+        const record = await runTerminalSkewJourney({ hostBuild: current, clientBuild: baseline })
+        expect(record.clientRevision).toBe(baseline.revision)
+        expectJourneyActuallyRan(record)
+        expectWireCompatible(record)
+      },
+      SUITE_TIMEOUT_MS
+    )
+
+    it(
+      'new client against old server completes the journey',
+      async () => {
+        const record = await runTerminalSkewJourney({ hostBuild: baseline, clientBuild: current })
+        expect(record.hostRevision).toBe(baseline.revision)
+        expectJourneyActuallyRan(record)
+        expectWireCompatible(record)
+      },
+      SUITE_TIMEOUT_MS
+    )
+  })
 })

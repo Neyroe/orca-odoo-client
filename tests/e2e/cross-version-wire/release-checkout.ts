@@ -60,12 +60,17 @@ function compareReleaseTags(a: string, b: string): number {
   return 0
 }
 
+function listReleaseTags(): string[] {
+  return git(['tag', '--list', 'v[0-9]*']).split('\n').filter(Boolean)
+}
+
 /**
  * The version point the harness pairs current code against. An explicit
  * {@link BASELINE_REF_ENV} wins; otherwise the newest stable desktop release tag.
  *
  * Throws rather than skipping: a cross-version lane that quietly runs nothing is
- * the exact failure this harness exists to prevent.
+ * the exact failure this harness exists to prevent. Only a local, tagless clone is
+ * allowed to skip — see {@link missingBaselineReleaseSkipReason}.
  */
 export function resolveBaselineReleaseRef(): string {
   const override = process.env[BASELINE_REF_ENV]?.trim()
@@ -74,7 +79,7 @@ export function resolveBaselineReleaseRef(): string {
   }
   let tags: string[]
   try {
-    tags = git(['tag', '--list', 'v[0-9]*']).split('\n').filter(Boolean)
+    tags = listReleaseTags()
   } catch (error) {
     throw new Error(
       `Cross-version harness could not list git tags in ${REPO_ROOT}: ${String(error)}. ` +
@@ -98,6 +103,31 @@ export function selectLatestStableReleaseTag(tags: string[]): string | null {
       .filter((tag) => STABLE_DESKTOP_RELEASE_TAG.test(tag))
       .sort(compareReleaseTags)
       .at(-1) ?? null
+  )
+}
+
+/**
+ * Why a tagless clone skips instead of failing: only CI can read "no release tags"
+ * as a misconfigured checkout — a working clone simply never fetched them. Returns
+ * null whenever the harness must run, so CI keeps the hard throw above.
+ */
+export function missingBaselineReleaseSkipReason(): string | null {
+  if (process.env.CI || process.env[BASELINE_REF_ENV]?.trim()) {
+    return null
+  }
+  let tags: string[]
+  try {
+    tags = listReleaseTags()
+  } catch {
+    // Not a git checkout at all; resolveBaselineReleaseRef reports that far better.
+    return null
+  }
+  if (selectLatestStableReleaseTag(tags)) {
+    return null
+  }
+  return (
+    `no stable desktop release tags matching vX.Y.Z in ${REPO_ROOT} (saw ${tags.length} tag(s) total): ` +
+    `run \`git fetch --tags\`, or pin a ref with ${BASELINE_REF_ENV}`
   )
 }
 
