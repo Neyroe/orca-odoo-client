@@ -10763,7 +10763,11 @@
               "connectedNoInstances": "Odoo is connected for this runtime. Re-check if the connected instance list looks stale.",
               "statusConnected": "Connected",
               "statusNotConnected": "Not connected",
-              "disconnectFailed": "Could not disconnect Odoo."
+              "disconnectFailed": "Could not disconnect Odoo.",
+              "keyRejected": "Odoo rejected the stored API key for {{value0}}. Replace it to restore access.",
+              "updateApiKey": "Update API key",
+              "updateApiKeyFor": "Update the API key for {{value0}}",
+              "updateKey": "Update key"
             }
           }
         }
@@ -15381,7 +15385,10 @@
             "ceb0150103": "Connect",
             "0d81b37e29": "Your API key is sent to the selected remote runtime and stored there with runtime-supported encryption.",
             "5d8ac0509d": "Your API key is stored locally and encrypted when local runtime storage supports it.",
-            "53ad73eb2d": "Connection failed"
+            "53ad73eb2d": "Connection failed",
+            "updateKeyTitle": "Update Odoo API key",
+            "updateKeyDescription": "Enter a new API key for {{value0}}. The server, database, and login stay as they are.",
+            "updateKeySubmit": "Update key"
           }
         },
         "saved": {

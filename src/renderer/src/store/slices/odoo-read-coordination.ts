@@ -3,6 +3,7 @@
 // per method; Odoo centralizes it so each slice read stays a thin wrapper.
 import type { AppState } from '../types'
 import type { OdooConnectionStatus, OdooInstanceSelection } from '../../../../shared/odoo-types'
+import type { OdooUpdatableInstance } from '@/runtime/runtime-odoo-client'
 import type { CacheEntry } from './github'
 import { isIntegrationCredentialDecryptionError } from '../../../../shared/integration-credential-errors'
 import { getProviderRuntimeContextKey } from '@/lib/provider-runtime-context'
@@ -206,6 +207,35 @@ export function executeOdooRead<T>(args: ExecuteOdooReadArgs<T>): Promise<T> {
   }
   args.inflight.set(args.cacheKey, entry)
   return promise
+}
+
+/**
+ * The instance a rejected API key belongs to, or null when the read cannot name
+ * one.
+ *
+ * Null for an 'all' read on purpose: `getClients('all')` fans out over every
+ * instance and one rejected key fails the whole read, so blaming the active
+ * instance would mislabel a healthy one. That case re-polls status anyway
+ * (`shouldRefreshOdooStatusAfterRead`), which restores the per-instance rows
+ * and their own update action.
+ */
+export function rejectedOdooCredential(
+  status: OdooConnectionStatus,
+  instanceId: OdooInstanceSelection | null | undefined
+): OdooUpdatableInstance | null {
+  const selected = instanceId ?? getSelectedOdooInstanceId(status)
+  if (!selected || selected === 'all') {
+    return null
+  }
+  const instance = (status.instances ?? []).find((entry) => entry.id === selected)
+  return instance
+    ? {
+        id: instance.id,
+        serverUrl: instance.serverUrl,
+        database: instance.database,
+        login: instance.login
+      }
+    : null
 }
 
 export function getSelectedOdooInstanceId(

@@ -29,6 +29,7 @@ export {
   odooUpdateTicketComment,
   odooUploadTicketAttachments
 } from './runtime-odoo-chatter-client'
+export { odooUpdateApiKey, type OdooUpdatableInstance } from './runtime-odoo-credential-client'
 export { getOdooRuntimeTarget, type RuntimeOdooSettings } from './odoo-runtime-target'
 
 export type OdooConnectResult = { ok: true; viewer: OdooViewer } | { ok: false; error: string }

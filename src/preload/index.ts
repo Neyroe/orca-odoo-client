@@ -2043,6 +2043,12 @@ const api = {
     }): Promise<{ ok: true; viewer: OdooViewer } | { ok: false; error: string }> =>
       ipcRenderer.invoke('odoo:testConnection', args),
 
+    updateApiKey: (args: {
+      instanceId: string
+      apiKey: string
+    }): Promise<{ ok: true; viewer: OdooViewer } | { ok: false; error: string }> =>
+      ipcRenderer.invoke('odoo:updateApiKey', args),
+
     listTickets: (args?: {
       filter?: OdooTicketFilter
       limit?: number

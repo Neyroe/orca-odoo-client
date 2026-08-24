@@ -11,7 +11,8 @@ import {
   odooDisconnect,
   odooSelectInstance,
   odooStatus,
-  odooTestConnection
+  odooTestConnection,
+  odooUpdateApiKey
 } from '@/runtime/runtime-odoo-client'
 import { getProviderRuntimeContextKey } from '@/lib/provider-runtime-context'
 import { translate } from '@/i18n/i18n'
@@ -36,6 +37,7 @@ type OdooConnectionLifecycle = Pick<
   | 'checkOdooConnection'
   | 'connectOdoo'
   | 'testOdooConnection'
+  | 'updateOdooApiKey'
   | 'selectOdooInstance'
   | 'disconnectOdoo'
 >
@@ -61,13 +63,35 @@ export function createOdooConnectionLifecycle({
   get,
   clearInflight
 }: OdooLifecycleDeps): OdooConnectionLifecycle {
+  const clearRejection = (instanceId?: string | null): void => {
+    const rejected = get().odooRejectedCredential
+    if (rejected && (!instanceId || rejected.id === instanceId)) {
+      set({ odooRejectedCredential: null })
+    }
+  }
+
+  // Why not "any healthy poll": `getStatus` only proves a key file exists, not
+  // that the server still accepts it, so a poll must not clear the banner. An
+  // instance that left the list has nothing left to fix.
+  const dropRejectionForRemovedInstance = (status: OdooConnectionStatus): void => {
+    const rejected = get().odooRejectedCredential
+    if (!rejected || !status.connected || !Array.isArray(status.instances)) {
+      return
+    }
+    if (!status.instances.some((instance) => instance.id === rejected.id)) {
+      set({ odooRejectedCredential: null })
+    }
+  }
+
   return {
     checkOdooConnection: async () => {
       const contextKey = getProviderRuntimeContextKey(get().settings)
       const statusReadGeneration = beginOdooStatusRead()
       const mutationGeneration = currentOdooMutationGeneration()
       if (get().odooStatusContextKey !== contextKey) {
-        set({ odooStatusChecked: false })
+        // A rejection belongs to one runtime's credential store; carrying it
+        // across would name an instance the new host has never heard of.
+        set({ odooStatusChecked: false, odooRejectedCredential: null })
       }
       const isStale = (): boolean =>
         !isCurrentOdooMutation(mutationGeneration) ||
@@ -78,6 +102,7 @@ export function createOdooConnectionLifecycle({
         if (isStale()) {
           return
         }
+        dropRejectionForRemovedInstance(status)
         const prev = get().odooStatus
         if (
           prev.connected !== status.connected ||
@@ -119,7 +144,11 @@ export function createOdooConnectionLifecycle({
           set({
             odooStatus: { connected: true, viewer: result.viewer },
             odooStatusChecked: true,
-            odooStatusContextKey: contextKey
+            odooStatusContextKey: contextKey,
+            // A verified credential for any instance clears the banner: connect
+            // cannot report which id it resolved to, and a re-armed rejection
+            // costs one failing read.
+            odooRejectedCredential: null
           })
           void get().checkOdooConnection()
         } else if (result.ok) {
@@ -149,6 +178,9 @@ export function createOdooConnectionLifecycle({
         ) {
           return result
         }
+        if (result.ok) {
+          clearRejection(instanceId)
+        }
         const status = await odooStatus(get().settings)
         if (
           isCurrentOdooMutation(requestGeneration) &&
@@ -159,6 +191,32 @@ export function createOdooConnectionLifecycle({
         return result
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Test failed'
+        return { ok: false as const, error: message }
+      }
+    },
+
+    // The main side rewrites only the key, uid, and display name, so a rejected
+    // new key leaves the working one — and the current selection — untouched.
+    updateOdooApiKey: async (instance, apiKey) => {
+      const requestGeneration = beginOdooMutation()
+      const contextKey = getProviderRuntimeContextKey(get().settings)
+      try {
+        const result = await odooUpdateApiKey(get().settings, instance, apiKey)
+        if (
+          !isCurrentOdooMutation(requestGeneration) ||
+          !isCurrentOdooRuntimeContext(contextKey, get().settings)
+        ) {
+          return result
+        }
+        if (result.ok) {
+          clearRejection(instance.id)
+          clearInflight()
+          set({ odooTicketCache: {}, odooTicketListCache: {} })
+          await get().checkOdooConnection()
+        }
+        return result
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Could not update the API key.'
         return { ok: false as const, error: message }
       }
     },
@@ -187,6 +245,7 @@ export function createOdooConnectionLifecycle({
       const requestGeneration = beginOdooMutation()
       const contextKey = getProviderRuntimeContextKey(get().settings)
       await odooDisconnect(get().settings, instanceId)
+      clearRejection(instanceId)
       if (
         !isCurrentOdooMutation(requestGeneration) ||
         !isCurrentOdooRuntimeContext(contextKey, get().settings)
