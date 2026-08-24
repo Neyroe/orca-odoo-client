@@ -440,7 +440,10 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
               <OdooTicketRow
                 key={`${ticket.instanceId ?? ''}:${ticket.id}`}
                 ticket={ticket}
-                selected={selectedTicket?.id === ticket.id}
+                selected={
+                  selectedTicket?.id === ticket.id &&
+                  selectedTicket?.instanceId === ticket.instanceId
+                }
                 showInstanceContext={instances.length > 1}
                 onOpen={setSelectedTicket}
               />
