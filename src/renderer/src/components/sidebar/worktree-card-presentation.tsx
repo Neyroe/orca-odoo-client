@@ -60,6 +60,7 @@ export function buildWorktreeCardPresentation(card: WorktreeCardController) {
     handleEditComment,
     handleOpenGitHubIssueInOrca,
     handleOpenLinearIssueInOrca,
+    handleOpenOdooTicketInOrca,
     handleOpenReviewInOrca,
     handleOpenAutomation,
     handleOpenAutomationRun,
@@ -173,6 +174,7 @@ export function buildWorktreeCardPresentation(card: WorktreeCardController) {
                 : undefined
             }
             onOpenLinearIssueInOrca={linearIssue?.url ? handleOpenLinearIssueInOrca : undefined}
+            onOpenOdooTicketInOrca={metaOdooTicket?.url ? handleOpenOdooTicketInOrca : undefined}
             onOpenReviewInOrca={
               metaReview?.url && metaReview.provider === 'github'
                 ? handleOpenReviewInOrca
@@ -240,6 +242,7 @@ export function buildWorktreeCardPresentation(card: WorktreeCardController) {
           metaIssue && 'url' in metaIssue && metaIssue.url ? handleOpenGitHubIssueInOrca : undefined
         }
         onOpenLinearIssueInOrca={linearIssue?.url ? handleOpenLinearIssueInOrca : undefined}
+        onOpenOdooTicketInOrca={metaOdooTicket?.url ? handleOpenOdooTicketInOrca : undefined}
         onOpenReviewInOrca={
           metaReview?.url && metaReview.provider === 'github' ? handleOpenReviewInOrca : undefined
         }

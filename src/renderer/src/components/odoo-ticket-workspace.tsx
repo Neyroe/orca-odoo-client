@@ -87,7 +87,6 @@ export function OdooTicketWorkspace({
   const [panelWidth, setPanelWidth] = useState(readStoredPanelWidth)
   const widthRef = useRef(panelWidth)
   const endResizeRef = useRef<(() => void) | null>(null)
-
   // Why: a drag interrupted by unmount would otherwise leave the window
   // listeners attached and `user-select: none` stuck on the whole app.
   useEffect(() => () => endResizeRef.current?.(), [])
@@ -137,6 +136,10 @@ export function OdooTicketWorkspace({
             event.preventDefault()
           }
         }}
+        // Focus leaving the sheet is not an intent to close it: opening the
+        // ticket from a workspace hands focus back out, which dismissed the
+        // sheet in the frame it appeared. Only a pointer in the void closes it.
+        onFocusOutside={(event) => event.preventDefault()}
         // Why: non-modal — pointer-events-none keeps the ticket list clickable
         // underneath, but the default Sheet scrim/blur still pulls focus onto
         // the open ticket.

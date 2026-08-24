@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { useAppStore } from '@/store'
 import { readStoreListenerCount } from '@/store/store-listener-census'
 import type { GlobalSettings } from '../../../../shared/global-settings-types'
+import type { OdooTicket } from '../../../../shared/odoo-types'
 import type { Worktree } from '../../../../shared/worktree/types'
 import { usePromptCacheCountdownStartedAt } from './CacheTimer'
 import { useWorktreeCardSecondaryDetails } from './use-worktree-card-secondary-details'
@@ -86,6 +87,7 @@ function secondaryDetailsArgs(settings: GlobalSettings) {
     linearIssue: null,
     linearIssueDisplay: null,
     jiraIssueDisplay: null,
+    odooTicket: null,
     odooTicketDisplay: null,
     prDisplay: null,
     linkedGitLabMR: null,
@@ -152,6 +154,36 @@ describe('useWorktreeCardSecondaryDetails store subscriptions', () => {
 
     act(() => root?.render(<Probe ttl={120_000} />))
     expect(cacheTtlMs).toBe(120_000)
+  })
+
+  // Regression: the Odoo ticket was missing from the hover-details check, so a
+  // workspace linked only to Odoo rendered no badge row and no hover card —
+  // which is where "Open in Orca" lives.
+  it('has hover details for a workspace linked only to an Odoo ticket', () => {
+    let hasDetails = false
+    let badgeRef: string | undefined
+    let openHandler: unknown
+    function Probe(): null {
+      const details = useWorktreeCardSecondaryDetails({
+        ...secondaryDetailsArgs(makeSettings(300_000)),
+        showOdooTicket: true,
+        odooTicket: { id: 47585, ref: '#47585' } as OdooTicket,
+        odooTicketDisplay: {
+          ref: '#47585',
+          title: 'Gestion des livraisons amazon',
+          url: 'https://odoo.example/odoo/project/1/tasks/47585'
+        }
+      })
+      hasDetails = details.hasDetails
+      badgeRef = details.metaOdooTicket?.ref
+      openHandler = details.handleOpenOdooTicketInOrca
+      return null
+    }
+
+    mount(<Probe />)
+    expect(hasDetails).toBe(true)
+    expect(badgeRef).toBe('#47585')
+    expect(typeof openHandler).toBe('function')
   })
 
   it('reports no TTL while the aggregate cache timer is suppressed', () => {

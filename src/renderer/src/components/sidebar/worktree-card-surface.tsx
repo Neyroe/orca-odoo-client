@@ -54,6 +54,7 @@ export function WorktreeCardSurface({ card }: { card: WorktreeCardController }):
     handleOpenGitHubIssueInOrca,
     linearIssue,
     handleOpenLinearIssueInOrca,
+    handleOpenOdooTicketInOrca,
     handleOpenReviewInOrca,
     handleOpenAutomation,
     handleOpenAutomationRun,
@@ -102,6 +103,7 @@ export function WorktreeCardSurface({ card }: { card: WorktreeCardController }):
             : undefined
         }
         onOpenLinearIssueInOrca={linearIssue?.url ? handleOpenLinearIssueInOrca : undefined}
+        onOpenOdooTicketInOrca={hoverOdooTicket?.url ? handleOpenOdooTicketInOrca : undefined}
         onOpenReviewInOrca={
           hoverReview?.url && hoverReview.provider === 'github' ? handleOpenReviewInOrca : undefined
         }

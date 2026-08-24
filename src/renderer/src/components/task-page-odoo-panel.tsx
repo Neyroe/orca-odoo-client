@@ -2,8 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { LoaderCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { OdooIcon } from '@/components/icons/OdooIcon'
-import { OdooConnectDialog } from '@/components/odoo-connect-dialog'
+import { OdooPanelConnectPrompt } from '@/components/odoo-panel-connect-prompt'
 import { OdooTicketWorkspace } from '@/components/odoo-ticket-workspace'
 import {
   DEFAULT_ODOO_TICKET_FILTERS,
@@ -29,11 +28,11 @@ import { OdooTicketToolbar, type OdooTicketPanelView } from '@/components/odoo-t
 import { OdooTicketRow } from '@/components/task-page-odoo-ticket-row'
 import type { OdooTicketFilterId } from '@/components/odoo-ticket-filter-select'
 import { getOdooPresets, getOdooPriorityLabels } from '@/components/task-page-localized-options'
-import { Button } from '@/components/ui/button'
 import { useAppStore } from '@/store'
 import { isWindowVisible } from '@/lib/window-visibility-interval'
 import { isOdooProjectScopeUnsupportedError } from '@/runtime/runtime-odoo-client'
 import { useOdooAutoWorkspace } from '@/components/use-odoo-auto-workspace'
+import { useOdooPanelTicketRequest } from '@/components/use-odoo-panel-ticket-request'
 import { useOdooProjects } from '@/components/use-odoo-projects'
 import {
   ODOO_TICKET_PANEL_REFRESH_INTERVAL_MS,
@@ -75,8 +74,8 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [refreshNonce, setRefreshNonce] = useState(0)
-  const [connectOpen, setConnectOpen] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<OdooTicket | null>(null)
+  const closeSelectedTicket = useOdooPanelTicketRequest(selectedTicket, setSelectedTicket)
   // Client-side narrowing of the loaded set — instant and instance-agnostic.
   const [filters, setFilters] = useState<OdooTicketListFilters>(
     initialDefault?.filters ?? DEFAULT_ODOO_TICKET_FILTERS
@@ -263,31 +262,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   }
 
   if (!odooStatus.connected) {
-    return (
-      <div className="mt-4 flex flex-col items-center justify-center rounded-md border border-border/50 bg-muted/50 px-6 py-14 text-center shadow-sm">
-        <OdooIcon className="mb-4 size-8 text-muted-foreground/60" />
-        <p className="text-base font-medium text-foreground">
-          {translate('auto.components.task.page.odoo.panel.36a83d1d90', 'Connect your Odoo server')}
-        </p>
-        <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-          {translate(
-            'auto.components.task.page.odoo.panel.c172248418',
-            'Browse, edit, and comment on Odoo tickets directly from here.'
-          )}
-        </p>
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-          <Button onClick={() => setConnectOpen(true)}>
-            {translate('auto.components.task.page.odoo.panel.d0e1575687', 'Connect Odoo')}
-          </Button>
-          {onHide ? (
-            <Button variant="outline" onClick={onHide}>
-              {translate('auto.components.task.page.odoo.panel.546376384c', 'Hide Odoo')}
-            </Button>
-          ) : null}
-        </div>
-        <OdooConnectDialog open={connectOpen} onOpenChange={setConnectOpen} />
-      </div>
-    )
+    return <OdooPanelConnectPrompt onHide={onHide} />
   }
 
   return (
@@ -454,7 +429,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
 
       <OdooTicketWorkspace
         ticket={selectedTicket}
-        onClose={() => setSelectedTicket(null)}
+        onClose={closeSelectedTicket}
         onTicketPatched={patchListedTicket}
         previousTicket={previousTicket}
         nextTicket={nextTicket}

@@ -134,6 +134,7 @@ export function useWorktreeCardController(props: ResolvedWorktreeCardProps) {
     linearIssue: linked.linearIssue,
     linearIssueDisplay: linked.linearIssueDisplay,
     jiraIssueDisplay: linked.jiraIssueDisplay,
+    odooTicket,
     odooTicketDisplay,
     prDisplay: review.prDisplay,
     linkedGitLabMR: review.linkedGitLabMR,
