@@ -168,4 +168,21 @@ describe('useWorktreeCardSecondaryDetails store subscriptions', () => {
     mount(<Probe />)
     expect(cacheTtlMs).toBe(0)
   })
+
+  it('reports hasDetails when an Odoo ticket is the only linked detail, on the default card style', () => {
+    let hasDetails: boolean | null = null
+    function Probe(): null {
+      // newCardStyle: false is the default card style, not the experimental one.
+      hasDetails = useWorktreeCardSecondaryDetails({
+        ...secondaryDetailsArgs(makeSettings(300_000)),
+        showOdooTicket: true,
+        odooTicketDisplay: { ref: 'TASK-72', title: 'Chatter attachments' },
+        newCardStyle: false
+      }).hasDetails
+      return null
+    }
+
+    mount(<Probe />)
+    expect(hasDetails).toBe(true)
+  })
 })

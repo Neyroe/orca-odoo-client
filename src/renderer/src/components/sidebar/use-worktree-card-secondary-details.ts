@@ -191,6 +191,7 @@ export function useWorktreeCardSecondaryDetails({
     issue: metaIssue,
     linearIssue: metaLinearIssue,
     jiraIssue: metaJiraIssue,
+    odooTicket: metaOdooTicket,
     review: newCardStyle ? null : metaReview,
     comment: metaComment,
     automationProvenance: metaAutomationProvenance,
