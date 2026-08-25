@@ -13,6 +13,7 @@ import {
   type OdooTicketListFilters
 } from '@/components/odoo-ticket-facets'
 import { OdooTicketFilterMultiSelect } from '@/components/odoo-ticket-filter-multi-select'
+import { OdooRawDomainInput } from '@/components/odoo-raw-domain-input'
 import { OdooAutoWorkspaceDialog } from '@/components/odoo-auto-workspace-dialog'
 import { OdooSavedFilterMenu } from '@/components/odoo-saved-filter-menu'
 import {
@@ -49,6 +50,8 @@ export type OdooTicketToolbarProps = {
   filters: OdooTicketListFilters
   /** Raw domain the toolbar narrows by on top of the facets, if any. */
   rawDomain: OdooDomain | null
+  /** Applies what the raw-domain box holds; null for no raw domain. */
+  onRawDomainChange: (domain: OdooDomain | null) => void
   onFilterChange: <K extends keyof OdooTicketListFilters>(
     key: K,
     value: OdooTicketListFilters[K]
@@ -88,6 +91,7 @@ export function OdooTicketToolbar({
   projects,
   filters,
   rawDomain,
+  onRawDomainChange,
   onFilterChange,
   openFilter,
   onOpenFilterChange,
@@ -260,6 +264,11 @@ export function OdooTicketToolbar({
           onSetDefault={onSetDefaultSavedFilter}
           onTogglePinned={onTogglePinnedSavedFilter}
           onReorder={onReorderSavedFilters}
+        />
+        <OdooRawDomainInput
+          rawDomain={rawDomain}
+          filtersActive={filtersActive}
+          onApply={onRawDomainChange}
         />
         <form
           onSubmit={(event) => {

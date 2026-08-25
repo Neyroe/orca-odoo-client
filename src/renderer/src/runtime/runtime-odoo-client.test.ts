@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   isOdooCurrentUserTokenUnsupportedError,
   isOdooProjectScopeUnsupportedError,
-  odooListTickets,
   odooSearchTickets,
   OdooCurrentUserTokenUnsupportedError,
   OdooProjectScopeUnsupportedError
@@ -22,8 +21,10 @@ import type { OdooProjectScope } from '../../../shared/odoo-types'
 
 const runtimeEnvironmentCall = vi.fn()
 const runtimeEnvironmentTransportCall = vi.fn()
-const listTicketsLocal = vi.fn()
 const searchTicketsLocal = vi.fn()
+
+/** Carries no `$orca:` token, so only the project scope is negotiated. */
+const PLAIN_DOMAIN = [['name', 'ilike', 'invoice']]
 
 const SCOPE: OdooProjectScope = {
   projectsByInstance: [{ instanceId: 'inst-a', projectIds: [7] }],
@@ -60,7 +61,6 @@ beforeEach(() => {
   clearRuntimeCompatibilityCacheForTests()
   runtimeEnvironmentCall.mockReset()
   runtimeEnvironmentTransportCall.mockReset()
-  listTicketsLocal.mockReset()
   searchTicketsLocal.mockReset()
   runtimeEnvironmentTransportCall.mockImplementation(
     (args: RuntimeEnvironmentCallRequest) =>
@@ -69,7 +69,7 @@ beforeEach(() => {
   vi.stubGlobal('window', {
     api: {
       runtimeEnvironments: { call: runtimeEnvironmentTransportCall },
-      odoo: { listTickets: listTicketsLocal, searchTickets: searchTicketsLocal }
+      odoo: { searchTickets: searchTicketsLocal }
     }
   })
 })
@@ -77,29 +77,29 @@ beforeEach(() => {
 describe('project-scoped reads against a remote runtime', () => {
   it('sends the scope to a runtime that advertises support', async () => {
     runtimeEnvironmentCall.mockResolvedValueOnce({
-      id: 'rpc-list',
+      id: 'rpc-search',
       ok: true,
       result: [{ id: 1 }],
       _meta: { runtimeId: 'runtime-1' }
     })
 
     await expect(
-      odooListTickets({ activeRuntimeEnvironmentId: 'env-1' }, 'assigned', 50, 'inst-a', SCOPE)
+      odooSearchTickets({ activeRuntimeEnvironmentId: 'env-1' }, PLAIN_DOMAIN, 50, 'inst-a', SCOPE)
     ).resolves.toEqual([{ id: 1 }])
 
     expect(runtimeEnvironmentCall).toHaveBeenCalledWith(
       expect.objectContaining({
-        method: 'odoo.listTickets',
-        params: { filter: 'assigned', limit: 50, instanceId: 'inst-a', projectScope: SCOPE }
+        method: 'odoo.searchTickets',
+        params: { domain: PLAIN_DOMAIN, limit: 50, instanceId: 'inst-a', projectScope: SCOPE }
       })
     )
   })
 
-  it('refuses a scoped list before an older runtime can answer unscoped', async () => {
+  it('refuses a scoped read before an older runtime can answer unscoped', async () => {
     stubRuntimeWithoutProjectScope()
 
     await expect(
-      odooListTickets({ activeRuntimeEnvironmentId: 'env-1' }, 'assigned', 50, 'inst-a', SCOPE)
+      odooSearchTickets({ activeRuntimeEnvironmentId: 'env-1' }, PLAIN_DOMAIN, 50, 'inst-a', SCOPE)
     ).rejects.toMatchObject({
       name: 'OdooProjectScopeUnsupportedError',
       message: 'This remote runtime must be updated to filter Odoo tickets by project.'
@@ -110,31 +110,22 @@ describe('project-scoped reads against a remote runtime', () => {
     expect(runtimeEnvironmentCall).not.toHaveBeenCalled()
   })
 
-  it('refuses a scoped search on the same runtime', async () => {
-    stubRuntimeWithoutProjectScope()
-
-    await expect(
-      odooSearchTickets({ activeRuntimeEnvironmentId: 'env-1' }, [], 50, 'inst-a', SCOPE)
-    ).rejects.toMatchObject({ name: 'OdooProjectScopeUnsupportedError' })
-    expect(runtimeEnvironmentCall).not.toHaveBeenCalled()
-  })
-
   it('still serves an unscoped read from that older runtime', async () => {
     stubRuntimeWithoutProjectScope()
     runtimeEnvironmentCall.mockResolvedValueOnce({
-      id: 'rpc-list',
+      id: 'rpc-search',
       ok: true,
       result: [{ id: 2 }],
       _meta: { runtimeId: 'runtime-old' }
     })
 
     await expect(
-      odooListTickets({ activeRuntimeEnvironmentId: 'env-1' }, 'assigned', 50, 'inst-a')
+      odooSearchTickets({ activeRuntimeEnvironmentId: 'env-1' }, PLAIN_DOMAIN, 50, 'inst-a')
     ).resolves.toEqual([{ id: 2 }])
     // No projectScope key at all, rather than an explicit undefined.
     expect(runtimeEnvironmentCall).toHaveBeenCalledWith(
       expect.objectContaining({
-        params: { filter: 'assigned', limit: 50, instanceId: 'inst-a' }
+        params: { domain: PLAIN_DOMAIN, limit: 50, instanceId: 'inst-a' }
       })
     )
   })
@@ -142,16 +133,16 @@ describe('project-scoped reads against a remote runtime', () => {
 
 describe('project-scoped reads against the local runtime', () => {
   it('passes the scope straight to IPC without a capability probe', async () => {
-    listTicketsLocal.mockResolvedValue([{ id: 3 }])
+    searchTicketsLocal.mockResolvedValue([{ id: 3 }])
 
     await expect(
-      odooListTickets({ activeRuntimeEnvironmentId: null }, 'all', 50, 'inst-a', SCOPE)
+      odooSearchTickets({ activeRuntimeEnvironmentId: null }, PLAIN_DOMAIN, 50, 'inst-a', SCOPE)
     ).resolves.toEqual([{ id: 3 }])
 
     // Main and renderer ship together locally, so there is no skew to negotiate.
     expect(runtimeEnvironmentTransportCall).not.toHaveBeenCalled()
-    expect(listTicketsLocal).toHaveBeenCalledWith({
-      filter: 'all',
+    expect(searchTicketsLocal).toHaveBeenCalledWith({
+      domain: PLAIN_DOMAIN,
       limit: 50,
       instanceId: 'inst-a',
       projectScope: SCOPE
@@ -171,9 +162,9 @@ describe('isOdooProjectScopeUnsupportedError', () => {
 
   it('survives the reject path the store rethrows it through', async () => {
     stubRuntimeWithoutProjectScope()
-    const failure = await odooListTickets(
+    const failure = await odooSearchTickets(
       { activeRuntimeEnvironmentId: 'env-1' },
-      'assigned',
+      PLAIN_DOMAIN,
       50,
       'inst-a',
       SCOPE
@@ -245,21 +236,6 @@ describe('current-user token against a remote runtime', () => {
       odooSearchTickets({ activeRuntimeEnvironmentId: 'env-1' }, [['name', 'ilike', '@me']], 50)
     ).resolves.toEqual([{ id: 2 }])
     expect(runtimeEnvironmentCall).toHaveBeenCalledTimes(1)
-  })
-
-  it('never negotiates for a preset list, whose token is produced host-side', async () => {
-    // `odoo.listTickets` carries a filter name, not a domain: no token crosses.
-    stubRuntimeWithoutDomainTokens()
-    runtimeEnvironmentCall.mockResolvedValueOnce({
-      id: 'rpc-list',
-      ok: true,
-      result: [{ id: 3 }],
-      _meta: { runtimeId: 'runtime-old' }
-    })
-
-    await expect(
-      odooListTickets({ activeRuntimeEnvironmentId: 'env-1' }, 'assigned', 50)
-    ).resolves.toEqual([{ id: 3 }])
   })
 
   it('reads a local target without negotiating at all', async () => {

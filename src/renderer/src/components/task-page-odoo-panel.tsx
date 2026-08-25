@@ -29,6 +29,7 @@ import {
 } from '@/components/odoo-saved-ticket-filters'
 import { OdooTicketKanban } from '@/components/odoo-ticket-kanban'
 import { OdooTicketToolbar, type OdooTicketPanelView } from '@/components/odoo-ticket-toolbar'
+import { odooTicketReadErrorMessage } from '@/components/odoo-ticket-read-error-message'
 import { OdooTicketRow } from '@/components/task-page-odoo-ticket-row'
 import type { OdooTicketFilterId } from '@/components/odoo-ticket-filter-select'
 import { getOdooPresets, getOdooPriorityLabels } from '@/components/task-page-localized-options'
@@ -117,6 +118,14 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   // across databases.
   const resetFilters = (): void =>
     setFilters((current) => ({ ...DEFAULT_ODOO_TICKET_FILTERS, projects: current.projects }))
+  // A new domain is its own question, so any live title search gives way: while
+  // one is applied it replaces the compiled domain, and the box would otherwise
+  // accept a domain that changes nothing on screen.
+  const applyRawDomain = (next: OdooDomain | null): void => {
+    setSearchInput('')
+    setAppliedSearch('')
+    setRawDomain(next)
+  }
   const setFilter = <K extends keyof OdooTicketListFilters>(
     key: K,
     value: OdooTicketListFilters[K]
@@ -227,7 +236,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
         if (isOdooProjectScopeUnsupportedError(readError)) {
           setTickets([])
         }
-        setError(readError instanceof Error ? readError.message : String(readError))
+        setError(odooTicketReadErrorMessage(readError))
       })
       .finally(() => {
         if (!cancelled) {
@@ -300,9 +309,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
         activePreset={activePreset}
         filtersActive={!appliedSearch}
         onPresetSelect={(next) => {
-          setSearchInput('')
-          setAppliedSearch('')
-          setRawDomain(filterDomain(next))
+          applyRawDomain(filterDomain(next))
           resetFilters()
         }}
         instances={instances}
@@ -326,6 +333,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
         projects={projects}
         filters={filters}
         rawDomain={rawDomain}
+        onRawDomainChange={applyRawDomain}
         onFilterChange={setFilter}
         openFilter={openFilter}
         onOpenFilterChange={setOpenFilter}
@@ -343,11 +351,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
         }}
         savedFilters={savedFilters}
         onApplySavedFilter={(entry) => {
-          // Recalling a saved view must also drop any active title search,
-          // otherwise the server read stays pinned to the search results.
-          setSearchInput('')
-          setAppliedSearch('')
-          setRawDomain(entry.rawDomain ?? null)
+          applyRawDomain(entry.rawDomain ?? null)
           setFilters(entry.filters)
           // A recalled view is an explicit choice; don't let the viewer seed
           // overwrite its assignee on the next load.
