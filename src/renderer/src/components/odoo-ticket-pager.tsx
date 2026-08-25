@@ -6,9 +6,11 @@ import { translate } from '@/i18n/i18n'
 
 /**
  * Odoo-style record pager (‹ 3/24 ›): steps to the previous/next ticket in the
- * currently visible list without leaving the panel. Floats over the header's
- * empty right side instead of living inside OdooTicketHeader, which this
- * feature does not own.
+ * currently visible list without leaving the panel. Laid out inside
+ * OdooTicketHeader's band as its `pager` slot — the panel is a right-edge sheet
+ * whose band starts at y=0, so a floating box there lands under the fixed
+ * .window-controls overlay (z-9999). The band's window-controls inset is what
+ * keeps this reachable; absolute positioning opted out of it.
  */
 export function OdooTicketPager({
   position,
@@ -24,7 +26,7 @@ export function OdooTicketPager({
   onNext: () => void
 }): React.JSX.Element {
   return (
-    <div className="absolute right-4 top-4 z-10 flex items-center gap-0.5 rounded-md border border-border/60 bg-background/85 px-1 py-0.5 shadow-xs backdrop-blur-sm">
+    <div className="flex shrink-0 items-center gap-0.5 rounded-md border border-border/60 bg-background/85 px-1 py-0.5 shadow-xs">
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
