@@ -1,12 +1,20 @@
-import { describe, expect, it } from 'vitest'
-import {
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { OdooClientForInstance } from './json-rpc'
+
+const mocks = vi.hoisted(() => ({ executeKw: vi.fn() }))
+
+vi.mock('./json-rpc', () => ({ executeKw: mocks.executeKw }))
+
+const {
   base64ImageDataUri,
+  loadLookups,
   mapCommentAttachments,
   mapMentionSuggestion,
   mapStage,
+  mapTicket,
   mapUser,
   toIsoDate
-} from './ticket-mappers'
+} = await import('./ticket-mappers')
 
 describe('toIsoDate', () => {
   it('turns a naive Odoo datetime into a UTC ISO string', () => {
@@ -171,5 +179,107 @@ describe('mapMentionSuggestion', () => {
 
   it('drops a user with no partner, since partner_ids is what a mention needs', () => {
     expect(mapMentionSuggestion({ ...marc, partner_id: false }, new Map())).toBeNull()
+  })
+})
+
+describe('customer company resolution', () => {
+  const client = {
+    instance: {
+      id: 'alpha',
+      serverUrl: 'https://alpha.odoo.com',
+      database: 'alpha',
+      login: 'admin',
+      uid: 2,
+      displayName: 'Alpha'
+    },
+    apiKey: 'k'
+  } as OdooClientForInstance
+
+  /** A search_read row: only `partner_id` matters to the partner lookup. */
+  function row(id: number, partnerId: unknown): Record<string, unknown> {
+    return { id, name: `Task ${id}`, partner_id: partnerId }
+  }
+
+  beforeEach(() => {
+    mocks.executeKw.mockReset()
+  })
+
+  it('resolves the contact to its commercial partner', async () => {
+    // Real shape: partner_id is a contact whose display_name carries the company.
+    mocks.executeKw.mockResolvedValueOnce([
+      { id: 41170, commercial_partner_id: [1633, 'CAM - NOVACEL'] }
+    ])
+
+    const rows = [row(1, [41170, 'CAM - NOVACEL, Helene Mannina'])]
+    const lookups = await loadLookups(client, rows)
+    const ticket = mapTicket(client, rows[0], lookups)
+
+    expect(ticket.customer).toEqual({ id: 41170, name: 'CAM - NOVACEL, Helene Mannina' })
+    expect(ticket.customerCompany).toEqual({ id: 1633, name: 'CAM - NOVACEL' })
+  })
+
+  it('maps a partner that is itself a company to itself', async () => {
+    mocks.executeKw.mockResolvedValueOnce([
+      { id: 46951, commercial_partner_id: [46951, 'NUTRIPURE'] }
+    ])
+
+    const rows = [row(1, [46951, 'NUTRIPURE'])]
+    const ticket = mapTicket(client, rows[0], await loadLookups(client, rows))
+
+    expect(ticket.customerCompany).toEqual({ id: 46951, name: 'NUTRIPURE' })
+  })
+
+  it('reads every distinct partner of the page in one call', async () => {
+    mocks.executeKw.mockResolvedValueOnce([
+      { id: 41170, commercial_partner_id: [1633, 'CAM - NOVACEL'] },
+      { id: 49088, commercial_partner_id: [49072, 'LABORATOIRES HUMEAU'] }
+    ])
+
+    const rows = [
+      row(1, [41170, 'CAM - NOVACEL, Helene Mannina']),
+      row(2, [49088, 'LABORATOIRES HUMEAU, Vincent Perrinet']),
+      row(3, [41170, 'CAM - NOVACEL, Helene Mannina'])
+    ]
+    const lookups = await loadLookups(client, rows)
+
+    expect(mocks.executeKw).toHaveBeenCalledTimes(1)
+    const [, model, method, args] = mocks.executeKw.mock.calls[0]
+    expect(model).toBe('res.partner')
+    expect(method).toBe('search_read')
+    expect(args).toEqual([[['id', 'in', [41170, 49088]]]])
+    expect(rows.map((raw) => mapTicket(client, raw, lookups).customerCompany?.id)).toEqual([
+      1633, 49072, 1633
+    ])
+  })
+
+  it('spends no round trip when no ticket carries a customer', async () => {
+    // `partner_id` is `false` on planning tasks; an unguarded read here would
+    // also hit the network in tickets.test.ts, which only mocks ./client.
+    const rows = [row(1, false), row(2, false)]
+    const ticket = mapTicket(client, rows[0], await loadLookups(client, rows))
+
+    expect(mocks.executeKw).not.toHaveBeenCalled()
+    expect(ticket.customer).toBeUndefined()
+    expect(ticket.customerCompany).toBeUndefined()
+  })
+
+  it('keeps the customer when the partner read is refused by ACL', async () => {
+    mocks.executeKw.mockRejectedValueOnce(new Error('AccessError'))
+
+    const rows = [row(1, [41170, 'CAM - NOVACEL, Helene Mannina'])]
+    const ticket = mapTicket(client, rows[0], await loadLookups(client, rows))
+
+    expect(ticket.customer?.id).toBe(41170)
+    expect(ticket.customerCompany).toBeUndefined()
+  })
+
+  it('drops a partner the read did not return, and one with no commercial partner', async () => {
+    mocks.executeKw.mockResolvedValueOnce([{ id: 41170, commercial_partner_id: false }])
+
+    const rows = [row(1, [41170, 'Contact']), row(2, [99999, 'Hidden'])]
+    const lookups = await loadLookups(client, rows)
+
+    expect(mapTicket(client, rows[0], lookups).customerCompany).toBeUndefined()
+    expect(mapTicket(client, rows[1], lookups).customerCompany).toBeUndefined()
   })
 })

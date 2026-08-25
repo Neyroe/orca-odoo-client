@@ -4,6 +4,7 @@ import { ODOO_PRIORITIES, ODOO_TICKET_STATES } from '../../shared/odoo-types'
 import type {
   OdooCommentAttachment,
   OdooMentionSuggestion,
+  OdooPartner,
   OdooPriority,
   OdooStage,
   OdooTag,
@@ -184,6 +185,48 @@ export type Lookups = {
   usersById: Map<number, OdooUser>
   tagsById: Map<number, OdooTag>
   stagesById: Map<number, OdooStage>
+  /** `partner_id` -> its `commercial_partner_id`; see `loadCustomerCompanies`. */
+  customerCompanyByPartnerId: Map<number, OdooPartner>
+}
+
+/**
+ * Resolves the company behind each `partner_id` of a page.
+ *
+ * Why a second read: `project.task.partner_id` is usually a per-person contact,
+ * and `commercial_partner_id` exists only on `res.partner` — reading it off the
+ * task raises `Invalid field 'commercial_partner_id' on 'project.task'`.
+ */
+async function loadCustomerCompanies(
+  client: OdooClientForInstance,
+  partnerIds: ReadonlySet<number>
+): Promise<Map<number, OdooPartner>> {
+  if (partnerIds.size === 0) {
+    return new Map()
+  }
+  let rows: OdooRecord[]
+  try {
+    // search_read rather than read: a multi-company record rule drops an
+    // unreadable partner from the result, where `read` would raise and blind
+    // the whole page. `active_test` off keeps archived contacts resolvable.
+    rows = await executeKw<OdooRecord[]>(
+      client,
+      'res.partner',
+      'search_read',
+      [[['id', 'in', [...partnerIds]]]],
+      { fields: ['commercial_partner_id'], context: { active_test: false } }
+    )
+  } catch {
+    // A customer Orca may not read is not an error for a ticket list.
+    return new Map()
+  }
+  const companies = new Map<number, OdooPartner>()
+  for (const row of rows) {
+    const company = readMany2One(row.commercial_partner_id)
+    if (typeof row.id === 'number' && company) {
+      companies.set(row.id, { id: company.id, name: company.name })
+    }
+  }
+  return companies
 }
 
 /**
@@ -199,6 +242,7 @@ export async function loadLookups(
   const userIds = new Set<number>()
   const tagIds = new Set<number>()
   const stageIds = new Set<number>()
+  const partnerIds = new Set<number>()
   for (const row of rows) {
     for (const id of readIdList(row.user_ids)) {
       userIds.add(id)
@@ -210,9 +254,13 @@ export async function loadLookups(
     if (stage) {
       stageIds.add(stage.id)
     }
+    const partner = readMany2One(row.partner_id)
+    if (partner) {
+      partnerIds.add(partner.id)
+    }
   }
 
-  const [users, tags, stages] = await Promise.all([
+  const [users, tags, stages, customerCompanyByPartnerId] = await Promise.all([
     userIds.size > 0
       ? executeKw<OdooRecord[]>(client, 'res.users', 'read', [[...userIds]], {
           fields: ['name', 'login', 'avatar_128']
@@ -227,13 +275,15 @@ export async function loadLookups(
       ? executeKw<OdooRecord[]>(client, 'project.task.type', 'read', [[...stageIds]], {
           fields: ['name', 'sequence', 'fold', 'color']
         })
-      : Promise.resolve([])
+      : Promise.resolve([]),
+    loadCustomerCompanies(client, partnerIds)
   ])
 
   return {
     usersById: new Map(users.map((user) => [user.id as number, mapUser(user)])),
     tagsById: new Map(tags.map((tag) => [tag.id as number, mapTag(tag)])),
-    stagesById: new Map(stages.map((stage) => [stage.id as number, mapStage(stage)]))
+    stagesById: new Map(stages.map((stage) => [stage.id as number, mapStage(stage)])),
+    customerCompanyByPartnerId
   }
 }
 
@@ -267,6 +317,7 @@ export function mapTicket(
         }
       : undefined,
     customer: customer ? { id: customer.id, name: customer.name } : undefined,
+    customerCompany: customer ? lookups.customerCompanyByPartnerId.get(customer.id) : undefined,
     stage: stageRef
       ? (lookups.stagesById.get(stageRef.id) ?? {
           id: stageRef.id,
