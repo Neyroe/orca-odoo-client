@@ -81,7 +81,7 @@ export type OdooUser = {
   avatarUrl?: string
 }
 
-/** A ticket's `partner_id` (Customer); Odoo shows it in the chatter header. */
+/** A `res.partner`: a ticket's Customer, or the company behind it. */
 export type OdooPartner = {
   id: number
   name: string
@@ -104,8 +104,15 @@ export type OdooTicket = {
   url: string
   /** Absent for private todos (`project_todo`), which carry no project. */
   project?: OdooProject
-  /** `partner_id`: the ticket's Customer, when set. */
+  /** `partner_id`: the ticket's Customer, when set — usually a person. */
   customer?: OdooPartner
+  /**
+   * `customer`'s `commercial_partner_id`. Coexists with `customer` because that
+   * one is per-contact ("Acme, Jane Doe"), too fine-grained to key a company on.
+   * Absent when the ticket has no customer, when the partner is unreadable, or
+   * when a remote host predates this field.
+   */
+  customerCompany?: OdooPartner
   stage?: OdooStage
   state: OdooTicketState
   priority: OdooPriority
