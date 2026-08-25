@@ -25,10 +25,8 @@ import { SYNC_FIT_PANES_EVENT, TOGGLE_TERMINAL_PANE_EXPAND_EVENT } from '@/const
 import { syncZoomCSSVar } from '@/lib/ui-zoom'
 import { resolveLeftSidebarStyleVariables } from '@/lib/left-sidebar-appearance'
 import { canShowRightSidebarForView } from '@/lib/right-sidebar-visibility'
-import {
-  isPairedWebClientWindow,
-  shouldRenderDesktopWindowChrome
-} from '@/lib/desktop-window-chrome'
+import { isPairedWebClientWindow } from '@/lib/desktop-window-chrome'
+import { hasDesktopWindowControls } from '@/lib/window-controls-css-vars'
 import { resolveLeftTitlebarChromeLayout } from '@/lib/titlebar-left-chrome'
 import { shouldShowWorktreeCreationSurface } from '@/lib/worktree-creation-surface'
 import { buildAppFontFamily } from '@/lib/app-font-family'
@@ -236,10 +234,8 @@ const isMac = navigator.userAgent.includes('Mac')
 const isWindows = !isMac && navigator.userAgent.includes('Windows')
 const shortcutPlatform: NodeJS.Platform = isMac ? 'darwin' : isWindows ? 'win32' : 'linux'
 // Why: Windows and Linux remove the native title bar so the renderer draws its own chrome; paired web clients run in a browser tab and must not.
-const hasCustomTitleBar = shouldRenderDesktopWindowChrome({
-  platform: shortcutPlatform,
-  isWebClient: isPairedWebClientWindow()
-})
+// Shared with the :root CSS vars the bootstrap publishes, so chrome and insets can never disagree.
+const hasCustomTitleBar = hasDesktopWindowControls
 
 async function listRuntimeSessionHostIdsForStartup(): Promise<ExecutionHostId[]> {
   try {
@@ -2253,11 +2249,7 @@ function App(): React.JSX.Element {
       className="app-layout"
       style={
         {
-          '--collapsed-sidebar-header-width': `${collapsedSidebarHeaderWidth}px`,
-          // Shared so surfaces can avoid the Windows/Linux window-controls overlay without hardcoding 138px everywhere.
-          '--window-controls-width': hasCustomTitleBar ? '138px' : '0px',
-          // Side-position activity bar uses this to push icons below the Windows/Linux window-controls overlay.
-          '--window-controls-height': hasCustomTitleBar ? '36px' : '0px'
+          '--collapsed-sidebar-header-width': `${collapsedSidebarHeaderWidth}px`
         } as React.CSSProperties
       }
     >

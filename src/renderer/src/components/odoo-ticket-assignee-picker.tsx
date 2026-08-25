@@ -117,6 +117,8 @@ export function OdooTicketAssigneePicker({
   const assigneeNames =
     ticket.assignees.map((user) => user.displayName).join(', ') ||
     translate('auto.components.odoo.ticket.assignee.picker.70dacd306b', 'Unassigned')
+  // Names the field too: no visible label sits next to the trigger any more.
+  const assigneeAccessibleName = `${translate('auto.components.odoo.ticket.workspace.4f1a1c9e6c', 'Assignees')}: ${assigneeNames}`
 
   return (
     <Popover
@@ -136,7 +138,7 @@ export function OdooTicketAssigneePicker({
           aria-expanded={open}
           disabled={saving}
           title={assigneeNames}
-          aria-label={assigneeNames}
+          aria-label={assigneeAccessibleName}
           className={cn(
             'h-7 justify-between px-2 text-xs font-normal',
             ODOO_TICKET_CONTROL_WIDTH_CLASS

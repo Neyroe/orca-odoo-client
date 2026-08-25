@@ -32,6 +32,9 @@ const storeState = {
     credentialError?: string
   },
   odooStatusChecked: true,
+  // The panel reads this unconditionally through useOdooPanelTicketRequest, so
+  // the parent object has to exist even when no ticket was requested.
+  taskPageData: {} as { openOdooTicket?: OdooTicket },
   checkOdooConnection: vi.fn().mockResolvedValue(undefined),
   // The panel compiles its filters into a domain, so every read is a search now.
   searchOdooTickets: vi.fn(),
@@ -73,6 +76,9 @@ const stagingTicket = ticketFixture({ title: 'Staging ticket', instanceId: 'stag
 describe('TaskPageOdooPanel ticket selection', () => {
   beforeEach(() => {
     window.localStorage.clear()
+    // Leaking a request into the next test would pre-select its ticket and let a
+    // click assertion pass without the click.
+    storeState.taskPageData = {}
     storeState.searchOdooTickets.mockResolvedValue([prodTicket, stagingTicket])
   })
 
@@ -105,5 +111,28 @@ describe('TaskPageOdooPanel ticket selection', () => {
     const stagingCard = await screen.findByText('Staging ticket')
     expect(prodCard.closest('button')).toHaveAttribute('aria-current', 'true')
     expect(stagingCard.closest('button')).not.toHaveAttribute('aria-current', 'true')
+  })
+
+  it('opens the ticket a workspace requested, not its id twin on another instance', async () => {
+    window.localStorage.setItem('odoo.ticketPanelView', 'list')
+    // A distinct object, like the workspace hands over: matching is on id + instance.
+    storeState.taskPageData = {
+      openOdooTicket: ticketFixture({ title: 'Prod ticket', instanceId: 'prod' })
+    }
+    render(
+      <TooltipProvider>
+        <TaskPageOdooPanel />
+      </TooltipProvider>
+    )
+
+    // No click: the request alone must open the ticket, once the list has loaded.
+    const prodRow = await screen.findByText('Prod ticket')
+    await waitFor(() => {
+      expect(prodRow.closest('[role="button"]')).toHaveAttribute('aria-current', 'true')
+    })
+    expect(screen.getByText('Staging ticket').closest('[role="button"]')).not.toHaveAttribute(
+      'aria-current',
+      'true'
+    )
   })
 })

@@ -10,6 +10,7 @@ import {
 } from './lib/crash-diagnostics'
 import { applyDocumentTheme } from './lib/document-theme'
 import { installTypingLatencyDiagnostic } from './lib/typing-latency-diagnostic'
+import { applyWindowControlsCssVars } from './lib/window-controls-css-vars'
 import { shouldEnableReactGrab } from './lib/react-grab-dev-gate'
 import { I18nProvider } from './i18n/I18nProvider'
 import { translate } from './i18n/i18n'
@@ -31,6 +32,7 @@ if (
 }
 
 applyDocumentTheme('system', { disableTransitions: false })
+applyWindowControlsCssVars()
 
 const rootElement = document.getElementById('root')
 if (!rootElement) {

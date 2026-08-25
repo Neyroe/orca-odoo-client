@@ -8,6 +8,7 @@ import { OdooTicketCommentComposer } from '@/components/odoo-ticket-comment-comp
 import { OdooTicketCommentList } from '@/components/odoo-ticket-comment-list'
 import { OdooTicketHeader } from '@/components/odoo-ticket-header'
 import { OdooTicketPager } from '@/components/odoo-ticket-pager'
+import { OdooTicketProperties } from '@/components/odoo-ticket-properties'
 import { isOdooTicketPanelKeepOpenTarget } from '@/components/odoo-ticket-panel-outside-dismiss'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
@@ -280,22 +281,30 @@ function OdooTicketDetail({
 
   return (
     <>
-      <OdooTicketPager
-        position={ticketPosition}
-        hasPrevious={previousTicket !== null}
-        hasNext={nextTicket !== null}
-        onPrevious={() => previousTicket && onNavigate?.(previousTicket)}
-        onNext={() => nextTicket && onNavigate?.(nextTicket)}
-      />
       <OdooTicketHeader
         ticket={ticket}
-        stages={stages}
-        saving={saving}
         onClose={onClose}
-        applyUpdate={(updates, patch) => void applyUpdate(updates, patch)}
+        pager={
+          <OdooTicketPager
+            position={ticketPosition}
+            hasPrevious={previousTicket !== null}
+            hasNext={nextTicket !== null}
+            onPrevious={() => previousTicket && onNavigate?.(previousTicket)}
+            onNext={() => nextTicket && onNavigate?.(nextTicket)}
+          />
+        }
       />
 
       <div className="min-h-0 flex-1 overflow-y-auto scrollbar-sleek px-5 py-4">
+        <OdooTicketProperties
+          ticket={ticket}
+          stages={stages}
+          saving={saving}
+          applyUpdate={(updates, patch) => void applyUpdate(updates, patch)}
+        />
+
+        <div className="my-4 border-t border-border/60" />
+
         <SectionToggle
           open={descriptionOpen}
           onToggle={() => setDescriptionOpen((open) => !open)}
