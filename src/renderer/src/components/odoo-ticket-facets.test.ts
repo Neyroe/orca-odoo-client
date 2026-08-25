@@ -1,14 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  DEFAULT_ODOO_TICKET_FILTERS,
   deriveOdooTicketFacets,
-  filterOdooTickets,
   odooProjectFilterOptions,
   odooProjectFilterValue,
   parseOdooProjectFilters,
-  retainResolvableOdooProjectFilters,
-  type OdooTicketListFilters
+  retainResolvableOdooProjectFilters
 } from './odoo-ticket-facets'
 import type { OdooTicket } from '../../../shared/odoo-types'
 function ticket(overrides: Partial<OdooTicket>): OdooTicket {
@@ -53,108 +50,6 @@ describe('deriveOdooTicketFacets', () => {
       { id: 5, label: 'Zoe' }
     ])
     expect(facets.tags).toEqual([{ id: 9, label: 'urgent' }])
-  })
-})
-
-/** Spread over the defaults so a new filter key needs no edit in every case. */
-function filters(overrides: Partial<OdooTicketListFilters> = {}): OdooTicketListFilters {
-  return { ...DEFAULT_ODOO_TICKET_FILTERS, ...overrides }
-}
-
-describe('filterOdooTickets', () => {
-  const tickets = [
-    ticket({ id: 1, priority: '3', assignees: [{ id: 5, displayName: 'Zoe' }], tags: [] }),
-    ticket({ id: 2, priority: '0', assignees: [], tags: [{ id: 9, name: 'urgent' }] })
-  ]
-
-  it("returns everything when all facets are 'all'", () => {
-    const result = filterOdooTickets(tickets, filters())
-    expect(result.map((t) => t.id)).toEqual([1, 2])
-  })
-
-  it('matches assignee id as a string', () => {
-    const result = filterOdooTickets(tickets, filters({ assignees: ['5'] }))
-    expect(result.map((t) => t.id)).toEqual([1])
-  })
-
-  it('matches tag id as a string', () => {
-    const result = filterOdooTickets(tickets, filters({ tags: ['9'] }))
-    expect(result.map((t) => t.id)).toEqual([2])
-  })
-
-  it('unions several stages and keeps other facets a conjunction', () => {
-    const staged = [
-      ticket({ id: 1, stage: { id: 1, name: 'Backlog', sequence: 0, fold: false } }),
-      ticket({ id: 2, stage: { id: 2, name: 'Doing', sequence: 1, fold: false } }),
-      ticket({ id: 3, stage: { id: 3, name: 'Done', sequence: 2, fold: false } })
-    ]
-    const result = filterOdooTickets(staged, filters({ stages: ['Backlog', 'Done'] }))
-    expect(result.map((t) => t.id)).toEqual([1, 3])
-  })
-
-  it('excludes stage-less tickets once any stage is selected', () => {
-    const result = filterOdooTickets([ticket({ id: 9 })], filters({ stages: ['Backlog'] }))
-    expect(result).toEqual([])
-  })
-
-  it('matches tickets nobody owns on the unassigned sentinel', () => {
-    const result = filterOdooTickets(tickets, filters({ assignees: ['unassigned'] }))
-    expect(result.map((t) => t.id)).toEqual([2])
-  })
-
-  it('combines facets as a conjunction', () => {
-    const result = filterOdooTickets(tickets, filters({ priorities: ['3'], assignees: ['5'] }))
-    expect(result.map((t) => t.id)).toEqual([1])
-  })
-
-  it('unions several assignees', () => {
-    const owned = [
-      ticket({ id: 1, assignees: [{ id: 5, displayName: 'Zoe' }] }),
-      ticket({ id: 2, assignees: [{ id: 6, displayName: 'Ada' }] }),
-      ticket({ id: 3, assignees: [{ id: 7, displayName: 'Kim' }] })
-    ]
-    expect(filterOdooTickets(owned, filters({ assignees: ['5', '7'] })).map((t) => t.id)).toEqual([
-      1, 3
-    ])
-  })
-
-  it('unions the unassigned sentinel with a real assignee', () => {
-    // 'unowned OR Zoe', never an impossible conjunction of the two.
-    expect(
-      filterOdooTickets(tickets, filters({ assignees: ['unassigned', '5'] })).map((t) => t.id)
-    ).toEqual([1, 2])
-  })
-
-  it('unions several priorities', () => {
-    expect(
-      filterOdooTickets(tickets, filters({ priorities: ['0', '3'] })).map((t) => t.id)
-    ).toEqual([1, 2])
-  })
-
-  it('unions several tags', () => {
-    const tagged = [
-      ticket({ id: 1, tags: [{ id: 9, name: 'urgent' }] }),
-      ticket({ id: 2, tags: [{ id: 10, name: 'later' }] }),
-      ticket({ id: 3, tags: [] })
-    ]
-    expect(filterOdooTickets(tagged, filters({ tags: ['9', '10'] })).map((t) => t.id)).toEqual([
-      1, 2
-    ])
-  })
-
-  it('excludes tag-less tickets once any tag is selected', () => {
-    expect(filterOdooTickets([ticket({ id: 9, tags: [] })], filters({ tags: ['9'] }))).toEqual([])
-  })
-
-  it('matches a ticket on any one of its several assignees', () => {
-    const shared = ticket({
-      id: 1,
-      assignees: [
-        { id: 5, displayName: 'Zoe' },
-        { id: 6, displayName: 'Ada' }
-      ]
-    })
-    expect(filterOdooTickets([shared], filters({ assignees: ['6'] })).map((t) => t.id)).toEqual([1])
   })
 })
 

@@ -7,10 +7,14 @@ import { OdooTicketWorkspace } from '@/components/odoo-ticket-workspace'
 import {
   DEFAULT_ODOO_TICKET_FILTERS,
   deriveOdooTicketFacets,
-  filterOdooTickets,
   parseOdooProjectFilters,
   type OdooTicketListFilters
 } from '@/components/odoo-ticket-facets'
+import {
+  compileOdooTicketFilterDomain,
+  odooTicketFilterDomainsEqual,
+  type OdooTicketFilterDomainResult
+} from '@/components/odoo-ticket-filter-domain'
 import {
   getDefaultSavedOdooTicketFilter,
   ODOO_SEEDED_FILTER_PRESETS,
@@ -39,7 +43,8 @@ import {
   shouldRunScheduledOdooRefresh
 } from '@/components/odoo-ticket-panel-refresh-schedule'
 import { translate } from '@/i18n/i18n'
-import type { OdooTicket, OdooTicketFilter } from '../../../shared/odoo-types'
+import { filterDomain } from '../../../shared/odoo-filter-preset-domain'
+import type { OdooDomain, OdooTicket, OdooTicketFilter } from '../../../shared/odoo-types'
 const VIEW_STORAGE_KEY = 'odoo.ticketPanelView'
 
 // Kanban is the default: the stage columns are what the panel is for, and the
@@ -59,7 +64,6 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   const odooStatus = useAppStore((s) => s.odooStatus)
   const odooStatusChecked = useAppStore((s) => s.odooStatusChecked)
   const checkOdooConnection = useAppStore((s) => s.checkOdooConnection)
-  const listOdooTickets = useAppStore((s) => s.listOdooTickets)
   const searchOdooTickets = useAppStore((s) => s.searchOdooTickets)
   const selectOdooInstance = useAppStore((s) => s.selectOdooInstance)
 
@@ -67,7 +71,10 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   // initial state rather than be applied after the first read fires.
   const initialSavedFilters = useRef(readOrSeedSavedOdooTicketFilters(odooPresetLabel)).current
   const initialDefault = getDefaultSavedOdooTicketFilter(initialSavedFilters)
-  const [preset, setPreset] = useState<OdooTicketFilter>(initialDefault?.preset ?? 'assigned')
+  // No starred filter: open on the same set the 'assigned' chip stands for.
+  const [rawDomain, setRawDomain] = useState<OdooDomain | null>(
+    initialDefault ? (initialDefault.rawDomain ?? null) : filterDomain('assigned')
+  )
   const [searchInput, setSearchInput] = useState('')
   const [appliedSearch, setAppliedSearch] = useState('')
   const [tickets, setTickets] = useState<OdooTicket[]>([])
@@ -76,7 +83,8 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   const [refreshNonce, setRefreshNonce] = useState(0)
   const [selectedTicket, setSelectedTicket] = useState<OdooTicket | null>(null)
   const closeSelectedTicket = useOdooPanelTicketRequest(selectedTicket, setSelectedTicket)
-  // Client-side narrowing of the loaded set — instant and instance-agnostic.
+  // Compiled into the read's domain, so what is on screen is what matched in the
+  // database rather than what survived on the first page.
   const [filters, setFilters] = useState<OdooTicketListFilters>(
     initialDefault?.filters ?? DEFAULT_ODOO_TICKET_FILTERS
   )
@@ -103,10 +111,10 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   const instances = odooStatus.instances ?? []
   const selectedInstanceId = odooStatus.selectedInstanceId ?? odooStatus.activeInstanceId ?? null
 
-  // The project scope is a server-side narrowing, not a facet read off the loaded
-  // page, so switching preset or searching keeps it — "what is open on these
-  // projects" is the question the scope asks. Only an instance switch clears it,
-  // since project ids do not carry across databases.
+  // The project scope travels apart from the domain, so switching preset or
+  // searching keeps it — "what is open on these projects" is the question the
+  // scope asks. Only an instance switch clears it, since project ids do not carry
+  // across databases.
   const resetFilters = (): void =>
     setFilters((current) => ({ ...DEFAULT_ODOO_TICKET_FILTERS, projects: current.projects }))
   const setFilter = <K extends keyof OdooTicketListFilters>(
@@ -130,26 +138,34 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   const projectScope = useMemo(() => parseOdooProjectFilters(filters.projects), [filters.projects])
 
   const facets = useMemo(() => deriveOdooTicketFacets(tickets), [tickets])
-  const visibleTickets = useMemo(() => filterOdooTickets(tickets, filters), [tickets, filters])
+  const viewerUid = odooStatus.viewer?.uid
+  const compiledDomain = useMemo(
+    () => compileOdooTicketFilterDomain({ filters, viewerUid, rawDomain }),
+    [filters, viewerUid, rawDomain]
+  )
+  // Which preset chip reads as ticked: the live domain is the only state, so the
+  // answer is derived from it rather than tracked beside it.
+  const activePreset =
+    presets.find((entry) => odooTicketFilterDomainsEqual(rawDomain, filterDomain(entry.id)))?.id ??
+    null
 
-  // Drives the ticket panel's prev/next pager — position within the same
-  // filtered/sorted list the user is currently browsing, not the raw fetch.
+  // Drives the ticket panel's prev/next pager — position within the list the user
+  // is browsing, which is now exactly what the read returned.
   const selectedTicketIndex = selectedTicket
-    ? visibleTickets.findIndex(
+    ? tickets.findIndex(
         (entry) => entry.id === selectedTicket.id && entry.instanceId === selectedTicket.instanceId
       )
     : -1
-  const previousTicket = selectedTicketIndex > 0 ? visibleTickets[selectedTicketIndex - 1] : null
+  const previousTicket = selectedTicketIndex > 0 ? tickets[selectedTicketIndex - 1] : null
   const nextTicket =
-    selectedTicketIndex >= 0 && selectedTicketIndex < visibleTickets.length - 1
-      ? visibleTickets[selectedTicketIndex + 1]
+    selectedTicketIndex >= 0 && selectedTicketIndex < tickets.length - 1
+      ? tickets[selectedTicketIndex + 1]
       : null
   const ticketPosition =
-    selectedTicketIndex >= 0 ? { index: selectedTicketIndex, total: visibleTickets.length } : null
+    selectedTicketIndex >= 0 ? { index: selectedTicketIndex, total: tickets.length } : null
 
   // Open on the signed-in user rather than "All assignees" — the first loaded
   // set is what tells us whether they actually appear in the facet.
-  const viewerUid = odooStatus.viewer?.uid
   useEffect(() => {
     if (viewerAssigneeAppliedRef.current || viewerUid === undefined || tickets.length === 0) {
       return
@@ -172,15 +188,25 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
     if (!odooStatus.connected) {
       return
     }
+    // A title search is its own question: it replaces the compiled domain rather
+    // than narrowing it, and the handler clears the facets when it is submitted.
+    const read: OdooTicketFilterDomainResult = appliedSearch
+      ? { ok: true, domain: [['name', 'ilike', appliedSearch]] }
+      : compiledDomain
+    // Refused before the round trip: a domain Odoo would read differently than
+    // its author meant must say so, not return a plausible other set.
+    if (!read.ok) {
+      setTickets([])
+      setError(read.error)
+      setLoading(false)
+      return
+    }
     let cancelled = false
     setLoading(true)
     setError(null)
     const forceRefresh = forceNextReadRef.current
     forceNextReadRef.current = false
-    const read = appliedSearch
-      ? searchOdooTickets([['name', 'ilike', appliedSearch]], 50, { forceRefresh, projectScope })
-      : listOdooTickets(preset, 50, { forceRefresh, projectScope })
-    read
+    searchOdooTickets(read.domain, 50, { forceRefresh, projectScope })
       .then((result) => {
         if (!cancelled) {
           setTickets(result)
@@ -214,11 +240,10 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   }, [
     odooStatus.connected,
     selectedInstanceId,
-    preset,
+    compiledDomain,
     appliedSearch,
     projectScope,
     refreshNonce,
-    listOdooTickets,
     searchOdooTickets,
     maybeStartOdooAutoWorkspaces
   ])
@@ -272,12 +297,12 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
     >
       <OdooTicketToolbar
         presets={presets}
-        preset={preset}
-        presetActive={!appliedSearch}
+        activePreset={activePreset}
+        filtersActive={!appliedSearch}
         onPresetSelect={(next) => {
           setSearchInput('')
           setAppliedSearch('')
-          setPreset(next)
+          setRawDomain(filterDomain(next))
           resetFilters()
         }}
         instances={instances}
@@ -300,6 +325,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
         facets={facets}
         projects={projects}
         filters={filters}
+        rawDomain={rawDomain}
         onFilterChange={setFilter}
         openFilter={openFilter}
         onOpenFilterChange={setOpenFilter}
@@ -321,14 +347,16 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
           // otherwise the server read stays pinned to the search results.
           setSearchInput('')
           setAppliedSearch('')
-          setPreset(entry.preset)
+          setRawDomain(entry.rawDomain ?? null)
           setFilters(entry.filters)
           // A recalled view is an explicit choice; don't let the viewer seed
           // overwrite its assignee on the next load.
           viewerAssigneeAppliedRef.current = true
         }}
         onSaveFilter={(name) =>
-          persistSavedFilters(upsertSavedOdooTicketFilter(savedFilters, { name, preset, filters }))
+          persistSavedFilters(
+            upsertSavedOdooTicketFilter(savedFilters, { name, filters, rawDomain })
+          )
         }
         onDeleteSavedFilter={(id) =>
           persistSavedFilters(removeSavedOdooTicketFilter(savedFilters, id))
@@ -354,8 +382,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
           {translate('auto.components.task.page.odoo.panel.93d245553c', 'Odoo tickets')}
         </div>
         <div className="shrink-0 text-[11px] text-muted-foreground">
-          {visibleTickets.length}{' '}
-          {translate('auto.components.task.page.odoo.panel.42b63f8760', 'shown')}
+          {tickets.length} {translate('auto.components.task.page.odoo.panel.42b63f8760', 'shown')}
         </div>
       </div>
 
@@ -381,7 +408,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
         </div>
       ) : null}
 
-      {!loading && visibleTickets.length === 0 && !error && !odooStatus.credentialError ? (
+      {!loading && tickets.length === 0 && !error && !odooStatus.credentialError ? (
         <div className="flex-none px-4 py-10 text-center">
           <p className="text-sm font-medium text-foreground">
             {translate('auto.components.task.page.odoo.panel.f5975fc3d1', 'No tickets found')}
@@ -399,7 +426,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
           each column, so it owns its own overflow instead of the list's. */}
       {view === 'kanban' ? (
         <OdooTicketKanban
-          tickets={visibleTickets}
+          tickets={tickets}
           selectedTicketId={selectedTicket?.id ?? null}
           selectedInstanceId={selectedTicket?.instanceId ?? null}
           showInstanceContext={instances.length > 1}
@@ -411,7 +438,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
           style={{ scrollbarGutter: 'stable' }}
         >
           <div className="divide-y divide-border/50">
-            {visibleTickets.map((ticket) => (
+            {tickets.map((ticket) => (
               <OdooTicketRow
                 key={`${ticket.instanceId ?? ''}:${ticket.id}`}
                 ticket={ticket}

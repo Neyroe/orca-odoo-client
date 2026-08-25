@@ -25,15 +25,16 @@ import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
-import type { OdooTicketFilter } from '../../../shared/odoo-types'
-/** Recall, save and delete named preset+facet combinations for the ticket list. */
+import type { OdooDomain, OdooTicketFilter } from '../../../shared/odoo-types'
+/** Recall, save and delete named filter combinations for the ticket list. */
 export function OdooSavedFilterMenu({
   saved,
   presets,
-  preset,
-  presetActive,
+  activePreset,
+  filtersActive,
   onPresetSelect,
   filters,
+  rawDomain,
   onApply,
   onSave,
   onDelete,
@@ -43,10 +44,11 @@ export function OdooSavedFilterMenu({
 }: {
   saved: OdooSavedTicketFilter[]
   presets: { id: OdooTicketFilter; label: string }[]
-  preset: OdooTicketFilter
-  presetActive: boolean
+  activePreset: OdooTicketFilter | null
+  filtersActive: boolean
   onPresetSelect: (preset: OdooTicketFilter) => void
   filters: OdooTicketListFilters
+  rawDomain: OdooDomain | null
   onApply: (entry: OdooSavedTicketFilter) => void
   onSave: (name: string) => void
   onDelete: (id: string) => void
@@ -63,8 +65,10 @@ export function OdooSavedFilterMenu({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
-  const activeEntry = saved.find((entry) => isSavedOdooTicketFilterActive(entry, preset, filters))
-  const activePreset = presets.find((entry) => entry.id === preset)
+  const activeEntry = saved.find((entry) =>
+    isSavedOdooTicketFilterActive(entry, filters, rawDomain)
+  )
+  const activePresetLabel = presets.find((entry) => entry.id === activePreset)?.label
 
   const submit = (): void => {
     const trimmed = name.trim()
@@ -100,8 +104,8 @@ export function OdooSavedFilterMenu({
           />
           <span className="truncate">
             {activeEntry?.name ??
-              (presetActive && activePreset
-                ? activePreset.label
+              (filtersActive && activePresetLabel
+                ? activePresetLabel
                 : translate('auto.components.odoo.saved.filter.menu.88c6da15ed', 'Saved filters'))}
           </span>
         </Button>
@@ -124,7 +128,7 @@ export function OdooSavedFilterMenu({
               <Check
                 className={cn(
                   'size-3 shrink-0 text-muted-foreground',
-                  presetActive && entry.id === preset ? 'opacity-70' : 'opacity-0'
+                  filtersActive && entry.id === activePreset ? 'opacity-70' : 'opacity-0'
                 )}
               />
               <span className="min-w-0 truncate">{entry.label}</span>
