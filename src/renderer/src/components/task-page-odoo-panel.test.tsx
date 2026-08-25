@@ -37,8 +37,8 @@ const storeState = {
   },
   odooStatusChecked: true,
   checkOdooConnection: vi.fn().mockResolvedValue(undefined),
-  listOdooTickets: vi.fn(),
-  searchOdooTickets: vi.fn().mockResolvedValue([]),
+  // The panel compiles its filters into a domain, so every read is a search now.
+  searchOdooTickets: vi.fn(),
   selectOdooInstance: vi.fn().mockResolvedValue(undefined)
 }
 
@@ -77,7 +77,7 @@ const stagingTicket = ticketFixture({ title: 'Staging ticket', instanceId: 'stag
 describe('TaskPageOdooPanel ticket selection', () => {
   beforeEach(() => {
     window.localStorage.clear()
-    storeState.listOdooTickets.mockResolvedValue([prodTicket, stagingTicket])
+    storeState.searchOdooTickets.mockResolvedValue([prodTicket, stagingTicket])
   })
 
   afterEach(() => {

@@ -26,8 +26,8 @@ export type OdooTicketListFilters = {
   tags: string[]
   /**
    * `<instanceId>:<projectId>` pairs and/or the no-project sentinel. Unlike its
-   * neighbours this one is applied by the server (see `OdooProjectScope`), not by
-   * `filterOdooTickets`.
+   * neighbours this one never reaches the ticket domain: it travels as an
+   * `OdooProjectScope`, which is instance-aware in a way a domain leaf is not.
    */
   projects: string[]
 }
@@ -128,7 +128,14 @@ function toSortedOptions(source: Map<number, string>): OdooTicketFacetOption[] {
     .sort((a, b) => a.label.localeCompare(b.label))
 }
 
-/** Derives the assignee/tag/stage filter options present in the loaded set. */
+/**
+ * Derives the assignee/tag/stage filter options present in the loaded set.
+ *
+ * Known limit: the set is what the current domain already returned, so a value
+ * no loaded ticket carries is not offered — narrowing on one facet shrinks the
+ * others' option lists. Clearing the toolbar, a preset or a saved filter reloads
+ * the wider set that brings them back.
+ */
 export function deriveOdooTicketFacets(tickets: OdooTicket[]): OdooTicketFacets {
   const stages = new Set<string>()
   const assignees = new Map<number, string>()
@@ -204,53 +211,4 @@ export function retainResolvableOdooProjectFilters(
     })
   )
   return values.filter((value) => value === ODOO_NO_PROJECT_FILTER || resolvable.has(value))
-}
-
-/** The values a ticket carries for one facet; empty means it can match none. */
-function ticketFacetValues(
-  ticket: OdooTicket,
-  facet: 'stages' | 'priorities' | 'assignees' | 'tags'
-): string[] {
-  if (facet === 'stages') {
-    return ticket.stage ? [ticket.stage.name] : []
-  }
-  if (facet === 'priorities') {
-    return [ticket.priority]
-  }
-  if (facet === 'tags') {
-    return ticket.tags.map((tag) => String(tag.id))
-  }
-  // A ticket nobody owns carries the sentinel instead of an id, so selecting
-  // 'unassigned' alongside a user reads as "unowned OR that user".
-  return ticket.assignees.length === 0
-    ? [ODOO_UNASSIGNED_FILTER]
-    : ticket.assignees.map((user) => String(user.id))
-}
-
-function matchesFacet(selected: readonly string[], carried: readonly string[]): boolean {
-  return selected.length === 0 || selected.some((value) => carried.includes(value))
-}
-
-/**
- * Client-side narrowing of the loaded set. An empty selection means the facet is
- * inactive; several values within one facet read as a union, and the facets read
- * as a conjunction — same semantics as Odoo's search panel. A ticket carrying no
- * value for an active facet (a stage-less ticket under a stage selection) is out.
- *
- * `projects` is deliberately absent: it is narrowed by the Odoo domain before the
- * read's limit applies. Re-applying it here would look like a safety net while
- * actually hiding truncation — a project with 40 open tickets would show however
- * many landed on the preset's first page.
- */
-export function filterOdooTickets(
-  tickets: OdooTicket[],
-  filters: OdooTicketListFilters
-): OdooTicket[] {
-  return tickets.filter(
-    (ticket) =>
-      matchesFacet(filters.stages, ticketFacetValues(ticket, 'stages')) &&
-      matchesFacet(filters.priorities, ticketFacetValues(ticket, 'priorities')) &&
-      matchesFacet(filters.assignees, ticketFacetValues(ticket, 'assignees')) &&
-      matchesFacet(filters.tags, ticketFacetValues(ticket, 'tags'))
-  )
 }

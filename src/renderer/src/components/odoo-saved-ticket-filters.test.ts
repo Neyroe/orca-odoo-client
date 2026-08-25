@@ -18,6 +18,10 @@ import {
   type OdooSavedTicketFilter
 } from './odoo-saved-ticket-filters'
 import { DEFAULT_ODOO_TICKET_FILTERS } from './odoo-ticket-facets'
+import { filterDomain } from '../../../shared/odoo-filter-preset-domain'
+import { CURRENT_USER_TOKEN } from '../../../shared/odoo-domain-tokens'
+import { parseOdooDomain } from '../../../shared/odoo-domain-validation'
+import { ODOO_CLOSED_STATES } from '../../../shared/odoo-types'
 
 const MINE = {
   ...DEFAULT_ODOO_TICKET_FILTERS,
@@ -33,7 +37,6 @@ function saved(
   return {
     id: name.toLowerCase(),
     name,
-    preset: 'assigned',
     filters: DEFAULT_ODOO_TICKET_FILTERS,
     ...overrides
   }
@@ -55,17 +58,24 @@ describe('parseSavedOdooTicketFilters', () => {
     ])
     const parsed = parseSavedOdooTicketFilters(raw)
     expect(parsed).toHaveLength(1)
-    expect(parsed[0]).toMatchObject({ id: 'dev', name: 'Dev', preset: 'all', filters: MINE })
+    expect(parsed[0]).toMatchObject({
+      id: 'dev',
+      name: 'Dev',
+      rawDomain: filterDomain('all'),
+      filters: MINE
+    })
   })
 
-  it('falls back to safe defaults for unknown presets and priorities', () => {
+  it('falls back to safe defaults for unknown legacy presets and priorities', () => {
+    // 'nope' read as 'assigned' in the build that stored it, so that is the set
+    // the entry was showing and the domain it must migrate to.
     const raw = JSON.stringify([
       { name: 'Odd', preset: 'nope', filters: { priority: '9', stages: 42 } }
     ])
     expect(parseSavedOdooTicketFilters(raw)[0]).toEqual({
       id: 'odd',
       name: 'Odd',
-      preset: 'assigned',
+      rawDomain: filterDomain('assigned'),
       filters: DEFAULT_ODOO_TICKET_FILTERS
     })
   })
@@ -75,28 +85,24 @@ describe('upsertSavedOdooTicketFilter', () => {
   it('appends a new entry', () => {
     const next = upsertSavedOdooTicketFilter([], {
       name: 'Mine',
-      preset: 'assigned',
       filters: MINE
     })
-    expect(next).toEqual([{ id: 'mine', name: 'Mine', preset: 'assigned', filters: MINE }])
+    expect(next).toEqual([{ id: 'mine', name: 'Mine', filters: MINE }])
   })
 
   it('replaces in place when the normalised name already exists', () => {
     const existing = [saved('Mine'), saved('Other')]
     const next = upsertSavedOdooTicketFilter(existing, {
       name: '  MINE ',
-      preset: 'all',
       filters: MINE
     })
     expect(next).toHaveLength(2)
-    expect(next[0]).toMatchObject({ id: 'mine', name: 'MINE', preset: 'all', filters: MINE })
+    expect(next[0]).toMatchObject({ id: 'mine', name: 'MINE', filters: MINE })
     expect(next[1]?.name).toBe('Other')
   })
 
   it('ignores a blank name', () => {
-    expect(upsertSavedOdooTicketFilter([], { name: '   ', preset: 'all', filters: MINE })).toEqual(
-      []
-    )
+    expect(upsertSavedOdooTicketFilter([], { name: '   ', filters: MINE })).toEqual([])
   })
 })
 
@@ -108,7 +114,6 @@ describe('saved-filter cap', () => {
   it('drops the oldest entry when a new one pushes past the cap', () => {
     const next = upsertSavedOdooTicketFilter(atCap, {
       name: 'Newest',
-      preset: 'all',
       filters: MINE
     })
     expect(next).toHaveLength(MAX_SAVED_FILTERS)
@@ -117,7 +122,7 @@ describe('saved-filter cap', () => {
   })
 
   it('leaves the list untouched when re-saving an existing entry at the cap', () => {
-    const next = upsertSavedOdooTicketFilter(atCap, { name: 'F1', preset: 'all', filters: MINE })
+    const next = upsertSavedOdooTicketFilter(atCap, { name: 'F1', filters: MINE })
     expect(next).toHaveLength(MAX_SAVED_FILTERS)
     expect(next[0]?.id).toBe('f1')
   })
@@ -127,7 +132,6 @@ describe('saved-filter cap', () => {
     const raw = JSON.stringify(
       Array.from({ length: MAX_SAVED_FILTERS + 1 }, (_unused, index) => ({
         name: `F${index + 1}`,
-        preset: 'all',
         filters: {}
       }))
     )
@@ -241,8 +245,8 @@ describe('legacy payload migration', () => {
       tags: ['9'],
       projects: ['inst-a:7']
     }
-    const once = upsertSavedOdooTicketFilter([], { name: 'A', preset: 'all', filters })
-    const twice = upsertSavedOdooTicketFilter(once, { name: 'B', preset: 'all', filters })
+    const once = upsertSavedOdooTicketFilter([], { name: 'A', filters })
+    const twice = upsertSavedOdooTicketFilter(once, { name: 'B', filters })
     for (const facet of ['stages', 'priorities', 'assignees', 'tags', 'projects'] as const) {
       expect(twice[0]?.filters[facet]).not.toBe(twice[1]?.filters[facet])
       expect(twice[0]?.filters[facet]).not.toBe(filters[facet])
@@ -274,7 +278,6 @@ describe('setDefaultSavedOdooTicketFilter', () => {
   it('keeps the star when re-saving under the same name', () => {
     const next = upsertSavedOdooTicketFilter([saved('Mine', { isDefault: true })], {
       name: 'Mine',
-      preset: 'all',
       filters: MINE
     })
     expect(next[0]?.isDefault).toBe(true)
@@ -299,7 +302,6 @@ describe('toggleSavedOdooTicketFilterPin', () => {
   it('keeps the pin when re-saving under the same name', () => {
     const next = upsertSavedOdooTicketFilter([saved('Mine', { pinned: true })], {
       name: 'Mine',
-      preset: 'all',
       filters: MINE
     })
     expect(next[0]?.pinned).toBe(true)
@@ -355,11 +357,25 @@ describe('reorderSavedOdooTicketFilters', () => {
 })
 
 describe('seedDefaultSavedOdooTicketFilters', () => {
-  it('creates one pinned entry per seeded preset, starring the first', () => {
+  it("creates one pinned entry per seeded preset, carrying that preset's domain", () => {
     const seeded = seedDefaultSavedOdooTicketFilters((preset) => `Label ${preset}`)
-    expect(seeded.map((entry) => entry.preset)).toEqual([...ODOO_SEEDED_FILTER_PRESETS])
+    expect(seeded.map((entry) => entry.rawDomain)).toEqual(
+      ODOO_SEEDED_FILTER_PRESETS.map((preset) => filterDomain(preset))
+    )
     expect(seeded.every((entry) => entry.pinned === true)).toBe(true)
-    expect(getDefaultSavedOdooTicketFilter(seeded)?.preset).toBe(ODOO_SEEDED_FILTER_PRESETS[0])
+    expect(getDefaultSavedOdooTicketFilter(seeded)?.rawDomain).toEqual(
+      filterDomain(ODOO_SEEDED_FILTER_PRESETS[0] ?? 'assigned')
+    )
+  })
+
+  it('survives the round trip it writes to storage on first run', () => {
+    // The seeded domains go straight back through the validator on next launch;
+    // a domain it refused would make the starter chips vanish silently.
+    const seeded = seedDefaultSavedOdooTicketFilters((preset) => `Label ${preset}`)
+    const reread = parseSavedOdooTicketFilters(JSON.stringify(seeded))
+    expect(reread.map((entry) => entry.rawDomain)).toEqual(seeded.map((entry) => entry.rawDomain))
+    expect(reread.map((entry) => entry.pinned)).toEqual(seeded.map((entry) => entry.pinned))
+    expect(getDefaultSavedOdooTicketFilter(reread)?.name).toBe(seeded[0]?.name)
   })
 
   it('produces entries the user can delete like any other', () => {
@@ -370,12 +386,24 @@ describe('seedDefaultSavedOdooTicketFilters', () => {
 })
 
 describe('isSavedOdooTicketFilterActive', () => {
-  it('matches only when preset and every facet agree', () => {
-    const entry = saved('Mine', { preset: 'all', filters: MINE })
-    expect(isSavedOdooTicketFilterActive(entry, 'all', MINE)).toBe(true)
-    expect(isSavedOdooTicketFilterActive(entry, 'assigned', MINE)).toBe(false)
-    expect(isSavedOdooTicketFilterActive(entry, 'all', { ...MINE, tags: [] })).toBe(false)
-    expect(isSavedOdooTicketFilterActive(entry, 'all', { ...MINE, stages: [] })).toBe(false)
+  it('matches only when the raw domain and every facet agree', () => {
+    const entry = saved('Mine', { rawDomain: filterDomain('all'), filters: MINE })
+    expect(isSavedOdooTicketFilterActive(entry, MINE, filterDomain('all'))).toBe(true)
+    expect(isSavedOdooTicketFilterActive(entry, MINE, filterDomain('assigned'))).toBe(false)
+    expect(isSavedOdooTicketFilterActive(entry, MINE)).toBe(false)
+    expect(isSavedOdooTicketFilterActive(entry, { ...MINE, tags: [] }, filterDomain('all'))).toBe(
+      false
+    )
+    expect(isSavedOdooTicketFilterActive(entry, { ...MINE, stages: [] }, filterDomain('all'))).toBe(
+      false
+    )
+  })
+
+  it('reads a domain-less entry as active only against a domain-less toolbar', () => {
+    const entry = saved('Facets only', { filters: MINE })
+    expect(isSavedOdooTicketFilterActive(entry, MINE)).toBe(true)
+    expect(isSavedOdooTicketFilterActive(entry, MINE, [])).toBe(true)
+    expect(isSavedOdooTicketFilterActive(entry, MINE, [['s_raf', '>', 0]])).toBe(false)
   })
 })
 
@@ -384,7 +412,6 @@ describe('project scope in saved filters', () => {
     const scoped = { ...DEFAULT_ODOO_TICKET_FILTERS, projects: ['inst-a:7', 'inst-a:9'] }
     const stored = upsertSavedOdooTicketFilter([], {
       name: 'Acme work',
-      preset: 'assigned',
       filters: scoped
     })
     const parsed = parseSavedOdooTicketFilters(JSON.stringify(stored))
@@ -393,8 +420,8 @@ describe('project scope in saved filters', () => {
 
   it('does not let two saved entries alias one projects array', () => {
     const filters = { ...DEFAULT_ODOO_TICKET_FILTERS, projects: ['inst-a:7'] }
-    const once = upsertSavedOdooTicketFilter([], { name: 'A', preset: 'all', filters })
-    const twice = upsertSavedOdooTicketFilter(once, { name: 'B', preset: 'all', filters })
+    const once = upsertSavedOdooTicketFilter([], { name: 'A', filters })
+    const twice = upsertSavedOdooTicketFilter(once, { name: 'B', filters })
     expect(twice[0]?.filters.projects).not.toBe(twice[1]?.filters.projects)
     expect(twice[0]?.filters.projects).not.toBe(filters.projects)
   })
@@ -411,28 +438,26 @@ describe('project scope in saved filters', () => {
       filters: { ...DEFAULT_ODOO_TICKET_FILTERS, projects: ['inst-a:7'] }
     })
     expect(
-      isSavedOdooTicketFilterActive(entry, 'assigned', {
+      isSavedOdooTicketFilterActive(entry, {
         ...DEFAULT_ODOO_TICKET_FILTERS,
         projects: ['inst-a:7']
       })
     ).toBe(true)
     // Same preset and facets, different project: the chip must not read as active.
     expect(
-      isSavedOdooTicketFilterActive(entry, 'assigned', {
+      isSavedOdooTicketFilterActive(entry, {
         ...DEFAULT_ODOO_TICKET_FILTERS,
         projects: ['inst-a:8']
       })
     ).toBe(false)
     // A superset is not the saved view either.
     expect(
-      isSavedOdooTicketFilterActive(entry, 'assigned', {
+      isSavedOdooTicketFilterActive(entry, {
         ...DEFAULT_ODOO_TICKET_FILTERS,
         projects: ['inst-a:7', 'inst-a:8']
       })
     ).toBe(false)
-    expect(isSavedOdooTicketFilterActive(entry, 'assigned', DEFAULT_ODOO_TICKET_FILTERS)).toBe(
-      false
-    )
+    expect(isSavedOdooTicketFilterActive(entry, DEFAULT_ODOO_TICKET_FILTERS)).toBe(false)
   })
 
   it('ignores selection order when matching', () => {
@@ -440,10 +465,169 @@ describe('project scope in saved filters', () => {
       filters: { ...DEFAULT_ODOO_TICKET_FILTERS, projects: ['inst-a:7', 'inst-a:9'] }
     })
     expect(
-      isSavedOdooTicketFilterActive(entry, 'assigned', {
+      isSavedOdooTicketFilterActive(entry, {
         ...DEFAULT_ODOO_TICKET_FILTERS,
         projects: ['inst-a:9', 'inst-a:7']
       })
     ).toBe(true)
+  })
+})
+
+describe('preset migration', () => {
+  // The two entries the previous build seeded, verbatim: preset + facets, the
+  // first starred, both pinned.
+  const V1_PAYLOAD = JSON.stringify([
+    {
+      id: 'assigned to me',
+      name: 'Assigned to me',
+      preset: 'assigned',
+      filters: { stages: [], priorities: [], assignees: [], tags: [], projects: [] },
+      pinned: true,
+      isDefault: true
+    },
+    {
+      id: 'all tickets',
+      name: 'All tickets',
+      preset: 'all',
+      filters: { stages: [], priorities: [], assignees: [], tags: [], projects: [] },
+      pinned: true
+    }
+  ])
+
+  it('turns the seeded presets into their domains, keeping star and pin', () => {
+    const parsed = parseSavedOdooTicketFilters(V1_PAYLOAD)
+    expect(parsed.map((entry) => entry.name)).toEqual(['Assigned to me', 'All tickets'])
+    expect(parsed.map((entry) => entry.rawDomain)).toEqual([
+      filterDomain('assigned'),
+      filterDomain('all')
+    ])
+    expect(parsed.map((entry) => entry.pinned)).toEqual([true, true])
+    expect(getDefaultSavedOdooTicketFilter(parsed)?.name).toBe('Assigned to me')
+  })
+
+  it('leaves no preset behind on a migrated entry', () => {
+    for (const entry of parseSavedOdooTicketFilters(V1_PAYLOAD)) {
+      expect(entry).not.toHaveProperty('preset')
+    }
+  })
+
+  it('migrates the current user as a token, never as a resolved uid', () => {
+    // A uid is resolved per instance, so a stored one reads as a stranger on the
+    // next database — silently.
+    const [assigned] = parseSavedOdooTicketFilters(V1_PAYLOAD)
+    expect(JSON.stringify(assigned?.rawDomain)).toContain(CURRENT_USER_TOKEN)
+  })
+
+  it.each(['assigned', 'reported', 'all', 'done'] as const)(
+    'migrates the %s preset to a domain the validator accepts',
+    (preset) => {
+      const raw = JSON.stringify([{ name: preset, preset, filters: {} }])
+      const migrated = parseSavedOdooTicketFilters(raw)[0]?.rawDomain
+      expect(migrated).toEqual(filterDomain(preset))
+      expect(parseOdooDomain(migrated ?? []).ok).toBe(true)
+    }
+  )
+
+  it('keeps the open/closed split the presets stood for', () => {
+    const raw = JSON.stringify([
+      { name: 'Open', preset: 'all', filters: {} },
+      { name: 'Closed', preset: 'done', filters: {} }
+    ])
+    const parsed = parseSavedOdooTicketFilters(raw)
+    expect(parsed[0]?.rawDomain).toEqual([['state', 'not in', [...ODOO_CLOSED_STATES]]])
+    expect(parsed[1]?.rawDomain).toEqual([['state', 'in', [...ODOO_CLOSED_STATES]]])
+  })
+
+  it('keeps the facets a v1 entry narrowed by alongside the migrated domain', () => {
+    const raw = JSON.stringify([
+      { name: 'Mine in review', preset: 'assigned', filters: { stages: ['Review'], tags: ['9'] } }
+    ])
+    const [entry] = parseSavedOdooTicketFilters(raw)
+    expect(entry?.filters.stages).toEqual(['Review'])
+    expect(entry?.filters.tags).toEqual(['9'])
+    expect(entry?.rawDomain).toEqual(filterDomain('assigned'))
+  })
+})
+
+describe('raw domain in saved filters', () => {
+  const RAF = [['s_raf', '>', 0]]
+
+  it('round trips a hand-written domain through storage', () => {
+    const stored = upsertSavedOdooTicketFilter([], {
+      name: 'Remaining work',
+      filters: DEFAULT_ODOO_TICKET_FILTERS,
+      rawDomain: RAF
+    })
+    expect(parseSavedOdooTicketFilters(JSON.stringify(stored))[0]?.rawDomain).toEqual(RAF)
+  })
+
+  it('abandons an entry whose domain is unreadable, keeping its neighbours', () => {
+    // Half-converting it would read a wider set than the entry was saved as.
+    const raw = JSON.stringify([
+      { name: 'Broken', filters: {}, rawDomain: ['|', ['s_raf', '>', 0]] },
+      { name: 'Fine', filters: {}, rawDomain: RAF }
+    ])
+    expect(parseSavedOdooTicketFilters(raw).map((entry) => entry.name)).toEqual(['Fine'])
+  })
+
+  it.each([
+    ['an unknown operator', [['s_raf', '~=', 0]]],
+    ['a reserved token as a field', [[CURRENT_USER_TOKEN, '=', 1]]],
+    ['an unknown Orca token', [['user_ids', 'in', ['$orca:nope']]]],
+    ['a non-domain payload', { s_raf: 0 }]
+  ])('abandons an entry carrying %s', (_label, rawDomain) => {
+    const raw = JSON.stringify([{ name: 'Broken', filters: {}, rawDomain }])
+    expect(parseSavedOdooTicketFilters(raw)).toEqual([])
+  })
+
+  it('normalises an empty domain away rather than storing it', () => {
+    // It matches everything, so keeping it would only perturb the read cache key.
+    const stored = upsertSavedOdooTicketFilter([], {
+      name: 'Everything',
+      filters: DEFAULT_ODOO_TICKET_FILTERS,
+      rawDomain: []
+    })
+    expect(stored[0]).not.toHaveProperty('rawDomain')
+    expect(
+      parseSavedOdooTicketFilters(JSON.stringify([{ name: 'A', filters: {}, rawDomain: [] }]))[0]
+    ).not.toHaveProperty('rawDomain')
+  })
+
+  it('refuses to save an unreadable domain, the way it refuses a blank name', () => {
+    const existing = [saved('Mine')]
+    expect(
+      upsertSavedOdooTicketFilter(existing, {
+        name: 'Broken',
+        filters: DEFAULT_ODOO_TICKET_FILTERS,
+        rawDomain: ['&', ['s_raf', '>', 0]]
+      })
+    ).toEqual(existing)
+  })
+
+  it('does not let two saved entries alias one domain array', () => {
+    const once = upsertSavedOdooTicketFilter([], {
+      name: 'A',
+      filters: DEFAULT_ODOO_TICKET_FILTERS,
+      rawDomain: RAF
+    })
+    const twice = upsertSavedOdooTicketFilter(once, {
+      name: 'B',
+      filters: DEFAULT_ODOO_TICKET_FILTERS,
+      rawDomain: RAF
+    })
+    expect(twice[0]?.rawDomain).not.toBe(twice[1]?.rawDomain)
+    expect(twice[0]?.rawDomain).not.toBe(RAF)
+  })
+
+  it('keeps its own domain over a stray legacy preset', () => {
+    const raw = JSON.stringify([{ name: 'Both', preset: 'done', filters: {}, rawDomain: RAF }])
+    expect(parseSavedOdooTicketFilters(raw)[0]?.rawDomain).toEqual(RAF)
+  })
+
+  it('reads an entry with neither domain nor preset as facets-only', () => {
+    const raw = JSON.stringify([{ name: 'Facets', filters: { stages: ['Review'] } }])
+    const [entry] = parseSavedOdooTicketFilters(raw)
+    expect(entry).not.toHaveProperty('rawDomain')
+    expect(entry?.filters.stages).toEqual(['Review'])
   })
 })

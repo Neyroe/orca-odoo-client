@@ -1,12 +1,16 @@
 import { DEFAULT_ODOO_TICKET_FILTERS, type OdooTicketListFilters } from './odoo-ticket-facets'
+import { odooTicketFilterDomainsEqual } from './odoo-ticket-filter-domain'
 import {
+  normaliseRawTicketFilterDomain,
   parseAssignees,
   parsePriorities,
   parseProjects,
+  parseSavedTicketFilterDomain,
   parseStages,
   parseTags
 } from './odoo-saved-ticket-filter-migrations'
-import type { OdooTicketFilter } from '../../../shared/odoo-types'
+import { filterDomain } from '../../../shared/odoo-filter-preset-domain'
+import type { OdooDomain, OdooTicketFilter } from '../../../shared/odoo-types'
 const STORAGE_KEY = 'odoo.savedTicketFilters'
 // Separate marker so an empty list means "the user cleared them", not "never
 // seeded" — otherwise deleting the seeded entries would bring them straight back.
@@ -15,12 +19,21 @@ const SEEDED_STORAGE_KEY = 'odoo.savedTicketFilters.seeded'
 export const MAX_SAVED_FILTERS = 30
 const MAX_NAME_LENGTH = 60
 
-/** A named preset + facet combination the user can recall in one click. */
+/** A named filter combination the user can recall in one click. */
 export type OdooSavedTicketFilter = {
   id: string
   name: string
-  preset: OdooTicketFilter
   filters: OdooTicketListFilters
+  /**
+   * Raw Odoo domain this entry also narrows by, AND-ed with the facets — the way
+   * to filter on a field Orca knows nothing about (`["s_raf", ">", 0]`), and
+   * where a migrated preset's own domain lands.
+   *
+   * It is stored in the filter rather than beside it because auto-start points at
+   * a filter by id: a domain held anywhere else would make that pointer pull
+   * something other than what the kanban shows.
+   */
+  rawDomain?: OdooDomain
   /** Starred entry applied when the panel opens; at most one across the list. */
   isDefault?: boolean
   /** Shown as a permanent chip in the toolbar rather than only in the menu. */
@@ -29,8 +42,6 @@ export type OdooSavedTicketFilter = {
 
 /** Presets seeded as real saved filters on first run, in chip order. */
 export const ODOO_SEEDED_FILTER_PRESETS: readonly OdooTicketFilter[] = ['assigned', 'all']
-
-const PRESETS: readonly OdooTicketFilter[] = ['assigned', 'reported', 'all', 'done']
 
 function copyFilters(filters: OdooTicketListFilters): OdooTicketListFilters {
   return {
@@ -100,14 +111,18 @@ export function parseSavedOdooTicketFilters(raw: string | null): OdooSavedTicket
     if (!name || seen.has(id)) {
       continue
     }
+    const domain = parseSavedTicketFilterDomain(candidate)
+    // Abandoned whole rather than half-converted: an entry that kept its facets
+    // and lost its domain would quietly read a wider set than it was saved as.
+    if (!domain.ok) {
+      continue
+    }
     seen.add(id)
     entries.push({
       id,
       name,
-      preset: PRESETS.includes(candidate.preset as OdooTicketFilter)
-        ? (candidate.preset as OdooTicketFilter)
-        : 'assigned',
       filters: parseFilters(candidate.filters),
+      ...(domain.domain ? { rawDomain: domain.domain } : {}),
       ...(candidate.isDefault === true && !defaultClaimed ? { isDefault: true } : {}),
       ...(candidate.pinned === true ? { pinned: true } : {})
     })
@@ -120,12 +135,18 @@ export function parseSavedOdooTicketFilters(raw: string | null): OdooSavedTicket
   return entries.slice(-MAX_SAVED_FILTERS)
 }
 
+/** Refuses an unreadable raw domain outright, the way it refuses a blank name. */
 export function upsertSavedOdooTicketFilter(
   saved: readonly OdooSavedTicketFilter[],
-  entry: { name: string; preset: OdooTicketFilter; filters: OdooTicketListFilters }
+  entry: {
+    name: string
+    filters: OdooTicketListFilters
+    rawDomain?: OdooDomain | null
+  }
 ): OdooSavedTicketFilter[] {
   const name = entry.name.trim().slice(0, MAX_NAME_LENGTH)
-  if (!name) {
+  const domain = normaliseRawTicketFilterDomain(entry.rawDomain)
+  if (!name || !domain.ok) {
     return [...saved]
   }
   const id = odooSavedTicketFilterId(name)
@@ -133,10 +154,10 @@ export function upsertSavedOdooTicketFilter(
   const next: OdooSavedTicketFilter = {
     id,
     name,
-    preset: entry.preset,
     // One copy per facet: sharing any of these arrays would make two saved
     // entries alias one selection.
     filters: copyFilters(entry.filters),
+    ...(domain.domain ? { rawDomain: [...domain.domain] } : {}),
     // Re-saving under an existing name keeps its star and pin rather than
     // demoting them.
     ...(existingIndex !== -1 && saved[existingIndex]?.isDefault ? { isDefault: true } : {}),
@@ -225,11 +246,11 @@ export function removeSavedOdooTicketFilter(
 /** True when the toolbar currently reflects exactly what this entry stored. */
 export function isSavedOdooTicketFilterActive(
   entry: OdooSavedTicketFilter,
-  preset: OdooTicketFilter,
-  filters: OdooTicketListFilters
+  filters: OdooTicketListFilters,
+  rawDomain?: OdooDomain | null
 ): boolean {
   return (
-    entry.preset === preset &&
+    odooTicketFilterDomainsEqual(entry.rawDomain, rawDomain) &&
     sameSelection(entry.filters.stages, filters.stages) &&
     sameSelection(entry.filters.priorities, filters.priorities) &&
     sameSelection(entry.filters.assignees, filters.assignees) &&
@@ -284,8 +305,9 @@ export function seedDefaultSavedOdooTicketFilters(
     return {
       id: odooSavedTicketFilterId(name),
       name,
-      preset,
       filters: copyFilters(DEFAULT_ODOO_TICKET_FILTERS),
+      // The preset survives as the domain it stood for, never as its id.
+      rawDomain: filterDomain(preset),
       pinned: true,
       ...(index === 0 ? { isDefault: true } : {})
     }

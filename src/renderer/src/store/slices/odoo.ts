@@ -232,6 +232,12 @@ export const createOdooSlice: StateCreator<AppState, [], [], OdooSlice> = (set, 
       )
     },
 
+    /**
+     * Preset read, kept for the RPC the host still serves. The ticket panel no
+     * longer takes this path: it compiles its facets and any raw domain into one
+     * domain and goes through `searchOdooTickets`, so what it shows is what
+     * matched in the database rather than what survived the first page.
+     */
     listOdooTickets: async (filter = 'assigned', limit = 30, options) => {
       const scope = getOdooReadScope(get().settings, options?.sourceContext)
       const instanceId = getSelectedOdooInstanceId(get().odooStatus)

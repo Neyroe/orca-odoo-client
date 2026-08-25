@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import { ODOO_PRIORITIES } from '../../../shared/odoo-types'
 import type {
+  OdooDomain,
   OdooInstance,
   OdooPriority,
   OdooProject,
@@ -34,8 +35,10 @@ import type {
 } from '../../../shared/odoo-types'
 export type OdooTicketToolbarProps = {
   presets: { id: OdooTicketFilter; label: string }[]
-  preset: OdooTicketFilter
-  presetActive: boolean
+  /** Preset whose domain the toolbar currently sits on, if any. */
+  activePreset: OdooTicketFilter | null
+  /** False while a title search drives the read, so no saved view is applied. */
+  filtersActive: boolean
   onPresetSelect: (preset: OdooTicketFilter) => void
   instances: OdooInstance[]
   selectedInstanceId: string | null
@@ -44,6 +47,8 @@ export type OdooTicketToolbarProps = {
   /** Projects of the scoped instance, for the project selector. */
   projects: OdooProject[]
   filters: OdooTicketListFilters
+  /** Raw domain the toolbar narrows by on top of the facets, if any. */
+  rawDomain: OdooDomain | null
   onFilterChange: <K extends keyof OdooTicketListFilters>(
     key: K,
     value: OdooTicketListFilters[K]
@@ -73,8 +78,8 @@ export type OdooTicketPanelView = 'list' | 'kanban'
 /** Preset chips, facet dropdowns, title search and refresh for the ticket list. */
 export function OdooTicketToolbar({
   presets,
-  preset,
-  presetActive,
+  activePreset,
+  filtersActive,
   onPresetSelect,
   instances,
   selectedInstanceId,
@@ -82,6 +87,7 @@ export function OdooTicketToolbar({
   facets,
   projects,
   filters,
+  rawDomain,
   onFilterChange,
   openFilter,
   onOpenFilterChange,
@@ -109,7 +115,7 @@ export function OdooTicketToolbar({
       {/* Pinned saved filters stay visible as chips; the rest live in the menu. */}
       <div className="flex flex-wrap items-center gap-2">
         {pinnedFilters.map((entry) => {
-          const active = presetActive && isSavedOdooTicketFilterActive(entry, preset, filters)
+          const active = filtersActive && isSavedOdooTicketFilterActive(entry, filters, rawDomain)
           return (
             <button
               key={entry.id}
@@ -243,10 +249,11 @@ export function OdooTicketToolbar({
         <OdooSavedFilterMenu
           saved={savedFilters}
           presets={presets}
-          preset={preset}
-          presetActive={presetActive}
+          activePreset={activePreset}
+          filtersActive={filtersActive}
           onPresetSelect={onPresetSelect}
           filters={filters}
+          rawDomain={rawDomain}
           onApply={onApplySavedFilter}
           onSave={onSaveFilter}
           onDelete={onDeleteSavedFilter}
