@@ -116,6 +116,7 @@ import { useWebSessionTabsSync } from './runtime/web-session-tabs-sync'
 import { useGlobalFileDrop } from './hooks/useGlobalFileDrop'
 import { MacosTccPromptNoticeHost } from './hooks/MacosTccPromptNoticeHost'
 import { useRadixBodyPointerEventsRecovery } from './hooks/useRadixBodyPointerEventsRecovery'
+import { useOdooAutoWorkspace } from './components/use-odoo-auto-workspace'
 import {
   isIntentionalAppRestartInProgress,
   registerUpdaterBeforeUnloadBypass
@@ -451,6 +452,8 @@ function App(): React.JSX.Element {
   const clearUnreadDockBadge = useUnreadDockBadge()
   useRadixBodyPointerEventsRecovery()
   useWebSessionTabsSync()
+  // App-level: the Odoo panel being closed must not stop tickets from starting work.
+  useOdooAutoWorkspace()
   // Why restored: leaving the panel closed forces the user to reopen and re-maximize it,
   // and that size jump reflows a live TUI's buffer (see floating-terminal-panel-view-state).
   const [floatingTerminalOpen, setFloatingTerminalOpen] = useState(

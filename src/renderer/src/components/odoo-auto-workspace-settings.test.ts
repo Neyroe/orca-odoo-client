@@ -13,71 +13,53 @@ describe('parseOdooAutoWorkspaceSettings', () => {
     expect(parseOdooAutoWorkspaceSettings('[]')).toEqual(DEFAULT_ODOO_AUTO_WORKSPACE_SETTINGS)
   })
 
-  it('refuses to look armed without a target repo', () => {
+  it('refuses to look armed without a saved filter', () => {
     const parsed = parseOdooAutoWorkspaceSettings(JSON.stringify({ enabled: true }))
     expect(parsed.enabled).toBe(false)
-    expect(parsed.repoId).toBeNull()
+    expect(parsed.savedFilterId).toBeNull()
   })
 
-  it('treats a blank repo id as no target repo', () => {
-    const parsed = parseOdooAutoWorkspaceSettings(JSON.stringify({ enabled: true, repoId: '   ' }))
-    expect(parsed.repoId).toBeNull()
+  it('treats a blank filter id as no filter', () => {
+    const parsed = parseOdooAutoWorkspaceSettings(
+      JSON.stringify({ enabled: true, savedFilterId: '   ' })
+    )
+    expect(parsed.savedFilterId).toBeNull()
     expect(parsed.enabled).toBe(false)
   })
 
-  it('trims a padded repo id', () => {
+  it('trims a padded filter id', () => {
     const parsed = parseOdooAutoWorkspaceSettings(
-      JSON.stringify({ enabled: true, repoId: '  repo-1  ' })
+      JSON.stringify({ enabled: true, savedFilterId: '  my tickets  ' })
     )
-    expect(parsed.repoId).toBe('repo-1')
+    expect(parsed.savedFilterId).toBe('my tickets')
     expect(parsed.enabled).toBe(true)
   })
 
-  it('keeps a fully configured payload', () => {
+  it('drops the retired repo, base branch and criteria fields', () => {
     const parsed = parseOdooAutoWorkspaceSettings(
       JSON.stringify({
         enabled: true,
+        savedFilterId: 'my tickets',
         repoId: 'repo-1',
-        baseBranch: '  main  ',
-        maxPerRun: 2,
-        criteria: { assignedToMe: true, priorities: ['3'], stageIds: [4], requireDescription: true }
+        baseBranch: 'release',
+        criteria: { assignedToMe: true, priorities: ['3'] },
+        maxPerRun: 2
       })
     )
-    expect(parsed).toMatchObject({
-      enabled: true,
-      repoId: 'repo-1',
-      baseBranch: 'main',
-      maxPerRun: 2
-    })
-    expect(parsed.criteria).toMatchObject({
-      priorities: ['3'],
-      stageIds: [4],
-      requireDescription: true
-    })
+    expect(parsed).toEqual({ enabled: true, savedFilterId: 'my tickets', maxPerRun: 2 })
   })
 
   it('clamps the per-run cap to the hard ceiling', () => {
     const parsed = parseOdooAutoWorkspaceSettings(
-      JSON.stringify({ enabled: true, repoId: 'r', maxPerRun: 999 })
+      JSON.stringify({ enabled: true, savedFilterId: 'f', maxPerRun: 999 })
     )
     expect(parsed.maxPerRun).toBe(ODOO_AUTO_WORKSPACE_MAX_PER_RUN)
   })
 
-  it('drops unknown priorities and non-integer stage ids', () => {
+  it('keeps a non-integer cap at the default rather than disarming or unbounding it', () => {
     const parsed = parseOdooAutoWorkspaceSettings(
-      JSON.stringify({
-        repoId: 'r',
-        criteria: { priorities: ['9', '3', '3'], stageIds: [1, 'x', 1.5] }
-      })
+      JSON.stringify({ savedFilterId: 'f', maxPerRun: 'many' })
     )
-    expect(parsed.criteria.priorities).toEqual(['3'])
-    expect(parsed.criteria.stageIds).toEqual([1])
-  })
-
-  it('treats a negative deadline window as no window', () => {
-    const parsed = parseOdooAutoWorkspaceSettings(
-      JSON.stringify({ repoId: 'r', criteria: { deadlineWithinDays: -5 } })
-    )
-    expect(parsed.criteria.deadlineWithinDays).toBeNull()
+    expect(parsed.maxPerRun).toBe(DEFAULT_ODOO_AUTO_WORKSPACE_SETTINGS.maxPerRun)
   })
 })

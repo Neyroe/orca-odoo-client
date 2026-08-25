@@ -35,7 +35,6 @@ import { getOdooPresets, getOdooPriorityLabels } from '@/components/task-page-lo
 import { useAppStore } from '@/store'
 import { isWindowVisible } from '@/lib/window-visibility-interval'
 import { isOdooProjectScopeUnsupportedError } from '@/runtime/runtime-odoo-client'
-import { useOdooAutoWorkspace } from '@/components/use-odoo-auto-workspace'
 import { useOdooPanelTicketRequest } from '@/components/use-odoo-panel-ticket-request'
 import { useOdooProjects } from '@/components/use-odoo-projects'
 import {
@@ -93,7 +92,6 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   const [savedFilters, setSavedFilters] = useState<OdooSavedTicketFilter[]>(initialSavedFilters)
   const [view, setView] = useState<OdooTicketPanelView>(readStoredView)
   // The Refresh button sets this so the next read bypasses the cache TTL.
-  const maybeStartOdooAutoWorkspaces = useOdooAutoWorkspace()
   const forceNextReadRef = useRef(false)
   // Read inside the interval callback, which must not re-subscribe on every
   // load toggle. Mirrored in an effect rather than assigned during render:
@@ -210,9 +208,6 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
       .then((result) => {
         if (!cancelled) {
           setTickets(result)
-          // Runs off the panel's own reads, so it can never fire more often
-          // than the panel already talks to Odoo.
-          maybeStartOdooAutoWorkspaces(result)
         }
       })
       .catch((readError: unknown) => {
@@ -244,8 +239,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
     appliedSearch,
     projectScope,
     refreshNonce,
-    searchOdooTickets,
-    maybeStartOdooAutoWorkspaces
+    searchOdooTickets
   ])
 
   // Unattended refresh. Reuses the Refresh button's exact path (force the next
