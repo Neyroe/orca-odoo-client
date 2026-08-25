@@ -16,6 +16,7 @@ import type {
   OdooViewer
 } from '../../../shared/odoo-types'
 import { callRuntimeRpc, runtimeEnvironmentSupportsCapability } from './runtime-rpc-client'
+import { assertCurrentUserTokenSupported } from './runtime-odoo-domain-token-support'
 import { ODOO_PROJECT_SCOPE_RUNTIME_CAPABILITY } from '../../../shared/protocol-version'
 import type { RuntimeClientTarget } from './runtime-client-target'
 import { isRuntimeProviderSearchQueryWithinLimit } from './runtime-provider-search-bounds'
@@ -29,6 +30,12 @@ export {
   odooUpdateTicketComment,
   odooUploadTicketAttachments
 } from './runtime-odoo-chatter-client'
+// The guard itself stays internal, like `assertProjectScopeSupported`: callers
+// negotiate by going through `odooSearchTickets`, never by asserting themselves.
+export {
+  isOdooCurrentUserTokenUnsupportedError,
+  OdooCurrentUserTokenUnsupportedError
+} from './runtime-odoo-domain-token-support'
 export { odooUpdateApiKey, type OdooUpdatableInstance } from './runtime-odoo-credential-client'
 export { getOdooRuntimeTarget, type RuntimeOdooSettings } from './odoo-runtime-target'
 
@@ -164,6 +171,7 @@ export async function odooSearchTickets(
 ): Promise<OdooTicket[]> {
   const target = getOdooRuntimeTarget(settings)
   await assertProjectScopeSupported(target, projectScope)
+  await assertCurrentUserTokenSupported(target, domain)
   const args = {
     domain,
     limit,

@@ -1,10 +1,12 @@
-// The Odoo domains a ticket read is assembled from. Split out of tickets.ts so
-// the preset, project and instance narrowing rules read as one unit — and so
-// they can be asserted without standing up a client.
-import { ODOO_CLOSED_STATES } from '../../shared/odoo-types'
-import type { OdooProjectScope, OdooTicketFilter } from '../../shared/odoo-types'
-
-export type OdooDomain = unknown[]
+// How a ticket read's domain is assembled: what every read excludes, what the
+// project scope contributes per instance, and the composition that holds the
+// fragments apart. Split out of tickets.ts so these rules can be asserted
+// without standing up a client.
+//
+// Main-only on purpose. The preset compiler is shared instead — the renderer
+// migrates seeded presets to stored domains, so it needs the same equivalences.
+import { andGroupedDomain } from '../../shared/odoo-domain-validation'
+import type { OdooDomain, OdooProjectScope } from '../../shared/odoo-types'
 
 // Why: mirrors the domain on Odoo's own My/All Tasks actions, which hide
 // template tasks. Without it Orca would list tickets the Odoo UI never shows.
@@ -12,21 +14,6 @@ export const BASE_DOMAIN: OdooDomain = [
   ['has_template_ancestor', '=', false],
   ['has_project_template', '=', false]
 ]
-
-const OPEN_STATE_DOMAIN: OdooDomain = [['state', 'not in', [...ODOO_CLOSED_STATES]]]
-
-export function filterDomain(filter: OdooTicketFilter, uid: number): OdooDomain {
-  if (filter === 'done') {
-    return [...BASE_DOMAIN, ['state', 'in', [...ODOO_CLOSED_STATES]]]
-  }
-  if (filter === 'assigned') {
-    return [...BASE_DOMAIN, ...OPEN_STATE_DOMAIN, ['user_ids', 'in', [uid]]]
-  }
-  if (filter === 'reported') {
-    return [...BASE_DOMAIN, ...OPEN_STATE_DOMAIN, ['create_uid', '=', uid]]
-  }
-  return [...BASE_DOMAIN, ...OPEN_STATE_DOMAIN]
-}
 
 /**
  * The scope's contribution to the domain of the instance `instanceId`, or `null`
@@ -57,4 +44,18 @@ export function projectScopeDomain(
   // Odoo domains take prefix operators: ['|', a, b] is OR(a, b), and it composes
   // with the surrounding implicit AND.
   return scope.includeNoProject ? ['|', projectLeaf, noProjectLeaf] : [projectLeaf]
+}
+
+/**
+ * AND-composes domain fragments, each closed in its own group.
+ *
+ * Why grouping and not a flat spread: a fragment whose prefix operators are not
+ * balanced within itself reaches past its own end and consumes the next
+ * fragment's leaves — the project scope, or one of BASE_DOMAIN's template
+ * exclusions. Grouping makes that structurally impossible whatever order the
+ * fragments are given in, and `andGroupedDomain` throws rather than pass an
+ * unbalanced fragment through ungrouped.
+ */
+export function composeDomain(...parts: OdooDomain[]): OdooDomain {
+  return parts.filter((part) => part.length > 0).flatMap((part) => andGroupedDomain(part))
 }

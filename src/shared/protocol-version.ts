@@ -60,6 +60,23 @@ export const LINEAR_ISSUE_ATTRIBUTE_FILTER_RUNTIME_CAPABILITY =
 // shape it cannot parse — the id is part of the contract, so a new shape earns a
 // new id. Whoever changes the payload again bumps this the same way.
 export const ODOO_PROJECT_SCOPE_RUNTIME_CAPABILITY = 'odoo.project-scope.v2' as const
+// Why: signals the host resolves the reserved `$orca:` tokens a stored ticket
+// domain may carry — today `$orca:me`, the signed-in user of the instance being
+// read.
+//
+// Rule 2 of docs/reference/remote-wire-compatibility.md, reached without a new
+// param: `domain` already exists, but a *value* inside it changes meaning. An
+// older host has no notion of the namespace, so it forwards `'$orca:me'` to
+// `search_read` as a literal string and Odoo raises inside an integer `in` —
+// loud, but as an opaque server error the user cannot act on. There is no
+// client-side fallback either: resolving the token here would bake one instance's
+// uid into a read that fans out to every connected instance, which is the bug the
+// token exists to prevent.
+//
+// Named for the namespace, not for `me`: the token set grows, and a new token is
+// a new shape. Whoever adds one that older hosts cannot resolve bumps this to v2
+// the way the project scope did.
+export const ODOO_DOMAIN_TOKENS_RUNTIME_CAPABILITY = 'odoo.domain-tokens.v1' as const
 // Why: signals the host exposes the Agent Session History scanner over RPC
 // (aiVault.listSessions). Registered unconditionally for every build, so it is a
 // STATIC capability advertised by getStatus() automatically — NOT a runtime
@@ -131,6 +148,7 @@ export const RUNTIME_CAPABILITIES = [
   FOLDER_WORKSPACE_PATH_STATUS_RUNTIME_CAPABILITY,
   LINEAR_ISSUE_ATTRIBUTE_FILTER_RUNTIME_CAPABILITY,
   ODOO_PROJECT_SCOPE_RUNTIME_CAPABILITY,
+  ODOO_DOMAIN_TOKENS_RUNTIME_CAPABILITY,
   AI_VAULT_RUNTIME_CAPABILITY,
   AI_VAULT_SESSION_TITLES_RUNTIME_CAPABILITY,
   TERMINAL_QUERY_REPLY_INPUT_RUNTIME_CAPABILITY,

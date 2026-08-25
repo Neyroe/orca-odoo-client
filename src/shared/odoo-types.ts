@@ -168,6 +168,15 @@ export type OdooTicketUpdate = {
 export type OdooTicketFilter = 'assigned' | 'reported' | 'all' | 'done'
 
 /**
+ * An Odoo search domain: a flat prefix expression of leaves and the operators
+ * '&', '|', '!'. Deliberately untyped past that — a domain may filter on a field
+ * Orca never reads, with any literal.
+ *
+ * `odoo-domain-validation.ts` is what decides whether one is well formed.
+ */
+export type OdooDomain = unknown[]
+
+/**
  * Server-side project narrowing for a ticket read, appended to the preset or
  * search domain rather than applied to the fetched page — the reads are
  * limited, so post-filtering a truncated page would hide matching tickets.

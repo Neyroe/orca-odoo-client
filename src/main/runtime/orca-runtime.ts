@@ -295,6 +295,7 @@ import {
   type ExecutionHostId
 } from '../../shared/execution-host'
 import { preservedBranchCleanupScopeKey } from '../../shared/preserved-branch-cleanup'
+import { clampLimit as clampOdooLimit } from '../ipc/odoo-ipc-args'
 import { getRegisteredSshState } from '../ipc/ssh'
 import type {
   AgentProviderSessionMetadata,
@@ -35773,7 +35774,7 @@ export class OrcaRuntimeService {
     instanceId?: OdooInstanceSelection,
     projectScope?: OdooProjectScope
   ): ReturnType<typeof listOdooTickets> {
-    return listOdooTickets(filter, Math.min(Math.max(1, limit), 100), instanceId, projectScope)
+    return listOdooTickets(filter, clampOdooLimit(limit), instanceId, projectScope)
   }
 
   odooSearchTickets(
@@ -35782,7 +35783,9 @@ export class OrcaRuntimeService {
     instanceId?: OdooInstanceSelection,
     projectScope?: OdooProjectScope
   ): ReturnType<typeof searchOdooTickets> {
-    return searchOdooTickets(domain, Math.min(Math.max(1, limit), 100), instanceId, projectScope)
+    // Why the shared clamp: Odoo rejects a fractional `limit`, and this path never
+    // crosses the IPC normalizer that truncates it.
+    return searchOdooTickets(domain, clampOdooLimit(limit), instanceId, projectScope)
   }
 
   odooGetTicket(id: number, instanceId?: string): ReturnType<typeof getOdooTicket> {

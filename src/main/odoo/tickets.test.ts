@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { CURRENT_USER_TOKEN } from '../../shared/odoo-domain-tokens'
 import type { OdooInstance, OdooProjectScope } from '../../shared/odoo-types'
 
 const mocks = vi.hoisted(() => ({ executeKw: vi.fn(), getClients: vi.fn() }))
@@ -12,13 +13,13 @@ vi.mock('./client', () => ({
 
 const { listTickets, searchTickets } = await import('./tickets')
 
-function instance(id: string): OdooInstance {
+function instance(id: string, uid = 2): OdooInstance {
   return {
     id,
     serverUrl: `https://${id}.odoo.com`,
     database: id,
     login: 'admin',
-    uid: 2,
+    uid,
     displayName: id
   }
 }
@@ -236,5 +237,159 @@ describe('project-scoped ticket reads', () => {
     await listTickets('all', 30)
 
     expect(mocks.executeKw).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('raw-domain composition', () => {
+  beforeEach(() => {
+    mocks.executeKw.mockReset()
+    mocks.getClients.mockReset()
+  })
+
+  const OR_DOMAIN = ['|', ['name', 'ilike', 'x'], ['name', 'ilike', 'y']]
+
+  function scope(
+    projectsByInstance: { instanceId: string; projectIds: number[] }[]
+  ): OdooProjectScope {
+    return { projectsByInstance, includeNoProject: false }
+  }
+
+  it('closes the caller domain in its own group, outside the project scope', async () => {
+    mocks.getClients.mockReturnValue([{ instance: instance('alpha'), apiKey: 'k' }])
+    mocks.executeKw.mockResolvedValueOnce([])
+
+    await searchTickets(OR_DOMAIN, 30, undefined, scope([{ instanceId: 'alpha', projectIds: [7] }]))
+
+    // The scope leaf sits after the OR's two operands, so no operator of the
+    // caller's domain can reach it.
+    expect(mocks.executeKw.mock.calls[0]?.[3]?.[0]).toEqual([
+      '&',
+      ['has_template_ancestor', '=', false],
+      ['has_project_template', '=', false],
+      '|',
+      ['name', 'ilike', 'x'],
+      ['name', 'ilike', 'y'],
+      ['project_id', 'in', [7]]
+    ])
+  })
+
+  it('refuses a domain with a dangling operator instead of reading with it', async () => {
+    mocks.getClients.mockReturnValue([{ instance: instance('alpha'), apiKey: 'k' }])
+
+    // Spliced flat this '|' would have eaten the project leaf and quietly
+    // widened the read to every project.
+    await expect(
+      searchTickets(['|', ['name', 'ilike', 'x']], 30, undefined, scope([]))
+    ).rejects.toThrow('The "|" operator at position 0 is missing an operand.')
+    expect(mocks.executeKw).not.toHaveBeenCalled()
+  })
+
+  it('refuses an invalid domain even with no instance connected', async () => {
+    mocks.getClients.mockReturnValue([])
+
+    await expect(searchTickets([['name', '==', 'x']], 30)).rejects.toThrow(
+      'The condition at position 0 uses an unknown operator "==".'
+    )
+  })
+
+  it('composes a preset read through the same three fragments', async () => {
+    mocks.getClients.mockReturnValue([{ instance: instance('alpha'), apiKey: 'k' }])
+    mocks.executeKw.mockResolvedValueOnce([])
+
+    await listTickets('assigned', 30, undefined, scope([{ instanceId: 'alpha', projectIds: [7] }]))
+
+    expect(mocks.executeKw.mock.calls[0]?.[3]?.[0]).toEqual([
+      '&',
+      ['has_template_ancestor', '=', false],
+      ['has_project_template', '=', false],
+      '&',
+      ['state', 'not in', ['1_done', '1_canceled']],
+      ['user_ids', 'in', [2]],
+      ['project_id', 'in', [7]]
+    ])
+  })
+})
+
+describe('current-user token', () => {
+  beforeEach(() => {
+    mocks.executeKw.mockReset()
+    mocks.getClients.mockReset()
+  })
+
+  function domainOf(nth: number): unknown[] {
+    return mocks.executeKw.mock.calls[nth]?.[3]?.[0] as unknown[]
+  }
+
+  it('resolves the same stored token to a different user on each instance', async () => {
+    // The whole point: uid is per database, so a filter that stored `180` would
+    // read a stranger's tickets on the second instance without erroring.
+    mocks.getClients.mockReturnValue([
+      { instance: instance('alpha', 7), apiKey: 'k' },
+      { instance: instance('beta', 180), apiKey: 'k' }
+    ])
+    mocks.executeKw.mockResolvedValue([])
+
+    await searchTickets([['user_ids', 'in', [CURRENT_USER_TOKEN]]], 30)
+
+    expect(domainOf(0)).toContainEqual(['user_ids', 'in', [7]])
+    expect(domainOf(1)).toContainEqual(['user_ids', 'in', [180]])
+  })
+
+  it('resolves a token used as a scalar value', async () => {
+    mocks.getClients.mockReturnValue([{ instance: instance('alpha', 7), apiKey: 'k' }])
+    mocks.executeKw.mockResolvedValueOnce([])
+
+    await searchTickets([['create_uid', '=', CURRENT_USER_TOKEN]], 30)
+
+    expect(domainOf(0)).toContainEqual(['create_uid', '=', 7])
+  })
+
+  it('resolves a token nested in the subdomain of an `any` leaf', async () => {
+    mocks.getClients.mockReturnValue([{ instance: instance('alpha', 7), apiKey: 'k' }])
+    mocks.executeKw.mockResolvedValueOnce([])
+
+    await searchTickets([['message_ids', 'any', [['author_id', '=', CURRENT_USER_TOKEN]]]], 30)
+
+    expect(domainOf(0)).toContainEqual(['message_ids', 'any', [['author_id', '=', 7]]])
+  })
+
+  it('leaves a domain without a token untouched', async () => {
+    mocks.getClients.mockReturnValue([{ instance: instance('alpha', 7), apiKey: 'k' }])
+    mocks.executeKw.mockResolvedValueOnce([])
+
+    await searchTickets([['user_ids', 'in', [180]]], 30)
+
+    expect(domainOf(0)).toContainEqual(['user_ids', 'in', [180]])
+  })
+
+  it('passes a value that merely looks like a token through as a literal', async () => {
+    mocks.getClients.mockReturnValue([{ instance: instance('alpha', 7), apiKey: 'k' }])
+    mocks.executeKw.mockResolvedValueOnce([])
+
+    await searchTickets([['name', 'ilike', '@me']], 30)
+
+    expect(domainOf(0)).toContainEqual(['name', 'ilike', '@me'])
+  })
+
+  it('refuses a near-miss inside the reserved namespace instead of searching for it', async () => {
+    mocks.getClients.mockReturnValue([{ instance: instance('alpha', 7), apiKey: 'k' }])
+
+    await expect(searchTickets([['user_ids', 'in', ['$orca:mee']]], 30)).rejects.toThrow(
+      'The condition at position 0 uses an unknown Orca token "$orca:mee".'
+    )
+    expect(mocks.executeKw).not.toHaveBeenCalled()
+  })
+
+  it('resolves the token of a seeded preset per instance too', async () => {
+    mocks.getClients.mockReturnValue([
+      { instance: instance('alpha', 7), apiKey: 'k' },
+      { instance: instance('beta', 180), apiKey: 'k' }
+    ])
+    mocks.executeKw.mockResolvedValue([])
+
+    await listTickets('assigned', 30)
+
+    expect(domainOf(0)).toContainEqual(['user_ids', 'in', [7]])
+    expect(domainOf(1)).toContainEqual(['user_ids', 'in', [180]])
   })
 })
