@@ -15387,6 +15387,13 @@
                 "961543ead1": "Start workspace from ticket"
               }
             }
+          },
+          "read": {
+            "error": {
+              "message": {
+                "currentUserToken": "The remote Orca host is too old to filter on the signed-in Odoo user. Update the host, or pick a named assignee — the connection and the domain are fine."
+              }
+            }
           }
         },
         "connect": {
@@ -15438,6 +15445,17 @@
               "5e08ae0d00": "{{fileName}} is empty.",
               "ee8fe5dcea": "{{fileName}} would exceed the {{maxSize}} attachment limit.",
               "73ad77172f": "You can attach up to {{maxCount}} files."
+            }
+          }
+        },
+        "raw": {
+          "domain": {
+            "input": {
+              "label": "Odoo domain",
+              "placeholder": "[[\"x_field\", \">\", 0]]"
+            },
+            "text": {
+              "invalidJson": "Write the domain as JSON, like [[\"s_raf\", \">\", 0]]."
             }
           }
         }

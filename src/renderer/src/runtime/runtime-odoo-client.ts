@@ -10,7 +10,6 @@ import type {
   OdooStage,
   OdooTag,
   OdooTicket,
-  OdooTicketFilter,
   OdooTicketUpdate,
   OdooUser,
   OdooViewer
@@ -142,25 +141,9 @@ export async function odooTestConnection(
     : window.api.odoo.testConnection(instanceId ? { instanceId } : undefined)
 }
 
-export async function odooListTickets(
-  settings: RuntimeOdooSettings,
-  filter?: OdooTicketFilter,
-  limit?: number,
-  instanceId?: OdooInstanceSelection | null,
-  projectScope?: OdooProjectScope | null
-): Promise<OdooTicket[]> {
-  const target = getOdooRuntimeTarget(settings)
-  await assertProjectScopeSupported(target, projectScope)
-  const args = {
-    filter,
-    limit,
-    instanceId: instanceId ?? undefined,
-    ...(projectScope ? { projectScope } : {})
-  }
-  return target.kind === 'environment'
-    ? callRuntimeRpc<OdooTicket[]>(target, 'odoo.listTickets', args, { timeoutMs: 30_000 })
-    : window.api.odoo.listTickets(args)
-}
+// No preset read here: a preset cannot express the domain the panel compiles, so
+// falling back to one would answer a different question (see
+// `odooTicketReadErrorMessage`). `odoo.listTickets` stays served for old clients.
 
 export async function odooSearchTickets(
   settings: RuntimeOdooSettings,

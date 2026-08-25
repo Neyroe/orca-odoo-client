@@ -5,13 +5,11 @@ import type {
   OdooInstanceSelection,
   OdooProjectScope,
   OdooTicket,
-  OdooTicketFilter,
   OdooViewer
 } from '../../../../shared/odoo-types'
 import type { CacheEntry } from './github'
 import {
   odooGetTicket,
-  odooListTickets,
   odooSearchTickets,
   type OdooUpdatableInstance
 } from '@/runtime/runtime-odoo-client'
@@ -45,12 +43,10 @@ type OdooPatchOptions = { sourceContext?: TaskSourceContext | null }
 
 const inflightTicketRequests = new Map<string, InflightOdooRead<OdooTicket | null>>()
 const inflightSearchRequests = new Map<string, InflightOdooRead<OdooTicket[]>>()
-const inflightListRequests = new Map<string, InflightOdooRead<OdooTicket[]>>()
 
 function clearOdooInflight(): void {
   inflightTicketRequests.clear()
   inflightSearchRequests.clear()
-  inflightListRequests.clear()
 }
 
 /**
@@ -112,11 +108,6 @@ export type OdooSlice = {
   ) => Promise<OdooTicket | null>
   searchOdooTickets: (
     domain: unknown[],
-    limit?: number,
-    options?: OdooListReadOptions
-  ) => Promise<OdooTicket[]>
-  listOdooTickets: (
-    filter?: OdooTicketFilter,
     limit?: number,
     options?: OdooListReadOptions
   ) => Promise<OdooTicket[]>
@@ -229,31 +220,6 @@ export const createOdooSlice: StateCreator<AppState, [], [], OdooSlice> = (set, 
         instanceId,
         options?.forceRefresh ?? false,
         () => odooSearchTickets(scope.settings, domain, limit, instanceId, options?.projectScope)
-      )
-    },
-
-    /**
-     * Preset read, kept for the RPC the host still serves. The ticket panel no
-     * longer takes this path: it compiles its facets and any raw domain into one
-     * domain and goes through `searchOdooTickets`, so what it shows is what
-     * matched in the database rather than what survived the first page.
-     */
-    listOdooTickets: async (filter = 'assigned', limit = 30, options) => {
-      const scope = getOdooReadScope(get().settings, options?.sourceContext)
-      const instanceId = getSelectedOdooInstanceId(get().odooStatus)
-      const cacheKey = scopedOdooCacheKey(
-        scope,
-        `${instanceId ?? 'default'}::list::${filter}::${limit}${projectScopeCacheKey(
-          options?.projectScope
-        )}`
-      )
-      return runListRead(
-        inflightListRequests,
-        cacheKey,
-        scope,
-        instanceId,
-        options?.forceRefresh ?? false,
-        () => odooListTickets(scope.settings, filter, limit, instanceId, options?.projectScope)
       )
     },
 
