@@ -1,11 +1,9 @@
 import { markdownToChatterHtml } from './chatter-html-markdown'
 import { acquire, executeKw, getClients, release, type OdooClientForInstance } from './client'
-import {
-  BASE_DOMAIN,
-  filterDomain,
-  projectScopeDomain,
-  type OdooDomain
-} from './ticket-read-domain'
+import { resolveCurrentUserToken } from '../../shared/odoo-domain-tokens'
+import { parseOdooDomain } from '../../shared/odoo-domain-validation'
+import { filterDomain } from '../../shared/odoo-filter-preset-domain'
+import { BASE_DOMAIN, composeDomain, projectScopeDomain } from './ticket-read-domain'
 import {
   loadLookups,
   mapStage,
@@ -21,6 +19,7 @@ import {
 import type {
   OdooCreateTicketArgs,
   OdooCreateTicketResult,
+  OdooDomain,
   OdooInstanceSelection,
   OdooMutationResult,
   OdooProject,
@@ -75,37 +74,70 @@ function mergeInstancePages(tickets: OdooTicket[], limit?: number): OdooTicket[]
     .slice(0, limit)
 }
 
-export async function listTickets(
-  filter: OdooTicketFilter = 'assigned',
+/**
+ * The one composition every ticket read goes through: BASE_DOMAIN AND the caller's
+ * domain AND the project scope, each closed in its own group.
+ *
+ * Both public reads funnel here so there is a single place where a domain can
+ * reach Odoo — and so the preset path cannot drift away from the raw-domain one.
+ */
+async function readWithDomain(
+  userDomain: OdooDomain,
   limit?: number,
   instanceId?: OdooInstanceSelection | null,
   projectScope?: OdooProjectScope | null
 ): Promise<OdooTicket[]> {
+  // Checked before the fan-out so an invalid domain fails the same way whether or
+  // not an instance happens to be connected.
+  const checked = parseOdooDomain(userDomain)
+  if (!checked.ok) {
+    throw new Error(checked.error)
+  }
   const tickets = await forEachClient(instanceId, (client) => {
     const scoped = projectScopeDomain(projectScope, client.instance.id)
     // Out-of-scope instance: answer empty without spending a round trip on a
     // read whose result could only be discarded.
     return scoped === null
       ? Promise.resolve([])
-      : readTickets(client, [...filterDomain(filter, client.instance.uid), ...scoped], limit)
+      : readTickets(
+          client,
+          composeDomain(
+            BASE_DOMAIN,
+            // Per client: `uid` is resolved at connect time, so the same stored
+            // token means a different user on each instance.
+            resolveCurrentUserToken(userDomain, client.instance.uid),
+            scoped
+          ),
+          limit
+        )
   })
   return mergeInstancePages(tickets, limit)
 }
 
-/** Runs a raw Odoo domain, the closest analogue to Jira's JQL search. */
+/** Reads a seeded preset by compiling it to its domain first. */
+export async function listTickets(
+  filter: OdooTicketFilter = 'assigned',
+  limit?: number,
+  instanceId?: OdooInstanceSelection | null,
+  projectScope?: OdooProjectScope | null
+): Promise<OdooTicket[]> {
+  return readWithDomain(filterDomain(filter), limit, instanceId, projectScope)
+}
+
+/**
+ * Runs a raw Odoo domain, the closest analogue to Jira's JQL search.
+ *
+ * Rejects a syntactically invalid domain instead of running it: composed flat it
+ * would parse against the surrounding fragments and drop the project scope or a
+ * template exclusion.
+ */
 export async function searchTickets(
   domain: OdooDomain,
   limit?: number,
   instanceId?: OdooInstanceSelection | null,
   projectScope?: OdooProjectScope | null
 ): Promise<OdooTicket[]> {
-  const tickets = await forEachClient(instanceId, (client) => {
-    const scoped = projectScopeDomain(projectScope, client.instance.id)
-    return scoped === null
-      ? Promise.resolve([])
-      : readTickets(client, [...BASE_DOMAIN, ...domain, ...scoped], limit)
-  })
-  return mergeInstancePages(tickets, limit)
+  return readWithDomain(domain, limit, instanceId, projectScope)
 }
 
 export async function getTicket(

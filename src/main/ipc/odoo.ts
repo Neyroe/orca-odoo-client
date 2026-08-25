@@ -19,6 +19,7 @@ import {
   searchTickets,
   updateTicket
 } from '../odoo/tickets'
+import { parseOdooDomain } from '../../shared/odoo-domain-validation'
 import { ODOO_PRIORITIES, ODOO_TICKET_STATES } from '../../shared/odoo-types'
 import {
   clampLimit,
@@ -161,11 +162,14 @@ export function registerOdooHandlers(): void {
         projectScope?: OdooProjectScope
       }
     ) => {
-      if (!Array.isArray(args?.domain)) {
-        return []
+      // Why throw: `[]` would read as "no ticket matches", indistinguishable from
+      // a filter that is merely too narrow.
+      const domain = parseOdooDomain(args?.domain)
+      if (!domain.ok) {
+        throw new Error(domain.error)
       }
       return searchTickets(
-        args.domain,
+        domain.domain,
         clampLimit(args.limit),
         normalizeInstanceSelection(args.instanceId),
         normalizeProjectScope(args.projectScope)

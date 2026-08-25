@@ -4,6 +4,7 @@ import {
   ODOO_ATTACHMENT_UPLOAD_MAX_BASE64_LENGTH
 } from '../../../../shared/odoo-attachment-upload-limit'
 import { ODOO_PRIORITIES, ODOO_TICKET_STATES } from '../../../../shared/odoo-types'
+import { parseOdooDomain } from '../../../../shared/odoo-domain-validation'
 import { defineMethod, type RpcMethod } from '../core'
 import {
   OptionalFiniteNumber,
@@ -71,9 +72,15 @@ const ListTickets = z
   .optional()
 
 const SearchTickets = z.object({
-  // An Odoo domain is a heterogeneous array of leaves and operators; its shape
-  // is validated server-side by Odoo itself.
-  domain: z.array(z.unknown()),
+  // An Odoo domain is a heterogeneous array of leaves and prefix operators. Its
+  // balance is checked here, not left to Odoo: an unbalanced domain still parses
+  // once spliced next to the host's own fragments, and eats their leaves.
+  domain: z.array(z.unknown()).superRefine((value, ctx) => {
+    const parsed = parseOdooDomain(value)
+    if (!parsed.ok) {
+      ctx.addIssue({ code: 'custom', message: parsed.error })
+    }
+  }),
   limit: OptionalFiniteNumber,
   instanceId: OptionalString,
   projectScope: ProjectScope
