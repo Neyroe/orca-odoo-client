@@ -16,6 +16,7 @@ import { OdooTicketFilterMultiSelect } from '@/components/odoo-ticket-filter-mul
 import { OdooRawDomainInput } from '@/components/odoo-raw-domain-input'
 import { OdooAutoWorkspaceDialog } from '@/components/odoo-auto-workspace-dialog'
 import { OdooSavedFilterMenu } from '@/components/odoo-saved-filter-menu'
+import type { OdooCustomerOption } from '@/components/odoo-ticket-customer-options'
 import {
   getPinnedSavedOdooTicketFilters,
   isSavedOdooTicketFilterActive,
@@ -45,6 +46,8 @@ export type OdooTicketToolbarProps = {
   selectedInstanceId: string | null
   onInstanceSelect: (instanceId: string) => void
   facets: OdooTicketFacets
+  /** Customer companies of the loaded tickets, for the auto-start routing table. */
+  customers: OdooCustomerOption[]
   /** Projects of the scoped instance, for the project selector. */
   projects: OdooProject[]
   filters: OdooTicketListFilters
@@ -88,6 +91,7 @@ export function OdooTicketToolbar({
   selectedInstanceId,
   onInstanceSelect,
   facets,
+  customers,
   projects,
   filters,
   rawDomain,
@@ -341,7 +345,8 @@ export function OdooTicketToolbar({
         <OdooAutoWorkspaceDialog
           open={autoWorkspaceOpen}
           onOpenChange={setAutoWorkspaceOpen}
-          priorityLabels={priorityLabels}
+          savedFilters={savedFilters}
+          customers={customers}
         />
         <Tooltip>
           <TooltipTrigger asChild>

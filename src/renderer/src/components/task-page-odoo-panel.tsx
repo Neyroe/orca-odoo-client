@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 
 import { OdooPanelConnectPrompt } from '@/components/odoo-panel-connect-prompt'
 import { OdooTicketWorkspace } from '@/components/odoo-ticket-workspace'
+import { deriveOdooCustomerOptions } from '@/components/odoo-ticket-customer-options'
 import {
   DEFAULT_ODOO_TICKET_FILTERS,
   deriveOdooTicketFacets,
@@ -145,6 +146,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
   const projectScope = useMemo(() => parseOdooProjectFilters(filters.projects), [filters.projects])
 
   const facets = useMemo(() => deriveOdooTicketFacets(tickets), [tickets])
+  const customers = useMemo(() => deriveOdooCustomerOptions(tickets), [tickets])
   const viewerUid = odooStatus.viewer?.uid
   const compiledDomain = useMemo(
     () => compileOdooTicketFilterDomain({ filters, viewerUid, rawDomain }),
@@ -324,6 +326,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
           })
         }}
         facets={facets}
+        customers={customers}
         projects={projects}
         filters={filters}
         rawDomain={rawDomain}

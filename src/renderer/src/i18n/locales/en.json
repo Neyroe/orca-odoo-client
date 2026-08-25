@@ -15261,7 +15261,10 @@
               "06bb829452": "Cancel",
               "f2040d28d3": "Save",
               "b2506d68ee": "Empty uses the project's default branch.",
-              "pick_filter": "Pick a saved filter first."
+              "pick_filter": "Pick a saved filter first.",
+              "filter": "Saved filter",
+              "filter_hint": "Exactly the tickets this filter returns — editing it changes what starts.",
+              "pick_filter_placeholder": "Pick a filter"
             },
             "skip": {
               "no_customer": "Auto-start skipped tickets with no customer.",
@@ -15456,6 +15459,23 @@
             },
             "text": {
               "invalidJson": "Write the domain as JSON, like [[\"s_raf\", \">\", 0]]."
+            }
+          }
+        },
+        "customer": {
+          "repo": {
+            "route": {
+              "editor": {
+                "title": "Client → project",
+                "hint": "A ticket starts in the project mapped to its client. A client with no row here starts nothing.",
+                "missingRepo": "Missing project ({{value0}})",
+                "remove": "Remove mapping",
+                "empty": "No mapping yet — nothing will start.",
+                "pickCustomer": "Client",
+                "pickRepo": "Project",
+                "add": "Add",
+                "noCustomers": "Clients are offered from the tickets currently loaded — refresh the list to see more."
+              }
             }
           }
         }

@@ -7,6 +7,14 @@ import {
   writeOdooAutoWorkspaceSettings,
   type OdooAutoWorkspaceSettings
 } from '@/components/odoo-auto-workspace-settings'
+import { OdooCustomerRepoRouteEditor } from '@/components/odoo-customer-repo-route-editor'
+import {
+  readOdooCustomerRepoRoutes,
+  writeOdooCustomerRepoRoutes,
+  type OdooCustomerRepoRoute
+} from '@/components/odoo-customer-repo-routes'
+import type { OdooSavedTicketFilter } from '@/components/odoo-saved-ticket-filters'
+import type { OdooCustomerOption } from '@/components/odoo-ticket-customer-options'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -17,9 +25,15 @@ import {
   DialogTitle
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { translate } from '@/i18n/i18n'
-import type { OdooPriority } from '../../../shared/odoo-types'
 function FieldRow({
   label,
   hint,
@@ -41,29 +55,45 @@ function FieldRow({
 }
 
 /**
- * Configures the unattended workspace start.
+ * Configures the unattended workspace start: which saved filter arms it, and
+ * which project each client's tickets land in.
  *
- * Trimmed to what the settings model still holds: the target repo now comes from
- * the customer routing table and the candidate set from a saved ticket filter,
- * so the picker for that filter is the UI lot's to add. `priorityLabels` stays in
- * the props so the toolbar keeps compiling untouched.
+ * The filter is referenced by id rather than copied, so editing it in the
+ * toolbar changes what is armed — and what starts work stays the same question
+ * the kanban answers.
  */
 export function OdooAutoWorkspaceDialog({
   open,
-  onOpenChange
+  onOpenChange,
+  savedFilters,
+  customers
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  priorityLabels: Record<OdooPriority, string>
+  savedFilters: readonly OdooSavedTicketFilter[]
+  customers: readonly OdooCustomerOption[]
 }): React.JSX.Element {
   const [draft, setDraft] = useState<OdooAutoWorkspaceSettings>(readOdooAutoWorkspaceSettings)
+  const [routes, setRoutes] = useState<readonly OdooCustomerRepoRoute[]>(readOdooCustomerRepoRoutes)
 
   const patch = (updates: Partial<OdooAutoWorkspaceSettings>): void =>
     setDraft((current) => ({ ...current, ...updates }))
 
+  // A filter that no longer exists cannot arm anything, so it reads as unset
+  // rather than as a name the picker has no row for.
+  const selectedFilterId =
+    draft.savedFilterId && savedFilters.some((entry) => entry.id === draft.savedFilterId)
+      ? draft.savedFilterId
+      : null
+
   const save = (): void => {
-    const next = { ...draft, enabled: draft.enabled && draft.savedFilterId !== null }
+    const next = {
+      ...draft,
+      savedFilterId: selectedFilterId,
+      enabled: draft.enabled && selectedFilterId !== null
+    }
     writeOdooAutoWorkspaceSettings(next)
+    writeOdooCustomerRepoRoutes(routes)
     setDraft(next)
     onOpenChange(false)
   }
@@ -74,6 +104,7 @@ export function OdooAutoWorkspaceDialog({
       onOpenChange={(next) => {
         if (next) {
           setDraft(readOdooAutoWorkspaceSettings())
+          setRoutes(readOdooCustomerRepoRoutes())
         }
         onOpenChange(next)
       }}
@@ -98,7 +129,7 @@ export function OdooAutoWorkspaceDialog({
           <FieldRow
             label={translate('auto.components.odoo.auto.workspace.dialog.6183b72801', 'Enabled')}
             hint={
-              draft.savedFilterId
+              selectedFilterId
                 ? undefined
                 : translate(
                     'auto.components.odoo.auto.workspace.dialog.pick_filter',
@@ -107,10 +138,39 @@ export function OdooAutoWorkspaceDialog({
             }
           >
             <Switch
-              checked={draft.enabled && draft.savedFilterId !== null}
-              disabled={draft.savedFilterId === null}
+              checked={draft.enabled && selectedFilterId !== null}
+              disabled={selectedFilterId === null}
               onCheckedChange={(checked) => patch({ enabled: checked })}
             />
+          </FieldRow>
+
+          <FieldRow
+            label={translate('auto.components.odoo.auto.workspace.dialog.filter', 'Saved filter')}
+            hint={translate(
+              'auto.components.odoo.auto.workspace.dialog.filter_hint',
+              'Exactly the tickets this filter returns — editing it changes what starts.'
+            )}
+          >
+            <Select
+              value={selectedFilterId ?? ''}
+              onValueChange={(value) => patch({ savedFilterId: value || null })}
+            >
+              <SelectTrigger className="h-8 w-52 text-xs">
+                <SelectValue
+                  placeholder={translate(
+                    'auto.components.odoo.auto.workspace.dialog.pick_filter_placeholder',
+                    'Pick a filter'
+                  )}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {savedFilters.map((entry) => (
+                  <SelectItem key={entry.id} value={entry.id}>
+                    {entry.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </FieldRow>
 
           <FieldRow
@@ -143,6 +203,8 @@ export function OdooAutoWorkspaceDialog({
               className="h-8 w-24 text-xs"
             />
           </FieldRow>
+
+          <OdooCustomerRepoRouteEditor routes={routes} customers={customers} onChange={setRoutes} />
         </div>
 
         <DialogFooter>
