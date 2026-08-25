@@ -14,10 +14,6 @@ vi.mock('@/components/use-odoo-projects', () => ({
   useOdooProjects: () => ({ projects: [], loading: false, failed: false })
 }))
 
-vi.mock('@/components/use-odoo-auto-workspace', () => ({
-  useOdooAutoWorkspace: () => (): void => {}
-}))
-
 vi.mock('@/components/odoo-ticket-workspace', () => ({
   OdooTicketWorkspace: (): null => null
 }))

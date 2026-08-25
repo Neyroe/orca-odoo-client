@@ -5,7 +5,7 @@
  *
  * `live-proof.test.ts` proves the individual transport round trips. This proves
  * the cycle around them, driving the shipped decision modules rather than
- * restating their rules: the auto-workspace criteria, `addWorktree`, the
+ * restating their rules: the auto-workspace candidate guard, `addWorktree`, the
  * `worktree.set` metadata schema, and the mention markup builder.
  *
  * The board-status → `stage_id` half of the cycle lives next to the hook it
@@ -39,16 +39,17 @@ vi.mock('electron', () => ({
 import { connect, getClients } from './client'
 import { executeKw, type OdooClientForInstance } from './json-rpc'
 import { addTicketComment, searchMentionCandidates } from './ticket-chatter'
-import { getTicket, listStages } from './tickets'
+import { getTicket, searchTickets } from './tickets'
 import { addWorktree } from '../git/worktree'
 import { getLinkedWorkItemMetadata } from '../ipc/worktree-linked-work-item-metadata'
 import { WorktreeSet } from '../runtime/rpc/methods/worktree-schemas'
 import {
-  DEFAULT_ODOO_AUTO_WORKSPACE_CRITERIA,
-  matchesOdooAutoWorkspaceCriteria,
+  capOdooAutoWorkspaceRun,
+  isOdooTicketClosed,
   selectOdooAutoWorkspaceCandidates
-} from '../../renderer/src/components/odoo-auto-workspace-criteria'
+} from '../../renderer/src/components/odoo-auto-workspace-candidates'
 import { resolveOdooMentionMarkup } from '../../renderer/src/components/odoo-comment-mention-query'
+import { ODOO_CLOSED_STATES } from '../../shared/odoo-types'
 import { WORKTREE_ID_SEPARATOR } from '../../shared/worktree/id'
 import type { WorktreeMeta } from '../../shared/worktree/meta-types'
 
@@ -98,7 +99,7 @@ describe.skipIf(!LIVE)('Odoo developer cycle', () => {
     }
   })
 
-  it('step 1 — the auto-workspace criteria select the assigned ticket and reject the rest', async () => {
+  it('step 1 — the auto-workspace guard refuses closed tickets and honours the cap', async () => {
     const assigned = await getTicket(CHILD_TICKET_ID)
     const unassigned = await getTicket(UNASSIGNED_TICKET_ID)
     expect(assigned, 'child ticket not readable').not.toBeNull()
@@ -106,65 +107,44 @@ describe.skipIf(!LIVE)('Odoo developer cycle', () => {
     if (!assigned || !unassigned) {
       return
     }
-    const currentStageId = assigned.stage?.id
-    expect(currentStageId, 'child ticket has no stage').toBeDefined()
-    const stages = await listStages(PROJECT_ID)
-    const otherStage = stages.find((stage) => stage.id !== currentStageId)
-    expect(otherStage, 'project needs a second stage for the negative case').toBeDefined()
-    if (currentStageId === undefined || !otherStage) {
-      return
-    }
+    expect(isOdooTicketClosed(assigned), 'child ticket must be open for this proof').toBe(false)
+    expect(isOdooTicketClosed(unassigned), 'control ticket must be open for this proof').toBe(false)
 
-    const criteria = {
-      ...DEFAULT_ODOO_AUTO_WORKSPACE_CRITERIA,
-      assignedToMe: true,
-      stageIds: [currentStageId]
-    }
-    const context = { viewerUid, now: Date.now() }
+    // Read real finished work rather than fabricating it: a filter built of
+    // facets alone carries no state leaf, so this is exactly what the server
+    // hands the auto-create.
+    const closed = await searchTickets([['state', 'in', [...ODOO_CLOSED_STATES]]], 5)
+    const pool = [...closed, unassigned, assigned]
 
-    expect(matchesOdooAutoWorkspaceCriteria(assigned, criteria, context)).toBe(true)
-    // The control ticket sits in the same project and stage and also has a
-    // description; only the assignee differs, so a pass here would mean the
-    // rule matches everything.
-    expect(matchesOdooAutoWorkspaceCriteria(unassigned, criteria, context)).toBe(false)
-    // The stage clause has to bite too, or "assigned to me, any stage" would be
-    // the rule actually under test.
-    expect(
-      matchesOdooAutoWorkspaceCriteria(
-        assigned,
-        { ...criteria, stageIds: [otherStage.id] },
-        context
-      )
-    ).toBe(false)
-    // And an unknown viewer must refuse rather than widen to every assignee.
-    expect(
-      matchesOdooAutoWorkspaceCriteria(assigned, criteria, {
-        viewerUid: undefined,
-        now: Date.now()
-      })
-    ).toBe(false)
-
-    const selection = selectOdooAutoWorkspaceCandidates([unassigned, assigned], criteria, {
-      ...context,
-      excludedTicketIds: new Set<number>(),
-      maxPerRun: 5
+    const candidates = selectOdooAutoWorkspaceCandidates(pool, {
+      excludedTicketIds: new Set<number>()
     })
-    expect(selection.selected.map((ticket) => ticket.id)).toEqual([CHILD_TICKET_ID])
+    const candidateIds = candidates.map((ticket) => ticket.id)
+    for (const finished of closed) {
+      expect(candidateIds, `closed ticket ${finished.id} must never be a candidate`).not.toContain(
+        finished.id
+      )
+    }
+    expect(candidateIds).toContain(CHILD_TICKET_ID)
+
+    // A ticket already linked to a workspace never re-triggers.
+    expect(
+      selectOdooAutoWorkspaceCandidates(pool, {
+        excludedTicketIds: new Set([CHILD_TICKET_ID])
+      }).map((ticket) => ticket.id)
+    ).not.toContain(CHILD_TICKET_ID)
+
+    const capped = capOdooAutoWorkspaceRun(candidates, 1)
+    expect(capped.selected).toHaveLength(1)
+    expect(capped.droppedByCap).toBe(candidates.length - 1)
+
     console.log(
       'STEP1 PROOF',
       JSON.stringify({
-        viewerUid,
-        criteriaStageIds: criteria.stageIds,
-        selected: selection.selected.map((ticket) => ({
-          id: ticket.id,
-          stage: ticket.stage,
-          assignees: ticket.assignees.map((user) => user.id)
-        })),
-        rejected: {
-          id: unassigned.id,
-          stage: unassigned.stage?.name,
-          assignees: unassigned.assignees.map((user) => user.id)
-        }
+        closedRead: closed.map((ticket) => ({ id: ticket.id, state: ticket.state })),
+        candidates: candidateIds,
+        capped: capped.selected.map((ticket) => ticket.id),
+        droppedByCap: capped.droppedByCap
       })
     )
   }, 90_000)

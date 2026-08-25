@@ -1,152 +1,70 @@
-import { useCallback, useRef } from 'react'
-import { toast } from 'sonner'
+import { useEffect, useRef } from 'react'
 
-import { bindTaskPageOdooItemSourceContext } from '@/components/task-page-odoo-item-source-context'
-import { getOdooTicketWorkspaceSeed } from '@/components/odoo-ticket-workspace-seed'
-import { selectOdooAutoWorkspaceCandidates } from '@/components/odoo-auto-workspace-criteria'
+import {
+  runOdooAutoWorkspacePass,
+  type OdooAutoWorkspaceSession
+} from '@/components/odoo-auto-workspace-run'
+import {
+  ODOO_AUTO_WORKSPACE_INTERVAL_MS,
+  shouldRunOdooAutoWorkspace
+} from '@/components/odoo-auto-workspace-schedule'
 import { readOdooAutoWorkspaceSettings } from '@/components/odoo-auto-workspace-settings'
+import { installWindowVisibilityInterval, isWindowVisible } from '@/lib/window-visibility-interval'
 import { useAppStore } from '@/store'
-import { translate } from '@/i18n/i18n'
-import type { OdooTicket } from '../../../shared/odoo-types'
-import type { WorkspaceLinkedItem } from '../../../shared/worktree/types'
+
 /**
- * Starts a workspace for freshly loaded tickets that match the configured
- * criteria, without asking.
+ * Starts a workspace for tickets matching the armed saved filter, without asking.
  *
- * Runs off the panel's own reads (manual refresh and the slow timer) rather
- * than a scheduler of its own, so it can never fire more often than the panel
- * already talks to Odoo.
+ * Mounted at the app root rather than in the Odoo panel: tied to the panel,
+ * "automatically" meant "the next time you happen to have that tab open". It
+ * keeps its own read and its own interval, and still stands down while the window
+ * is hidden — there is nobody to hand a workspace to.
  */
-export function useOdooAutoWorkspace(): (tickets: readonly OdooTicket[]) => void {
-  // Tickets handled this session. Guards the window between "create started"
-  // and "worktree appears in the store", where the ticket still looks unlinked.
-  const handledRef = useRef<Set<number>>(new Set())
+export function useOdooAutoWorkspace(): void {
+  const connected = useAppStore((s) => s.odooStatus.connected)
+  const odooStatusChecked = useAppStore((s) => s.odooStatusChecked)
+  const checkOdooConnection = useAppStore((s) => s.checkOdooConnection)
+  const session = useRef<OdooAutoWorkspaceSession>({ handled: new Set(), reported: new Set() })
   const runningRef = useRef(false)
+  const lastRunAtRef = useRef<number | null>(null)
 
-  return useCallback((tickets: readonly OdooTicket[]) => {
-    const settings = readOdooAutoWorkspaceSettings()
-    if (!settings.enabled || !settings.repoId || runningRef.current) {
+  // Nothing else probes Odoo unless the panel or Settings is open, so an armed
+  // rule would otherwise wait behind a `connected` that stays false all session.
+  useEffect(() => {
+    if (odooStatusChecked || !readOdooAutoWorkspaceSettings().enabled) {
       return
     }
-    const state = useAppStore.getState()
-    const excluded = new Set(handledRef.current)
-    for (const worktree of state.allWorktrees()) {
-      if (worktree.linkedOdooTicket) {
-        excluded.add(worktree.linkedOdooTicket)
-      }
-    }
-    const { selected, droppedByCap } = selectOdooAutoWorkspaceCandidates(
-      tickets,
-      settings.criteria,
-      {
-        viewerUid: state.odooStatus.viewer?.uid,
-        now: Date.now(),
-        excludedTicketIds: excluded,
-        maxPerRun: settings.maxPerRun
-      }
-    )
-    if (selected.length === 0) {
+    void checkOdooConnection()
+  }, [odooStatusChecked, checkOdooConnection])
+
+  useEffect(() => {
+    if (!connected) {
       return
     }
-    if (droppedByCap > 0) {
-      // Never drop silently: a run that quietly ignored matches would read as
-      // "the criteria are wrong" rather than "the cap held".
-      toast.warning(
-        droppedByCap === 1
-          ? translate(
-              'auto.components.odoo.auto.workspace.capped_one',
-              '{{count}} more matching ticket was skipped by the per-run limit.',
-              { count: droppedByCap }
-            )
-          : translate(
-              'auto.components.odoo.auto.workspace.capped_other',
-              '{{count}} more matching tickets were skipped by the per-run limit.',
-              { count: droppedByCap }
-            )
-      )
-    }
-
-    const repoId = settings.repoId
-    const baseBranch = settings.baseBranch
-    runningRef.current = true
-    void (async () => {
-      try {
-        for (const ticket of selected) {
-          const taskSourceContext = bindTaskPageOdooItemSourceContext({
-            ticket,
-            instances: state.odooStatus.instances ?? [],
-            settings: state.settings ?? { activeRuntimeEnvironmentId: null }
-          })
-          if (!taskSourceContext) {
-            continue
-          }
-          handledRef.current.add(ticket.id)
-          const resolvedInstanceId =
-            taskSourceContext.providerIdentity?.provider === 'odoo'
-              ? (taskSourceContext.providerIdentity.instanceId ?? undefined)
-              : undefined
-          const linkedWorkItem: WorkspaceLinkedItem = {
-            provider: 'odoo',
-            type: 'issue',
-            number: ticket.id,
-            title: `${ticket.ref} ${ticket.title}`,
-            url: ticket.url,
-            odooInstanceId: resolvedInstanceId
-          }
-          try {
-            await useAppStore
-              .getState()
-              .createWorktree(
-                repoId,
-                getOdooTicketWorkspaceSeed(ticket),
-                baseBranch,
-                'inherit',
-                undefined,
-                'sidebar',
-                `${ticket.ref} ${ticket.title}`,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                { linkedWorkItem, linkedTaskSourceContext: taskSourceContext }
-              )
-            toast.success(
-              translate(
-                'auto.components.odoo.auto.workspace.created',
-                'Started a workspace for {{value0}}.',
-                { value0: ticket.ref }
-              )
-            )
-          } catch (error) {
-            // Keep the ticket in handled: retrying every refresh would hammer
-            // a repo that is failing for a structural reason.
-            toast.error(
-              translate(
-                'auto.components.odoo.auto.workspace.failed',
-                'Could not start a workspace for {{value0}}.',
-                { value0: ticket.ref }
-              ),
-              { description: error instanceof Error ? error.message : undefined }
-            )
-          }
-        }
-      } finally {
+    const run = (): void => {
+      const settings = readOdooAutoWorkspaceSettings()
+      if (
+        !shouldRunOdooAutoWorkspace({
+          enabled: settings.enabled,
+          connected: useAppStore.getState().odooStatus.connected,
+          windowVisible: isWindowVisible(),
+          running: runningRef.current,
+          lastRunAt: lastRunAtRef.current,
+          now: Date.now()
+        })
+      ) {
+        return
+      }
+      // Stamped at entry, not completion: a slow pass must not let the next tick
+      // straight through behind it.
+      lastRunAtRef.current = Date.now()
+      runningRef.current = true
+      void runOdooAutoWorkspacePass(settings, session.current).finally(() => {
         runningRef.current = false
-      }
-    })()
-  }, [])
+      })
+    }
+    // Keyed on `connected` so the first pass fires when the connection lands
+    // rather than waiting out a full interval from a cold, disconnected start.
+    return installWindowVisibilityInterval({ run, intervalMs: ODOO_AUTO_WORKSPACE_INTERVAL_MS })
+  }, [connected])
 }

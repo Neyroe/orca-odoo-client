@@ -15260,7 +15260,23 @@
               "18d16befe4": "Bounds how many workspaces one over-broad rule can create.",
               "06bb829452": "Cancel",
               "f2040d28d3": "Save",
-              "b2506d68ee": "Empty uses the project's default branch."
+              "b2506d68ee": "Empty uses the project's default branch.",
+              "pick_filter": "Pick a saved filter first."
+            },
+            "skip": {
+              "no_customer": "Auto-start skipped tickets with no customer.",
+              "company_unresolved": "Auto-start could not read the customer's company on some tickets.",
+              "no_route": "Auto-start has no repository mapped for these customers.",
+              "repo_missing": "Auto-start maps these customers to a repository Orca no longer has.",
+              "repo_ambiguous": "Auto-start cannot tell which host owns the mapped repository.",
+              "no_base_ref": "Auto-start found no default branch in the mapped repository.",
+              "source_unresolved": "Auto-start could not resolve the Odoo instance these tickets belong to.",
+              "refs_more": "{{value0}} and {{count}} more."
+            },
+            "fault": {
+              "filter_missing": "Auto-start points at a saved filter that no longer exists.",
+              "domain_invalid": "Auto-start could not turn its saved filter into an Odoo domain.",
+              "read_failed": "Auto-start could not read tickets from Odoo."
             }
           }
         },
