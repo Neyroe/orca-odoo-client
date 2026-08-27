@@ -1,7 +1,11 @@
 import React from 'react'
+import { Braces } from 'lucide-react'
 
+import { OdooRawDomainDialog } from '@/components/odoo-raw-domain-dialog'
 import { formatOdooRawDomain, parseOdooRawDomainText } from '@/components/odoo-raw-domain-text'
 import { odooTicketFilterDomainsEqual } from '@/components/odoo-ticket-filter-domain'
+import type { OdooTicketListFilters } from '@/components/odoo-ticket-facets'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { translate } from '@/i18n/i18n'
 import type { OdooDomain } from '../../../shared/odoo-types'
@@ -15,6 +19,8 @@ const ERROR_ID = 'odoo-raw-domain-error'
  * on `s_raf` without `s_raf` ever being in the read's `fields`, so no schema has
  * to be taught to the client first.
  *
+ * One line here, with the editor a button away for a domain that outgrows it.
+ *
  * Applied on Enter or blur, never per keystroke — the list cache keys on
  * `JSON.stringify(domain)` with a 60s TTL over 500 entries, so a read per
  * character would spend the whole cache on half-typed domains.
@@ -25,10 +31,15 @@ const ERROR_ID = 'odoo-raw-domain-error'
  */
 export function OdooRawDomainInput({
   rawDomain,
+  filters,
+  viewerUid,
   filtersActive,
   onApply
 }: {
   rawDomain: OdooDomain | null
+  /** Facets the editor's aggregate preview compiles alongside the domain. */
+  filters: OdooTicketListFilters
+  viewerUid: number | null | undefined
   /** False while a title search drives the read, so this domain is not in effect. */
   filtersActive: boolean
   onApply: (domain: OdooDomain | null) => void
@@ -36,6 +47,7 @@ export function OdooRawDomainInput({
   const applied = formatOdooRawDomain(rawDomain)
   const [draft, setDraft] = React.useState(applied)
   const [error, setError] = React.useState<string | null>(null)
+  const [editorOpen, setEditorOpen] = React.useState(false)
   const [syncedFrom, setSyncedFrom] = React.useState(applied)
   // A preset chip and a recalled saved filter both write this domain from
   // outside; the box follows them rather than keeping the text it was left with.
@@ -65,32 +77,53 @@ export function OdooRawDomainInput({
   const shownError = filtersActive ? error : null
 
   return (
-    <form
-      className="flex flex-col gap-1"
-      onSubmit={(event) => {
-        event.preventDefault()
-        apply()
-      }}
-    >
-      <Input
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        onBlur={apply}
+    <div className="flex items-start gap-2">
+      <form
+        className="flex flex-col gap-1"
+        onSubmit={(event) => {
+          event.preventDefault()
+          apply()
+        }}
+      >
+        <Input
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={apply}
+          disabled={!filtersActive}
+          aria-invalid={shownError !== null}
+          aria-describedby={shownError ? ERROR_ID : undefined}
+          aria-label={translate('auto.components.odoo.raw.domain.input.label', 'Odoo domain')}
+          placeholder={translate(
+            'auto.components.odoo.raw.domain.input.placeholder',
+            "[('x_field', '>', 0)]"
+          )}
+          className="h-7 w-64 font-mono text-[11px]"
+        />
+        {shownError ? (
+          <p id={ERROR_ID} className="w-64 text-xs text-destructive">
+            {shownError}
+          </p>
+        ) : null}
+      </form>
+      <Button
+        type="button"
+        variant="outline"
+        size="xs"
+        className="h-7"
         disabled={!filtersActive}
-        aria-invalid={shownError !== null}
-        aria-describedby={shownError ? ERROR_ID : undefined}
-        aria-label={translate('auto.components.odoo.raw.domain.input.label', 'Odoo domain')}
-        placeholder={translate(
-          'auto.components.odoo.raw.domain.input.placeholder',
-          '[["x_field", ">", 0]]'
-        )}
-        className="h-7 w-64 font-mono text-[11px]"
+        onClick={() => setEditorOpen(true)}
+      >
+        <Braces className="size-3.5" />
+        {translate('auto.components.odoo.raw.domain.input.openEditor', 'Add custom domain')}
+      </Button>
+      <OdooRawDomainDialog
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        filters={filters}
+        viewerUid={viewerUid}
+        rawDomain={rawDomain}
+        onApply={onApply}
       />
-      {shownError ? (
-        <p id={ERROR_ID} className="w-64 text-xs text-destructive">
-          {shownError}
-        </p>
-      ) : null}
-    </form>
+    </div>
   )
 }

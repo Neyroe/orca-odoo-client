@@ -329,6 +329,7 @@ export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JS
         customers={customers}
         projects={projects}
         filters={filters}
+        viewerUid={viewerUid}
         rawDomain={rawDomain}
         onRawDomainChange={applyRawDomain}
         onFilterChange={setFilter}
