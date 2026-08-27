@@ -15455,10 +15455,22 @@
           "domain": {
             "input": {
               "label": "Odoo domain",
-              "placeholder": "[[\"x_field\", \">\", 0]]"
+              "placeholder": "[[\"x_field\", \">\", 0]]",
+              "openEditor": "Add custom domain"
             },
             "text": {
               "invalidJson": "Write the domain as JSON, like [[\"s_raf\", \">\", 0]]."
+            },
+            "dialog": {
+              "title": "Custom domain",
+              "description": "Written the way Odoo writes it — [('s_raf', '>', 0)] — and narrowing the ticket read on top of the facets selected in the toolbar.",
+              "label": "Odoo domain",
+              "placeholder": "[\n  ('stage_id', '=', 103),\n  ('s_raf', '>', 0),\n]",
+              "aggregate": "Domain sent to Odoo",
+              "token": "$orca:me stands for the signed-in user and is resolved per instance when the read runs — a frozen user id would name a stranger on another database.",
+              "serverSide": "The template-task exclusion and the selected projects are added on top of this, server-side, per instance.",
+              "cancel": "Cancel",
+              "apply": "Apply"
             }
           }
         },
@@ -15476,6 +15488,22 @@
                 "add": "Add",
                 "noCustomers": "Clients are offered from the tickets currently loaded — refresh the list to see more."
               }
+            }
+          }
+        },
+        "domain": {
+          "literal": {
+            "parse": {
+              "unclosed": "The \"{{open}}\" opened at character {{at}} is never closed.",
+              "mismatched": "The \"{{open}}\" opened at character {{at}} is closed by \"{{found}}\".",
+              "unterminated": "The quote opened at character {{at}} is never closed.",
+              "notANumber": "The number at character {{at}} is incomplete.",
+              "unknownWord": "\"{{word}}\" at character {{at}} is not a value. Quote it, or write True, False or None.",
+              "tooDeep": "The domain nests too deeply at character {{at}}.",
+              "expectedSeparator": "Character {{at}} should be \",\" or \"{{closer}}\", not \"{{found}}\".",
+              "missingValue": "A value is missing at character {{at}}.",
+              "unexpected": "Character {{at}} (\"{{found}}\") cannot start a value.",
+              "trailing": "The domain ends at character {{at}}; remove what follows it."
             }
           }
         }

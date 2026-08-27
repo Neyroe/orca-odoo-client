@@ -51,6 +51,8 @@ export type OdooTicketToolbarProps = {
   /** Projects of the scoped instance, for the project selector. */
   projects: OdooProject[]
   filters: OdooTicketListFilters
+  /** Signed-in user, so the domain editor's preview shows the token the read sends. */
+  viewerUid: number | null | undefined
   /** Raw domain the toolbar narrows by on top of the facets, if any. */
   rawDomain: OdooDomain | null
   /** Applies what the raw-domain box holds; null for no raw domain. */
@@ -94,6 +96,7 @@ export function OdooTicketToolbar({
   customers,
   projects,
   filters,
+  viewerUid,
   rawDomain,
   onRawDomainChange,
   onFilterChange,
@@ -271,6 +274,8 @@ export function OdooTicketToolbar({
         />
         <OdooRawDomainInput
           rawDomain={rawDomain}
+          filters={filters}
+          viewerUid={viewerUid}
           filtersActive={filtersActive}
           onApply={onRawDomainChange}
         />
