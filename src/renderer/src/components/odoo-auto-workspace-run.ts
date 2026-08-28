@@ -104,6 +104,27 @@ function noticeCapped(droppedByCap: number): void {
   )
 }
 
+/**
+ * Loads the worktree catalog for every mapped repo before candidates are picked.
+ *
+ * Closing a race, not an optimisation: the pass fires when the Odoo connection
+ * lands, which does not wait for `fetchWorktrees`. Against an empty catalog every
+ * ticket that already has a workspace reads as unlinked — `session.handled` is
+ * empty too on a fresh start, by design — so the pass starts a second workspace
+ * for work already under way, and does it again on every launch that loses the
+ * race.
+ *
+ * Per mapped repo rather than per ticket: one refresh answers for every ticket
+ * that routes there, and a failure leaves the catalog as it was, which the
+ * `linkedOdooTicket` filter then reads as "nothing known" — the same conservative
+ * answer as before, never a wrong one.
+ */
+async function refreshRoutedWorktrees(): Promise<void> {
+  const fetchWorktrees = useAppStore.getState().fetchWorktrees
+  const repoIds = [...new Set(readOdooCustomerRepoRoutes().map((route) => route.repoId))]
+  await Promise.all(repoIds.map((repoId) => fetchWorktrees(repoId).catch(() => undefined)))
+}
+
 /** Eligible tickets paired with the repo their customer routes to; everything
  *  refused lands in `skips` with the reason that refused it. */
 function routeCandidates(
@@ -139,29 +160,36 @@ function routeCandidates(
 }
 
 /**
- * The repo's primary branch, passed explicitly so it wins over a per-repo
- * `worktreeBaseRef` override — the user wants the primary always, and an empty
- * request would let `resolveWorktreeCreateBase` prefer the override instead.
+ * Whether Orca can name a base for this repo at all.
  *
- * A failed probe reads as null like an absent default: either way Orca does not
- * know the primary, and guessing one is what this refuses to do.
+ * Which base is left to `resolveWorktreeCreateBase` main-side, which prefers the
+ * repo's `worktreeBaseRef` over the git default: the base ref set in the repo's
+ * settings has to govern an unattended start exactly as it governs a manual one,
+ * or the two silently disagree in the same repo — a repo whose real base is
+ * `develop` would keep starting work from `main` with nothing on screen to say so.
+ *
+ * Probing at all only separates "this repo has no base" from a create failure, so
+ * such a ticket is reported as skipped rather than as an error. A configured
+ * override is itself an answer, so it needs no probe.
  */
-async function resolveBaseRef(target: RoutedTicket['target']): Promise<string | null> {
+async function hasResolvableBase(target: RoutedTicket['target']): Promise<boolean> {
+  if (target.repo.worktreeBaseRef?.trim()) {
+    return true
+  }
   try {
     const result = await getRuntimeRepoBaseRefDefault(
       target.ownerSettings,
       target.repo.id,
       target.hostId
     )
-    return result.defaultBaseRef
+    return result.defaultBaseRef !== null
   } catch {
-    return null
+    return false
   }
 }
 
 async function startWorkspace(
   candidate: RoutedTicket,
-  baseRef: string,
   session: OdooAutoWorkspaceSession,
   skips: OdooAutoWorkspaceSkip[]
 ): Promise<void> {
@@ -192,7 +220,10 @@ async function startWorkspace(
     await state.createWorktree(
       target.repo.id,
       getOdooTicketWorkspaceSeed(ticket),
-      baseRef,
+      // Empty on purpose: `resolveWorktreeCreateBase` then prefers the repo's own
+      // `worktreeBaseRef` over the git default, so the base ref configured for the
+      // repo governs this start exactly as it governs a manual one.
+      '',
       'inherit',
       undefined,
       'sidebar',
@@ -274,6 +305,7 @@ export async function runOdooAutoWorkspacePass(
     reportFault(session, 'read-failed', errorMessage(error))
     return
   }
+  await refreshRoutedWorktrees()
   const skips: OdooAutoWorkspaceSkip[] = []
   const { selected, droppedByCap } = capOdooAutoWorkspaceRun(
     routeCandidates(tickets, session, skips),
@@ -283,14 +315,13 @@ export async function runOdooAutoWorkspacePass(
     noticeCapped(droppedByCap)
   }
   // One probe per distinct repo: several tickets of one customer share an answer.
-  const baseRefs = new Map<string, string | null>()
+  const hasBase = new Map<string, boolean>()
   for (const candidate of selected) {
     const key = `${candidate.target.hostId}::${candidate.target.repo.id}`
-    if (!baseRefs.has(key)) {
-      baseRefs.set(key, await resolveBaseRef(candidate.target))
+    if (!hasBase.has(key)) {
+      hasBase.set(key, await hasResolvableBase(candidate.target))
     }
-    const baseRef = baseRefs.get(key) ?? null
-    if (!baseRef) {
+    if (!hasBase.get(key)) {
       skips.push({
         ticketId: candidate.ticket.id,
         ref: candidate.ticket.ref,
@@ -298,7 +329,7 @@ export async function runOdooAutoWorkspacePass(
       })
       continue
     }
-    await startWorkspace(candidate, baseRef, session, skips)
+    await startWorkspace(candidate, session, skips)
   }
   reportSkips(session, skips)
 }

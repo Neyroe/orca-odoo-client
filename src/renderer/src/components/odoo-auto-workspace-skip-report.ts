@@ -106,7 +106,7 @@ function skipReasonMessage(reason: OdooAutoWorkspaceSkipReason): string {
     case 'no-base-ref':
       return translate(
         'auto.components.odoo.auto.workspace.skip.no_base_ref',
-        'Auto-start found no default branch in the mapped repository.'
+        'Auto-start found no base branch in the mapped repository.'
       )
     case 'source-unresolved':
       return translate(

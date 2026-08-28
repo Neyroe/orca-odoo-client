@@ -15272,7 +15272,7 @@
               "no_route": "Auto-start has no repository mapped for these customers.",
               "repo_missing": "Auto-start maps these customers to a repository Orca no longer has.",
               "repo_ambiguous": "Auto-start cannot tell which host owns the mapped repository.",
-              "no_base_ref": "Auto-start found no default branch in the mapped repository.",
+              "no_base_ref": "Auto-start found no base branch in the mapped repository.",
               "source_unresolved": "Auto-start could not resolve the Odoo instance these tickets belong to.",
               "refs_more": "{{value0}} and {{count}} more."
             },

@@ -12,9 +12,16 @@ const mocks = vi.hoisted(() => ({
   toast: { success: vi.fn(), warning: vi.fn(), error: vi.fn() },
   searchOdooTickets: vi.fn(),
   createWorktree: vi.fn(),
+  fetchWorktrees: vi.fn(),
   getBaseRefDefault: vi.fn(),
   worktrees: [] as { linkedOdooTicket?: number }[],
-  repos: [] as { id: string; path: string; displayName: string; executionHostId: string | null }[]
+  repos: [] as {
+    id: string
+    path: string
+    displayName: string
+    executionHostId: string | null
+    worktreeBaseRef?: string
+  }[]
 }))
 
 vi.mock('sonner', () => ({ toast: mocks.toast }))
@@ -37,7 +44,8 @@ vi.mock('@/store', () => ({
       repos: mocks.repos,
       allWorktrees: () => mocks.worktrees,
       searchOdooTickets: mocks.searchOdooTickets,
-      createWorktree: mocks.createWorktree
+      createWorktree: mocks.createWorktree,
+      fetchWorktrees: mocks.fetchWorktrees
     })
   }
 }))
@@ -88,6 +96,7 @@ beforeEach(() => {
   mocks.toast.error.mockReset()
   mocks.searchOdooTickets.mockReset().mockResolvedValue([])
   mocks.createWorktree.mockReset().mockResolvedValue({})
+  mocks.fetchWorktrees.mockReset().mockResolvedValue(undefined)
   mocks.getBaseRefDefault.mockReset().mockResolvedValue({ defaultBaseRef: 'origin/main' })
   mocks.worktrees = []
   mocks.repos = [{ id: 'acme', path: '/repos/acme', displayName: 'acme', executionHostId: null }]
@@ -167,7 +176,7 @@ describe('runOdooAutoWorkspacePass — the closed-ticket invariant', () => {
 })
 
 describe('runOdooAutoWorkspacePass — the customer repo and the base branch', () => {
-  it('starts in the customer repo, on its primary branch, passed explicitly', async () => {
+  it('starts in the customer repo, leaving the base to the repo settings', async () => {
     armFilter()
     armRoute()
     mocks.searchOdooTickets.mockResolvedValue([ticket(1)])
@@ -181,11 +190,14 @@ describe('runOdooAutoWorkspacePass — the customer repo and the base branch', (
     )
     const [repoId, , baseBranch] = mocks.createWorktree.mock.calls[0] ?? []
     expect(repoId).toBe('acme')
-    expect(baseBranch).toBe('origin/main')
+    // Why empty: naming the git default here would outrank the repo's own
+    // `worktreeBaseRef`, so an unattended start would silently disagree with a
+    // manual one in the same repo.
+    expect(baseBranch).toBe('')
     expect(mocks.toast.success).toHaveBeenCalledWith('Started a workspace for #1.')
   })
 
-  it('skips rather than falling back when no primary branch resolves', async () => {
+  it('skips rather than falling back when no base branch resolves', async () => {
     armFilter()
     armRoute()
     mocks.getBaseRefDefault.mockResolvedValue({ defaultBaseRef: null })
@@ -195,9 +207,54 @@ describe('runOdooAutoWorkspacePass — the customer repo and the base branch', (
 
     expect(mocks.createWorktree).not.toHaveBeenCalled()
     expect(mocks.toast.warning).toHaveBeenCalledWith(
-      'Auto-start found no default branch in the mapped repository.',
+      'Auto-start found no base branch in the mapped repository.',
       expect.anything()
     )
+  })
+
+  it('loads the worktree catalog before picking, so a linked ticket stays excluded', async () => {
+    armFilter()
+    armRoute()
+    mocks.searchOdooTickets.mockResolvedValue([ticket(1)])
+    // The race this closes: the pass fires when the Odoo connection lands, which
+    // does not wait for the catalog. Empty, it makes an existing workspace
+    // invisible, and a second one is created for work already under way.
+    mocks.fetchWorktrees.mockImplementation(async () => {
+      mocks.worktrees = [{ linkedOdooTicket: 1 }]
+    })
+
+    await runPass(session())
+
+    expect(mocks.fetchWorktrees).toHaveBeenCalledWith('acme')
+    expect(mocks.createWorktree).not.toHaveBeenCalled()
+  })
+
+  it('still picks when the catalog refresh fails, rather than stalling', async () => {
+    armFilter()
+    armRoute()
+    mocks.searchOdooTickets.mockResolvedValue([ticket(1)])
+    // A failed refresh leaves the catalog as it was: the same conservative answer
+    // the filter read before, never a wrong one.
+    mocks.fetchWorktrees.mockRejectedValue(new Error('offline'))
+
+    await runPass(session())
+
+    expect(mocks.createWorktree).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not probe the git default when the repo already configures a base', async () => {
+    armFilter()
+    armRoute()
+    mocks.repos[0] = { ...mocks.repos[0]!, worktreeBaseRef: 'origin/develop' }
+    mocks.searchOdooTickets.mockResolvedValue([ticket(1)])
+
+    await runPass(session())
+
+    // The configured ref is an answer on its own, and main-side precedence is
+    // what applies it — asking git for a default here would only risk shadowing it.
+    expect(mocks.getBaseRefDefault).not.toHaveBeenCalled()
+    expect(mocks.createWorktree).toHaveBeenCalledTimes(1)
+    expect(mocks.createWorktree.mock.calls[0]?.[2]).toBe('')
   })
 
   it.each([
