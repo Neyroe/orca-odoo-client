@@ -19,6 +19,7 @@ vi.mock('os', async () => {
 })
 
 import { CommandCodeHookService } from './hook-service'
+import { POSIX_ANCESTOR_ENVIRON_READ } from './command-code-managed-script'
 
 const WINDOWS_POWERSHELL_LAUNCHER =
   /^[A-Za-z]:\/[^"]*\/System32\/WindowsPowerShell\/v1\.0\/powershell\.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand \S+$/
@@ -108,10 +109,54 @@ describe('CommandCodeHookService', () => {
       expect(script).toContain('ORCA_AGENT_LAUNCH_TOKEN')
       expect(script).toContain('orca-dev/agent-hooks')
       expect(script).toContain('endpoint_port=')
+      expect(script).toContain(POSIX_ANCESTOR_ENVIRON_READ)
     }
   })
 
   const itPosix = process.platform === 'win32' ? it.skip : it
+
+  const runAncestorEnvironRead = (
+    environPath: string,
+    name: string
+  ): Promise<{ code: number | null; stdout: string; stderr: string }> =>
+    new Promise((resolve, reject) => {
+      const child = spawn('/bin/sh', ['-c', POSIX_ANCESTOR_ENVIRON_READ], {
+        env: { ...process.env, __orca_environ_path: environPath, __orca_name: name },
+        stdio: ['ignore', 'pipe', 'pipe']
+      })
+      let stdout = ''
+      let stderr = ''
+      child.stdout.setEncoding('utf8')
+      child.stderr.setEncoding('utf8')
+      child.stdout.on('data', (chunk) => {
+        stdout += chunk
+      })
+      child.stderr.on('data', (chunk) => {
+        stderr += chunk
+      })
+      child.on('error', reject)
+      child.on('exit', (code) => resolve({ code, stdout, stderr }))
+    })
+
+  // Why (#32): the ancestor walk reaches environ paths it cannot open (ptrace_scope=1)
+  // or that do not exist at all (no /proc on macOS). Both must stay silent, or the
+  // shell diagnostic surfaces as hook stderr on every agent event.
+  itPosix('recovers an ancestor variable without leaking a failed environ open', async () => {
+    const environPath = join(homeDir, 'environ')
+    writeFileSync(environPath, 'PATH=/usr/bin\0ORCA_PANE_KEY=tab:leaf\0TERM=xterm\0')
+
+    const found = await runAncestorEnvironRead(environPath, 'ORCA_PANE_KEY')
+    expect(found.stdout).toBe('tab:leaf\n')
+    expect(found.stderr).toBe('')
+
+    const unopenable = await runAncestorEnvironRead(
+      join(homeDir, 'no-such-proc', '4242', 'environ'),
+      'ORCA_PANE_KEY'
+    )
+    expect(unopenable.stderr).toBe('')
+    expect(unopenable.stdout).toBe('')
+    expect(unopenable.code).toBe(0)
+  })
 
   itPosix('does not let stale endpoint files clobber recovered connection fields', async () => {
     new CommandCodeHookService().install()
@@ -163,23 +208,23 @@ describe('CommandCodeHookService', () => {
       })
       child.stdin.end(JSON.stringify({ hook_event_name: 'Stop' }))
 
-      const exitCode = await new Promise<number | null>((resolve, reject) => {
+      const { exitCode, stderr } = await new Promise<{
+        exitCode: number | null
+        stderr: string
+      }>((resolve, reject) => {
         let stderr = ''
         child.stderr.setEncoding('utf8')
         child.stderr.on('data', (chunk) => {
           stderr += chunk
         })
         child.on('error', reject)
-        child.on('exit', (code) => {
-          if (stderr.trim()) {
-            reject(new Error(stderr))
-          } else {
-            resolve(code)
-          }
-        })
+        child.on('exit', (exitCode) => resolve({ exitCode, stderr }))
       })
 
-      expect(exitCode).toBe(0)
+      expect(exitCode, `hook stderr: ${stderr}`).toBe(0)
+      // Why (#32): fail on a leaked environ/redirect diagnostic, not on any host noise
+      // the ancestor walk happens to pick up.
+      expect(stderr).not.toMatch(/cannot open|Permission denied/)
       expect(requests).toHaveLength(1)
       expect(requests[0].token).toBe('current-token')
       expect(new URLSearchParams(requests[0].body).get('paneKey')).toBe('tab:leaf')

@@ -7,6 +7,11 @@ import {
 
 export type CommandCodeManagedScriptTarget = 'local' | 'posix'
 
+// Why (#32): `< "$path" 2>/dev/null` redirects after the open, so a denied environ leaks
+// the shell diagnostic. Silencing the group keeps the read quiet for the `ps eww` fallback.
+export const POSIX_ANCESTOR_ENVIRON_READ =
+  '{ cat "$__orca_environ_path" | tr "\\000" "\\n" | sed -n "s/^${__orca_name}=//p" | head -n 1; } 2>/dev/null'
+
 export function buildCommandCodeManagedScript(
   target: CommandCodeManagedScriptTarget = 'local'
 ): string {
@@ -41,8 +46,10 @@ export function buildCommandCodeManagedScript(
     '  __orca_pid="${PPID:-}"',
     '  while [ -n "$__orca_pid" ] && [ "$__orca_pid" != "0" ] && [ "$__orca_pid" != "1" ]; do',
     '    __orca_value=""',
-    '    if [ -r "/proc/$__orca_pid/environ" ]; then',
-    '      __orca_value=$(tr "\\000" "\\n" < "/proc/$__orca_pid/environ" 2>/dev/null | sed -n "s/^${__orca_name}=//p" | head -n 1)',
+    '    __orca_environ_path="/proc/$__orca_pid/environ"',
+    // Why -e, not -r: readability never gated the open; hosts without /proc still skip free.
+    '    if [ -e "$__orca_environ_path" ]; then',
+    `      __orca_value=$(${POSIX_ANCESTOR_ENVIRON_READ})`,
     '    fi',
     '    if [ -z "$__orca_value" ]; then',
     '      __orca_value=$(ps eww -p "$__orca_pid" -o command= 2>/dev/null | tr " " "\\n" | sed -n "s/^${__orca_name}=//p" | head -n 1)',
