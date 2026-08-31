@@ -3,7 +3,7 @@
 // per method; Odoo centralizes it so each slice read stays a thin wrapper.
 import type { AppState } from '../types'
 import type { OdooConnectionStatus, OdooInstanceSelection } from '../../../../shared/odoo-types'
-import type { CacheEntry } from './github'
+import type { CacheEntry } from '../github/cache-model'
 import { isIntegrationCredentialDecryptionError } from '../../../../shared/integration-credential-errors'
 import { getProviderRuntimeContextKey } from '@/lib/provider-runtime-context'
 import {

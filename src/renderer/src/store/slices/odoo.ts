@@ -7,7 +7,7 @@ import type {
   OdooTicketFilter,
   OdooViewer
 } from '../../../../shared/odoo-types'
-import type { CacheEntry } from './github'
+import type { CacheEntry } from '../github/cache-model'
 import { odooGetTicket, odooListTickets, odooSearchTickets } from '@/runtime/runtime-odoo-client'
 import {
   getTaskSourceCacheScope,

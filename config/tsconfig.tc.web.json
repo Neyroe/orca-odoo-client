@@ -12,6 +12,10 @@
     // the renderer hook; listed so the composite project can typecheck that file.
     "../src/main/integration-credential-file.ts",
     "../src/main/ipc/odoo-ipc-args.ts",
+    "../src/main/network/bounded-proxy-application.ts",
+    "../src/main/network/electron-default-proxy-session.ts",
+    "../src/main/network/electron-proxy-credentials.ts",
+    "../src/main/network/proxy-policy-resolution.ts",
     "../src/main/network/proxy-settings.ts",
     "../src/main/observability/redactor.ts",
     "../src/main/observability/tracer.ts",
