@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { safeStorage } from 'electron'
+import { getSecretStore } from '../../shared/secret-store'
 import {
   CredentialDecryptionError,
   credentialFileHasContent,
@@ -152,11 +152,11 @@ export function writeInstanceFile(file: OdooInstanceFile): void {
 }
 
 function writeEncryptedKey(path: string, apiKey: string): void {
-  if (safeStorage.isEncryptionAvailable()) {
-    writeFileSync(path, safeStorage.encryptString(apiKey), { mode: 0o600 })
+  if (getSecretStore().isEncryptionAvailable()) {
+    writeFileSync(path, getSecretStore().encryptString(apiKey), { mode: 0o600 })
     return
   }
-  console.warn('[odoo] safeStorage encryption unavailable — storing API key in plaintext')
+  console.warn('[odoo] secret encryption unavailable — storing API key in plaintext')
   writeFileSync(path, apiKey, { encoding: 'utf-8', mode: 0o600 })
 }
 

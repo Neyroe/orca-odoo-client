@@ -10,23 +10,10 @@
  * Opt-in and credential-free: set ODOO_PROOF_URL / _DB / _LOGIN / _KEY against a
  * disposable instance. Unset, the suite skips so CI stays green.
  */
-import { beforeAll, describe, expect, it, vi } from 'vitest'
-
-// Same shape as live-proof.test.ts: the Odoo transport only touches
-// session.defaultSession to configure a proxy, which a direct localhost call
-// does not need, and net.fetch is API-compatible with the global.
-vi.mock('electron', () => ({
-  app: { getPath: () => '/tmp/proof-linked-item' },
-  session: { defaultSession: undefined },
-  net: { fetch: (url: string, init?: RequestInit) => globalThis.fetch(url, init) },
-  safeStorage: {
-    isEncryptionAvailable: () => false,
-    encryptString: (v: string) => Buffer.from(v),
-    decryptString: (b: Buffer) => b.toString()
-  }
-}))
+import { beforeAll, describe, expect, it } from 'vitest'
 
 import { connect, getClients } from '../../../main/odoo/client'
+import { installOdooLiveProofHostPorts } from '../../../main/odoo/live-proof-host-ports'
 import { getTicket } from '../../../main/odoo/tickets'
 import { bindTaskPageOdooItemSourceContext } from './task-page-odoo-item-source-context'
 import { TaskSourceContextSchema } from '../../../shared/task-source-context-schema'
@@ -47,6 +34,8 @@ let instance: OdooInstance
 
 describe.skipIf(!LIVE)('Odoo start-workspace linked item', () => {
   beforeAll(async () => {
+    // Inside the skipped describe so a non-live run leaves the process-wide ports alone.
+    installOdooLiveProofHostPorts()
     const result = await connect({
       serverUrl: process.env.ODOO_PROOF_URL as string,
       database: process.env.ODOO_PROOF_DB as string,

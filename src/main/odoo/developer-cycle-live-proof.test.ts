@@ -20,24 +20,11 @@ import { execFileSync } from 'node:child_process'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
-
-// Same shape as live-proof.test.ts: the Odoo transport only touches
-// session.defaultSession to configure a proxy, which a direct localhost call
-// does not need, and net.fetch is API-compatible with the global.
-vi.mock('electron', () => ({
-  app: { getPath: () => '/tmp/proof-cycle' },
-  session: { defaultSession: undefined },
-  net: { fetch: (url: string, init?: RequestInit) => globalThis.fetch(url, init) },
-  safeStorage: {
-    isEncryptionAvailable: () => false,
-    encryptString: (v: string) => Buffer.from(v),
-    decryptString: (b: Buffer) => b.toString()
-  }
-}))
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { connect, getClients } from './client'
 import { executeKw, type OdooClientForInstance } from './json-rpc'
+import { installOdooLiveProofHostPorts } from './live-proof-host-ports'
 import { addTicketComment, searchMentionCandidates } from './ticket-chatter'
 import { getTicket, listStages } from './tickets'
 import { addWorktree } from '../git/worktree'
@@ -76,6 +63,8 @@ function git(cwd: string, args: string[]): string {
 
 describe.skipIf(!LIVE)('Odoo developer cycle', () => {
   beforeAll(async () => {
+    // Inside the skipped describe so a non-live run leaves the process-wide ports alone.
+    installOdooLiveProofHostPorts()
     const result = await connect({
       serverUrl: process.env.ODOO_PROOF_URL as string,
       database: process.env.ODOO_PROOF_DB as string,
