@@ -53,7 +53,9 @@ function odooPresetLabel(preset: OdooTicketFilter): string {
   return getOdooPresets().find((entry) => entry.id === preset)?.label ?? preset
 }
 
-export function TaskPageOdooPanel({ onHide }: { onHide?: () => void }): React.JSX.Element {
+export type TaskPageOdooPanelProps = { onHide?: () => void }
+
+export function TaskPageOdooPanel({ onHide }: TaskPageOdooPanelProps): React.JSX.Element {
   const odooStatus = useAppStore((s) => s.odooStatus)
   const odooStatusChecked = useAppStore((s) => s.odooStatusChecked)
   const checkOdooConnection = useAppStore((s) => s.checkOdooConnection)

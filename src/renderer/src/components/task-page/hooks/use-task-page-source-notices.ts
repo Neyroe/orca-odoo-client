@@ -37,6 +37,7 @@ export function useTaskPageSourceNotices({
   taskSourceHostAvailability,
   selectedLinearWorkspace,
   selectedJiraSite,
+  odooInstanceName,
   sourceOptions
 }: {
   taskSource: TaskProvider
@@ -56,6 +57,7 @@ export function useTaskPageSourceNotices({
   taskSourceHostAvailability: TaskSourceHostAvailability[]
   selectedLinearWorkspace: LinearWorkspace | null
   selectedJiraSite: JiraSite | null
+  odooInstanceName: string | null
   sourceOptions: SourceOption[]
 }) {
   const taskSourceAvailabilityNoticeByProvider = useMemo<
@@ -153,7 +155,8 @@ export function useTaskPageSourceNotices({
       selectedRepoCount: selectedRepos.length,
       linearWorkspaceName:
         selectedLinearWorkspace?.organizationName ?? selectedLinearWorkspace?.id ?? null,
-      jiraSiteName: selectedJiraSite?.displayName ?? selectedJiraSite?.siteUrl ?? null
+      jiraSiteName: selectedJiraSite?.displayName ?? selectedJiraSite?.siteUrl ?? null,
+      odooInstanceName
     })
   }, [
     selectedJiraSite,
@@ -164,6 +167,7 @@ export function useTaskPageSourceNotices({
     accountBackedTaskSourceHostAvailability,
     accountBackedTaskSourceHostId,
     hostLabelById,
+    odooInstanceName,
     taskSourceHostAvailability,
     taskSourceRepoContexts
   ])

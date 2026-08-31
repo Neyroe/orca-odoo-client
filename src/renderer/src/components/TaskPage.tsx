@@ -89,6 +89,7 @@ import type { NewLinearIssueDialogProps } from '@/components/task-page/dialogs/n
 import type { NewJiraIssueDialogProps } from '@/components/task-page/dialogs/new-jira-issue-dialog'
 import type { TaskPageConnectDialogsProps } from '@/components/task-page/dialogs/task-page-connect-dialogs'
 import type { LinearViewsHostProps } from '@/components/task-page/linear/linear-views-host'
+import type { TaskPageOdooPanelProps } from '@/components/task-page-odoo-panel'
 import { useTaskPageStoreBindings } from '@/components/task-page/hooks/use-task-page-store-bindings'
 import { useTaskPageRepoSelection } from '@/components/task-page/source/use-task-page-repo-selection'
 import { useTaskPageAccountScopes } from '@/components/task-page/hooks/use-task-page-account-scopes'
@@ -256,7 +257,6 @@ export default function TaskPage(): React.JSX.Element {
     taskSourceRepoContexts,
     hostRegistryById,
     hostLabelById,
-    odooInstanceName,
     getTaskPickerRepoHostLabel
   } = useTaskPageRuntimePreflight({
     taskSource,
@@ -293,6 +293,20 @@ export default function TaskPage(): React.JSX.Element {
     selectedJiraSite,
     selectedJiraSiteId
   })
+  const odooStatus = useAppStore((s) => s.odooStatus)
+  // Why: Odoo is account-backed, so the source label names the connected
+  // instance; 'all' only reads as a span when more than one is connected.
+  const odooInstanceName = useMemo(() => {
+    const instances = odooStatus.instances ?? []
+    const selected = odooStatus.selectedInstanceId ?? odooStatus.activeInstanceId ?? null
+    if (selected === 'all') {
+      return instances.length > 1
+        ? translate('auto.components.task.page.odoo.allInstances', 'All instances')
+        : null
+    }
+    const match = instances.find((instance) => instance.id === selected)
+    return match?.database ?? match?.displayName ?? odooStatus.viewer?.login ?? null
+  }, [odooStatus])
   const {
     taskSourceAvailabilityNoticeByProvider,
     taskSourceContextSummary,
@@ -313,6 +327,7 @@ export default function TaskPage(): React.JSX.Element {
     taskSourceHostAvailability,
     selectedLinearWorkspace,
     selectedJiraSite,
+    odooInstanceName,
     sourceOptions
   })
   const {
@@ -466,10 +481,6 @@ export default function TaskPage(): React.JSX.Element {
     githubListScrollTopRef,
     pendingGithubScrollRestoreRef
   ])
-    const selected = odooStatus.selectedInstanceId ?? odooStatus.activeInstanceId ?? null
-    const instances = odooStatus.instances ?? []
-  const odooInstanceName = useMemo(() => {
-  const odooStatus = useAppStore((s) => s.odooStatus)
 
   useEffect(
     () => () => {
@@ -485,8 +496,6 @@ export default function TaskPage(): React.JSX.Element {
     },
     []
   )
-            <TaskPageOdooPanel onHide={() => hideTaskSource('odoo', 'Odoo')} />
-          ) : taskSource === 'odoo' ? (
 
   // Why: keyed on selectedReposKey, not the selectedRepos array — a background
   // repos:changed refresh mid-flight would otherwise bump the generation and
@@ -2554,6 +2563,8 @@ export default function TaskPage(): React.JSX.Element {
     hasGitLabDetail: Boolean(gitlabDialogItem),
     hasJiraDetail: Boolean(selectedJiraIssue),
     // Odoo's detail is a Sheet overlay that slides over the list instead of
+    // replacing it, so the list chrome stays visible and is never hidden.
+    hasOdooDetail: false,
     hasLinearIssueDetail: Boolean(selectedLinearIssue),
     hasLinearProjectContext: Boolean(selectedLinearProject),
     hasLinearViewContext: Boolean(selectedLinearCustomView)
@@ -3062,6 +3073,9 @@ export default function TaskPage(): React.JSX.Element {
     submitShortcutLabel,
     hasMissingJiraCreateField
   }
+  const odooPanel: TaskPageOdooPanelProps = {
+    onHide: () => hideTaskSource('odoo', 'Odoo')
+  }
   const connectDialogs: TaskPageConnectDialogsProps = {
     gitlabDialogItem,
     gitlabDialogRepo,
@@ -3098,6 +3112,7 @@ export default function TaskPage(): React.JSX.Element {
       primaryRepo={primaryRepo}
       gitlabList={gitlabList}
       jiraList={jiraList}
+      odooPanel={odooPanel}
       linearViews={linearViews}
       newGithubIssue={newGithubIssue}
       newLinearProject={newLinearProject}
