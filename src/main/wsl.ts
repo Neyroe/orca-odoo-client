@@ -7,8 +7,14 @@ import {
   _setWslAvailabilityCacheForTests,
   dropStaleWslAvailabilityFailure
 } from './wsl-availability'
+import {
+  _resetRunningWslDistroCacheForTests,
+  resolveRunningWslDistros
+} from './wsl-running-distro-cache'
 
-export { toWindowsWslPath } from '../shared/wsl-paths'
+// Why re-exported rather than defined here: the relay bundle needs the path
+// conversion without this module's distro-probing subprocess graph.
+export { toLinuxPath, toWindowsWslPath } from '../shared/wsl-paths'
 export {
   getCachedWslAvailability,
   hasCachedWslAvailability,
@@ -28,7 +34,7 @@ function getWslDirectoryProbeArgs(info: WslPathInfo): string[] {
   return [
     '-d',
     info.distro,
-    '--',
+    '--exec',
     'sh',
     '-c',
     `if [ -d "$1" ]; then printf ${WSL_DIRECTORY_EXISTS_MARKER}; else printf ${WSL_DIRECTORY_MISSING_MARKER}; fi`,
@@ -117,34 +123,10 @@ export function wslUncDirectoryExistsAsync(uncPath: string): Promise<boolean | n
   })
 }
 
-/**
- * Convert a Windows path to a Linux path for commands that will execute inside WSL.
- * Returns the path unchanged if it is already POSIX-style.
- *
- * Why: WSL hook/setup environments may need both the worktree UNC path
- * (\\wsl.localhost\...) and regular Windows install paths (C:\Users\...)
- * translated before passing them to bash. Leaving drive paths untouched
- * breaks scripts that read ORCA_ROOT_PATH or similar env vars inside WSL.
- */
-export function toLinuxPath(windowsPath: string): string {
-  const info = parseWslPath(windowsPath)
-  if (info) {
-    return info.linuxPath
-  }
-
-  const driveMatch = windowsPath.match(/^([A-Za-z]):[/\\](.*)$/)
-  if (!driveMatch) {
-    return windowsPath
-  }
-
-  const driveLetter = driveMatch[1].toLowerCase()
-  const rest = driveMatch[2].replace(/\\/g, '/')
-  return `/mnt/${driveLetter}/${rest}`
-}
-
 // ─── WSL home directory resolution ──────────────────────────────────
 
 const wslHomeCache = new Map<string, string>()
+const wslHomeProbeCache = new Map<string, Promise<string | null>>()
 let wslDistroCache: string[] | null = null
 // Why: a wsl.exe failure must stay retryable (a transient error would
 // otherwise hide every distro until restart), but repeated failures cannot
@@ -254,6 +236,20 @@ export async function listWslDistrosAsync(): Promise<string[]> {
   }
 }
 
+/** Running user distros only — see `resolveRunningWslDistros` for the fallback/backoff and
+ *  single-flight contract shared by every caller. */
+export async function listRunningWslDistrosAsync(): Promise<string[]> {
+  if (process.platform !== 'win32') {
+    return []
+  }
+  return resolveRunningWslDistros(() =>
+    execFileUtf8('wsl.exe', ['--list', '--running', '--quiet'], {
+      ...process.env,
+      WSL_UTF8: '1'
+    }).then((output) => filterUserWslDistros(parseWslDistros(output)))
+  )
+}
+
 export function hasCachedWslDistros(): boolean {
   return wslDistroCache !== null
 }
@@ -285,7 +281,7 @@ export function getWslHome(distro: string): string | null {
   }
 
   try {
-    const home = execFileSync('wsl.exe', ['-d', distro, '--', 'bash', '-c', 'echo $HOME'], {
+    const home = execFileSync('wsl.exe', ['-d', distro, '--exec', 'bash', '-c', 'echo $HOME'], {
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
       timeout: 5000
@@ -303,35 +299,58 @@ export function getWslHome(distro: string): string | null {
   }
 }
 
+/** Pure cache lookup — never probes. Lets callers that memoize a derived value avoid caching one
+ *  built from the unresolved fallback, since only the success path is cached above. */
+export function hasCachedWslHome(distro: string): boolean {
+  return wslHomeCache.has(distro)
+}
+
 export async function getWslHomeAsync(distro: string): Promise<string | null> {
   if (wslHomeCache.has(distro)) {
     return wslHomeCache.get(distro)!
   }
-
-  try {
-    const home = (
-      await execFileUtf8('wsl.exe', ['-d', distro, '--', 'bash', '-c', 'echo $HOME'])
-    ).trim()
-
-    if (!home || !home.startsWith('/')) {
-      return null
-    }
-
-    const uncPath = toWindowsWslPath(home, distro)
-    wslHomeCache.set(distro, uncPath)
-    return uncPath
-  } catch {
-    return null
+  const inflight = wslHomeProbeCache.get(distro)
+  if (inflight) {
+    return inflight
   }
+
+  const probe = execFileUtf8('wsl.exe', ['-d', distro, '--exec', 'bash', '-c', 'echo $HOME'])
+    .then((output) => {
+      const home = output.trim()
+      if (!home || !home.startsWith('/')) {
+        return null
+      }
+      const uncPath = toWindowsWslPath(home, distro)
+      wslHomeCache.set(distro, uncPath)
+      return uncPath
+    })
+    .catch(() => null)
+    .finally(() => {
+      if (wslHomeProbeCache.get(distro) === probe) {
+        wslHomeProbeCache.delete(distro)
+      }
+    })
+  wslHomeProbeCache.set(distro, probe)
+  return probe
+}
+
+/** UNC home roots for distros that are running at discovery time. */
+export async function listRunningWslHomeDirsAsync(): Promise<string[]> {
+  const homes = await Promise.all(
+    (await listRunningWslDistrosAsync()).map((distro) => getWslHomeAsync(distro))
+  )
+  return homes.filter((home): home is string => Boolean(home))
 }
 
 export function _resetWslCachesForTests(): void {
   wslHomeCache.clear()
+  wslHomeProbeCache.clear()
   wslDistroCache = null
   wslDistroListRetryAfterMs = 0
   wslDistroListEmptyStreak = 0
   wslDistroProbeSequence = 0
   wslDistroCacheSequence = 0
+  _resetRunningWslDistroCacheForTests()
   _resetWslAvailabilityCacheForTests()
 }
 
@@ -356,12 +375,12 @@ export function _setWslCachesForTests(args: {
   }
 }
 
-function execFileUtf8(command: string, args: string[]): Promise<string> {
+function execFileUtf8(command: string, args: string[], env?: NodeJS.ProcessEnv): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(
       command,
       args,
-      { encoding: 'utf-8', timeout: 5000, windowsHide: true },
+      { encoding: 'utf-8', env, timeout: 5000, windowsHide: true },
       (error, stdout) => {
         if (error) {
           reject(error)

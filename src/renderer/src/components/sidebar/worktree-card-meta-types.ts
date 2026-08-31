@@ -1,4 +1,3 @@
-import type { ExecutionHostId } from '../../../../shared/execution-host'
 import type { IssueInfo } from '../../../../shared/github/pull-request-types'
 import type {
   AutomationWorkspaceProvenance,
@@ -59,7 +58,6 @@ export type WorktreeCardDetailsHoverProps = WorktreeCardMetaBadgesProps & {
   workspaceTitle?: string
   identityOrder?: 'workspace-first' | 'branch-first'
   workspaceTitleRenameDisabled?: boolean
-  automationHostId?: ExecutionHostId
   detailsAfter?: React.ReactNode
   openDelay?: number
   closeDelay?: number
@@ -68,9 +66,11 @@ export type WorktreeCardDetailsHoverProps = WorktreeCardMetaBadgesProps & {
   onEditIssue?: (event: React.MouseEvent) => void
   onEditComment?: (event: React.MouseEvent) => void
   onOpenGitHubIssueInOrca?: (event: React.MouseEvent) => void
+  onOpenIssueInBrowser?: (url: string) => void
   onOpenLinearIssueInOrca?: (event: React.MouseEvent) => void
   onOpenOdooTicketInOrca?: (event: React.MouseEvent) => void
   onOpenReviewInOrca?: (event: React.MouseEvent) => void
+  onOpenReviewInBrowser?: (url: string) => void
   onUnlinkReview?: () => void
   onOpenAutomation?: (event: React.MouseEvent) => void
   onOpenAutomationRun?: (event: React.MouseEvent) => void

@@ -1,10 +1,7 @@
 import { branchName } from '@/lib/git-utils'
 import { getHostedReviewCacheKey } from '@/store/slices/hosted-review-cache-identity'
 import type { AppState } from '@/store/types'
-import type {
-  DashboardCardOdooTicket,
-  DashboardCardReview
-} from '../../../../shared/dashboard-snapshot'
+import type { DashboardCardReview } from '../../../../shared/dashboard-snapshot'
 import { hostedReviewInfoFromGitHubPRInfo } from '../../../../shared/hosted-review-github'
 import { isPositiveHostedReviewNumber } from '../../../../shared/hosted-review'
 import type { Repo } from '../../../../shared/repo-types'
@@ -29,30 +26,7 @@ export type DashboardCardContext = {
   review?: DashboardCardReview
   odooTicket?: DashboardCardOdooTicket
 }
-
-/**
- * `linkedWorkItem` caches the ticket's title/URL, but a link made without it
- * (or displaced by another provider) still leaves `linkedOdooTicket` set — so
- * the id alone is enough to badge the card.
- */
-export function resolveDashboardCardOdooTicket(
-  worktree: Worktree
-): DashboardCardOdooTicket | undefined {
-  const cached = worktree.linkedWorkItem?.provider === 'odoo' ? worktree.linkedWorkItem : undefined
-  const id = worktree.linkedOdooTicket ?? cached?.number ?? null
-  if (id === null || !Number.isFinite(id) || id <= 0) {
-    return undefined
-  }
   const instanceId = worktree.linkedOdooInstanceId ?? cached?.odooInstanceId ?? undefined
-  // Only trust the cached title/URL when it actually describes this ticket.
-  const describesLinked = cached?.number === id
-  return {
-    id,
-    ...(describesLinked && cached?.title ? { title: cached.title } : {}),
-    ...(describesLinked && cached?.url ? { url: cached.url } : {}),
-    ...(instanceId ? { instanceId } : {})
-  }
-}
 
 function hasLinkedReview(worktree: Worktree): boolean {
   return [
@@ -68,6 +42,9 @@ function resolveReview(
   state: DashboardCardContextState,
   repo: Repo | null,
   worktree: Worktree
+  const id = worktree.linkedOdooTicket ?? cached?.number ?? null
+  const cached = worktree.linkedWorkItem?.provider === 'odoo' ? worktree.linkedWorkItem : undefined
+): DashboardCardOdooTicket | undefined {
 ): DashboardCardReview | undefined {
   if (!repo || !state.hostedReviewCache || !state.prCache || repo.kind === 'folder') {
     return undefined
@@ -114,31 +91,11 @@ export function resolveDashboardCardContext(
       ? state.workspaceStatuses
       : DEFAULT_WORKSPACE_STATUSES
   const workspaceStatusId = getWorkspaceStatus(worktree, statuses)
+  const review = resolveReview(state, repo, worktree)
   return {
     workspaceStatus:
       statuses.find((status) => status.id === workspaceStatusId) ?? DEFAULT_WORKSPACE_STATUSES[0],
-    review: resolveReview(state, repo, worktree),
-    hasReview: hasLinkedReview(worktree),
-    odooTicket: resolveDashboardCardOdooTicket(worktree)
-  }
-}
-
-/** The snapshot fields a card context contributes; shared by the workspace and
- *  agent rows so the two stay in step. */
-export function dashboardCardContextFields(context: DashboardCardContext | undefined): {
-  workspaceStatusId: string | undefined
-  workspaceStatusLabel: string | undefined
-  workspaceStatusColor: string | undefined
-  hasReview: boolean | undefined
-  review: DashboardCardContext['review'] | undefined
-  odooTicket: DashboardCardContext['odooTicket'] | undefined
-} {
-  return {
-    workspaceStatusId: context?.workspaceStatus.id,
-    workspaceStatusLabel: context?.workspaceStatus.label,
-    workspaceStatusColor: context?.workspaceStatus.color,
-    hasReview: context?.hasReview,
-    review: context?.review,
-    odooTicket: context?.odooTicket
+    review,
+    hasReview: hasLinkedReview(worktree) || review !== undefined
   }
 }

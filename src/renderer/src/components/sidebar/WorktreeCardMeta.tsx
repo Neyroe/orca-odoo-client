@@ -64,7 +64,6 @@ export function WorktreeCardDetailsHover({
   workspaceTitle,
   identityOrder = 'workspace-first',
   workspaceTitleRenameDisabled = false,
-  automationHostId,
   detailsAfter,
   openDelay = 250,
   closeDelay = 120,
@@ -73,9 +72,11 @@ export function WorktreeCardDetailsHover({
   onEditIssue,
   onEditComment,
   onOpenGitHubIssueInOrca,
+  onOpenIssueInBrowser,
   onOpenLinearIssueInOrca,
   onOpenOdooTicketInOrca,
   onOpenReviewInOrca,
+  onOpenReviewInBrowser,
   onUnlinkReview,
   onOpenAutomation,
   onOpenAutomationRun,
@@ -217,6 +218,14 @@ export function WorktreeCardDetailsHover({
             onOpenGitHubIssueInOrca={
               onOpenGitHubIssueInOrca ? dismissAndRun(onOpenGitHubIssueInOrca) : undefined
             }
+            onOpenIssueInBrowser={
+              onOpenIssueInBrowser && issue?.url
+                ? (url: string) => {
+                    closeHover()
+                    onOpenIssueInBrowser(url)
+                  }
+                : undefined
+            }
           />
 
           <WorktreeCardLinearDetailSection
@@ -267,6 +276,9 @@ export function WorktreeCardDetailsHover({
             reviewMenuOpen={reviewMenuOpen}
             onReviewMenuOpenChange={handleReviewMenuOpenChange}
             onOpenReviewInOrca={onOpenReviewInOrca}
+            onOpenReviewInBrowser={
+              onOpenReviewInBrowser && review?.url ? onOpenReviewInBrowser : undefined
+            }
             onCopyReviewLink={review?.url ? handleCopyReviewLink : undefined}
             onUnlinkReview={onUnlinkReview}
             closeHover={closeHover}
@@ -275,7 +287,6 @@ export function WorktreeCardDetailsHover({
           {automationProvenance && (
             <WorktreeCardAutomationDetailSection
               provenance={automationProvenance}
-              worktreeHostId={automationHostId}
               onOpenAutomation={onOpenAutomation ? dismissAndRun(onOpenAutomation) : undefined}
               onOpenAutomationRun={
                 onOpenAutomationRun ? dismissAndRun(onOpenAutomationRun) : undefined

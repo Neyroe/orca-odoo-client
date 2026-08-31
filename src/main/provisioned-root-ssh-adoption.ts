@@ -15,7 +15,7 @@ import {
 } from '../shared/ephemeral-vm-recipes'
 import { listEphemeralVmRuntimes } from '../shared/ephemeral-vm-runtime-store'
 import type { EphemeralVmRuntimeRecord } from '../shared/ephemeral-vm-runtimes'
-import { getProjectHostSetupWorktreeMeta } from '../shared/project-host-setup-projection'
+import { getProjectHostSetupWorktreeMeta } from '../shared/project-host-setup-lookup'
 import { isTuiAgent } from '../shared/tui-agent-config'
 import { getSshGitProvider } from './providers/ssh-git-dispatch'
 import {
@@ -89,6 +89,16 @@ export async function adoptProvisionedRootSshCheckout(args: {
   }
   if (gitWorktree.isSparse || sparseCheckoutEnabled) {
     throw new Error('Provisioned-root recipes cannot adopt a sparse checkout.')
+  }
+  const requestedBranch = request.branchNameOverride ?? request.name
+  if (gitWorktree.branch !== `refs/heads/${requestedBranch}`) {
+    throw new Error("The recipe projectRoot is not checked out on Orca's requested branch.")
+  }
+  if (request.baseBranch && !request.expectedRefHead) {
+    throw new Error('The requested provisioned-root ref identity is missing.')
+  }
+  if (request.expectedRefHead && gitWorktree.head !== request.expectedRefHead) {
+    throw new Error("The recipe projectRoot was not created from Orca's requested ref.")
   }
 
   const worktreeId = `${repo.id}::${gitWorktree.path}`
@@ -188,6 +198,12 @@ function buildProvisionedRootMeta(
       ? { linkedAzureDevOpsPR: args.linkedAzureDevOpsPR }
       : {}),
     ...(args.linkedGiteaPR !== undefined ? { linkedGiteaPR: args.linkedGiteaPR } : {}),
+    // Odoo needs its own pair: the stage sync and the sidebar card read the
+    // ticket id + instance rather than `linkedWorkItem`.
+    ...(args.linkedOdooTicket !== undefined ? { linkedOdooTicket: args.linkedOdooTicket } : {}),
+    ...(args.linkedOdooInstanceId !== undefined
+      ? { linkedOdooInstanceId: args.linkedOdooInstanceId }
+      : {}),
     ...(args.linkedWorkItem !== undefined ? { linkedWorkItem: args.linkedWorkItem } : {}),
     ...(args.linkedTaskSourceContext !== undefined
       ? { linkedTaskSourceContext: args.linkedTaskSourceContext }

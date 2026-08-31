@@ -3,9 +3,11 @@ import type { WorktreeMeta } from '../../../../shared/worktree/meta-types'
 import {
   buildOdooTicketMetaUpdate,
   buildWorktreeMetaUpdates,
+  parseGitLabMergeRequestNumberForMetaField,
   type WorktreeMetaDraft,
   type WorktreeMetaLiveLinks,
-  type WorktreeMetaSnapshot
+  type WorktreeMetaSnapshot,
+  type WorktreeReviewProvider
 } from './worktree-meta-updates'
 
 function makeDraft(overrides: Partial<WorktreeMetaDraft> = {}): WorktreeMetaDraft {
@@ -13,7 +15,7 @@ function makeDraft(overrides: Partial<WorktreeMetaDraft> = {}): WorktreeMetaDraf
     displayNameInput: 'Workspace',
     issueInput: '',
     issueProvider: 'github',
-    prInput: '',
+    reviewInput: '',
     commentInput: '',
     ...overrides
   }
@@ -25,6 +27,7 @@ function makeSnapshot(overrides: Partial<WorktreeMetaSnapshot> = {}): WorktreeMe
     comment: '',
     issueInput: '',
     issueProvider: 'github',
+    prInput: '',
     odooInput: '',
     ...overrides
   }
@@ -35,9 +38,15 @@ function makeSnapshot(overrides: Partial<WorktreeMetaSnapshot> = {}): WorktreeMe
 function buildUpdates(
   draft: Partial<WorktreeMetaDraft>,
   snapshot: Partial<WorktreeMetaSnapshot> = {},
-  live: WorktreeMetaLiveLinks = {}
+  live: WorktreeMetaLiveLinks = {},
+  reviewProvider: WorktreeReviewProvider = 'github'
 ): Partial<WorktreeMeta> {
-  const updates = buildWorktreeMetaUpdates(makeDraft(draft), makeSnapshot(snapshot), live)
+  const updates = buildWorktreeMetaUpdates(
+    makeDraft(draft),
+    makeSnapshot(snapshot),
+    live,
+    reviewProvider
+  )
   const undefinedKeys = Object.keys(updates).filter(
     (key) => updates[key as keyof WorktreeMeta] === undefined
   )
@@ -52,6 +61,33 @@ const LINEAR_LINK_KEYS = [
 ] as const
 
 describe('buildWorktreeMetaUpdates', () => {
+  it('writes only the GitLab MR slot in GitLab mode', () => {
+    expect(buildUpdates({ reviewInput: '!42' }, {}, {}, 'gitlab')).toEqual({
+      linkedGitLabMR: 42
+    })
+    expect(buildUpdates({ reviewInput: '' }, {}, {}, 'gitlab')).toEqual({ linkedGitLabMR: null })
+  })
+
+  it('accepts only positive MR references for the GitLab review row', () => {
+    expect(parseGitLabMergeRequestNumberForMetaField('42')).toBe(42)
+    expect(parseGitLabMergeRequestNumberForMetaField('!42')).toBe(42)
+    expect(
+      parseGitLabMergeRequestNumberForMetaField(
+        'https://gitlab.example.com/group/project/-/merge_requests/42'
+      )
+    ).toBe(42)
+    for (const invalid of [
+      '#42',
+      '0',
+      '!0',
+      '9007199254740992',
+      'https://gitlab.example.com/group/project/-/issues/42',
+      'https://gitlab.example.com/group/project/-/work_items/42',
+      'ftp://gitlab.example.com/group/project/-/merge_requests/42'
+    ]) {
+      expect(parseGitLabMergeRequestNumberForMetaField(invalid)).toBeNull()
+    }
+  })
   // The dialog opens focused on Comment, so this is the common save path; a
   // regression here silently destroys the user's existing link.
   it('emits no link keys when the issue field is untouched', () => {
@@ -61,7 +97,7 @@ describe('buildWorktreeMetaUpdates', () => {
     )
 
     expect(updates.comment).toBe('shipping today')
-    expect(updates).toHaveProperty('linkedPR', null)
+    expect(updates).not.toHaveProperty('linkedPR')
     expect(updates).not.toHaveProperty('linkedIssue')
     for (const key of LINEAR_LINK_KEYS) {
       expect(updates).not.toHaveProperty(key)
@@ -73,8 +109,7 @@ describe('buildWorktreeMetaUpdates', () => {
       linkedIssue: 12,
       linkedLinearIssue: null,
       linkedLinearIssueWorkspaceId: null,
-      linkedLinearIssueOrganizationUrlKey: null,
-      linkedPR: null
+      linkedLinearIssueOrganizationUrlKey: null
     })
   })
 
@@ -83,7 +118,7 @@ describe('buildWorktreeMetaUpdates', () => {
   it('emits no Linear clear when the workspace holds no Linear link', () => {
     const updates = buildUpdates({ issueInput: '12' })
 
-    expect(updates).toEqual({ linkedIssue: 12, linkedPR: null })
+    expect(updates).toEqual({ linkedIssue: 12 })
     for (const key of LINEAR_LINK_KEYS) {
       expect(updates).not.toHaveProperty(key)
     }
@@ -94,8 +129,7 @@ describe('buildWorktreeMetaUpdates', () => {
       linkedIssue: null,
       linkedLinearIssue: 'STA-335',
       linkedLinearIssueWorkspaceId: null,
-      linkedLinearIssueOrganizationUrlKey: null,
-      linkedPR: null
+      linkedLinearIssueOrganizationUrlKey: null
     })
   })
 
@@ -109,8 +143,7 @@ describe('buildWorktreeMetaUpdates', () => {
       linkedIssue: null,
       linkedLinearIssue: 'STA-335',
       linkedLinearIssueWorkspaceId: null,
-      linkedLinearIssueOrganizationUrlKey: 'acme',
-      linkedPR: null
+      linkedLinearIssueOrganizationUrlKey: 'acme'
     })
   })
 
@@ -125,8 +158,7 @@ describe('buildWorktreeMetaUpdates', () => {
       linkedIssue: null,
       linkedLinearIssue: null,
       linkedLinearIssueWorkspaceId: null,
-      linkedLinearIssueOrganizationUrlKey: null,
-      linkedPR: null
+      linkedLinearIssueOrganizationUrlKey: null
     })
   })
 
@@ -192,7 +224,7 @@ describe('buildWorktreeMetaUpdates', () => {
       { linkedIssue: 42, linkedWorkItemProvider: 'github', linkedWorkItemType: 'issue' }
     )
 
-    expect(updates).toEqual({ linkedPR: null })
+    expect(updates).toEqual({})
   })
 
   it('emits nothing when a Linear identifier is respelled in lower case', () => {
@@ -202,7 +234,7 @@ describe('buildWorktreeMetaUpdates', () => {
       { linkedLinearIssue: 'STA-335' }
     )
 
-    expect(updates).toEqual({ linkedPR: null })
+    expect(updates).toEqual({})
   })
 
   it('emits nothing when a Linear identifier is respelled as its stored URL', () => {
@@ -216,7 +248,7 @@ describe('buildWorktreeMetaUpdates', () => {
       { linkedLinearIssue: 'STA-335' }
     )
 
-    expect(updates).toEqual({ linkedPR: null })
+    expect(updates).toEqual({})
   })
 
   // The URL adds the org key the stored link lacked, which is worth persisting —
@@ -307,8 +339,7 @@ describe('buildWorktreeMetaUpdates', () => {
 
     expect(updates).toEqual({
       comment: 'note',
-      displayName: 'Renamed',
-      linkedPR: null
+      displayName: 'Renamed'
     })
   })
 
@@ -319,12 +350,31 @@ describe('buildWorktreeMetaUpdates', () => {
   })
 
   it('rejects issue URLs in the PR input', () => {
-    expect(buildUpdates({ prInput: 'https://github.com/stablyai/orca/issues/6933' })).toEqual({})
+    expect(buildUpdates({ reviewInput: 'https://github.com/stablyai/orca/issues/6933' })).toEqual(
+      {}
+    )
   })
 
   it('accepts PR URLs in the PR input', () => {
-    expect(buildUpdates({ prInput: 'https://github.com/stablyai/orca/pull/6934' })).toEqual({
+    expect(buildUpdates({ reviewInput: 'https://github.com/stablyai/orca/pull/6934' })).toEqual({
       linkedPR: 6934
+    })
+  })
+
+  it('records suppression when the user clears an explicit PR link', () => {
+    expect(buildUpdates({ reviewInput: '' }, { prInput: '6934' }, { linkedPR: 6934 })).toEqual({
+      linkedPR: null,
+      suppressedGitHubPR: 6934
+    })
+  })
+
+  it('does not invent suppression for an already-unlinked PR field', () => {
+    expect(buildUpdates({ reviewInput: '' }, {}, { linkedPR: null })).toEqual({})
+  })
+
+  it('does not suppress a PR linked in the background when the PR field is untouched', () => {
+    expect(buildUpdates({ commentInput: 'note' }, {}, { linkedPR: 6934 })).toEqual({
+      comment: 'note'
     })
   })
 
@@ -339,15 +389,12 @@ describe('buildWorktreeMetaUpdates', () => {
       linkedIssue: 6933,
       linkedLinearIssue: null,
       linkedLinearIssueWorkspaceId: null,
-      linkedLinearIssueOrganizationUrlKey: null,
-      linkedPR: null
+      linkedLinearIssueOrganizationUrlKey: null
     })
   })
 
   it('rejects PR URLs in the issue input', () => {
-    expect(buildUpdates({ issueInput: 'https://github.com/stablyai/orca/pull/6934' })).toEqual({
-      linkedPR: null
-    })
+    expect(buildUpdates({ issueInput: 'https://github.com/stablyai/orca/pull/6934' })).toEqual({})
   })
 
   // Persistence stamps lastActivityAt on any comment write, so re-emitting an
