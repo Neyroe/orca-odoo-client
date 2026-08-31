@@ -26,19 +26,18 @@ vi.mock('electron', () => ({
   }
 }))
 
-import { connect, getClients } from './client'
-import { getTicket } from './tickets'
-import { WorktreeCreate } from '../runtime/rpc/methods/worktree-schemas'
-import { bindTaskPageOdooItemSourceContext } from '../../renderer/src/components/task-page-odoo-item-source-context'
-import { TaskSourceContextSchema } from '../../shared/task-source-context-schema'
+import { connect, getClients } from '../../../main/odoo/client'
+import { getTicket } from '../../../main/odoo/tickets'
+import { bindTaskPageOdooItemSourceContext } from './task-page-odoo-item-source-context'
+import { TaskSourceContextSchema } from '../../../shared/task-source-context-schema'
 import {
   areWorkspaceLinkedItemsEqual,
   normalizeWorkspaceLinkedItem
-} from '../../shared/workspace-linked-item'
-import { WorkspaceLinkedItemSchema } from '../../shared/workspace-linked-item-schema'
-import { isWorkspaceLinkedItemSourceContextMatch } from '../../shared/workspace-linked-item-source-context'
-import type { OdooInstance } from '../../shared/odoo-types'
-import type { WorkspaceLinkedItem } from '../../shared/worktree/types'
+} from '../../../shared/workspace-linked-item'
+import { WorkspaceLinkedItemSchema } from '../../../shared/workspace-linked-item-schema'
+import { isWorkspaceLinkedItemSourceContextMatch } from '../../../shared/workspace-linked-item-source-context'
+import type { OdooInstance } from '../../../shared/odoo-types'
+import type { WorkspaceLinkedItem } from '../../../shared/worktree/types'
 
 const CHILD_TICKET_ID = Number(process.env.ODOO_PROOF_CHILD_TICKET ?? '80')
 
@@ -120,21 +119,8 @@ describe.skipIf(!LIVE)('Odoo start-workspace linked item', () => {
         isWorkspaceLinkedItemSourceContextMatch(parsedItem.data, parsedContext.data)
     ).toBe(true)
 
-    // Gate 3 — the same create over RPC, which remote and CLI clients take.
-    const parsedCreate = WorktreeCreate.safeParse({
-      repo: 'odoo-proof-repo',
-      name: `ticket-${ticket.id}`,
-      linkedWorkItem,
-      linkedTaskSourceContext: taskSourceContext,
-      telemetrySource: 'sidebar'
-    })
-    expect(
-      parsedCreate.success,
-      parsedCreate.success ? '' : JSON.stringify(parsedCreate.error.issues)
-    ).toBe(true)
-    expect(parsedCreate.success && parsedCreate.data.linkedWorkItem?.odooInstanceId).toBe(
-      instance.id
-    )
+    // Gate 3 (the same create over RPC) lives in worktree-schemas.test.ts: the
+    // RPC schema graph is main-only and the web project must not import it.
 
     // The instance has to be load-bearing, or carrying it through proves nothing:
     // the same ticket number on another instance is a different work item.
@@ -156,7 +142,7 @@ describe.skipIf(!LIVE)('Odoo start-workspace linked item', () => {
         database: instance.database,
         instanceId: instance.id,
         ticket: { id: ticket.id, ref: ticket.ref, title: ticket.title, url: ticket.url },
-        parsedLinkedWorkItem: parsedCreate.success ? parsedCreate.data.linkedWorkItem : null,
+        parsedLinkedWorkItem: parsedItem.success ? parsedItem.data : null,
         sourceContextProvider: parsedContext.success ? parsedContext.data.provider : null
       })
     )
