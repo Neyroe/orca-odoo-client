@@ -43,6 +43,8 @@ export const WorktreeCreate = z
     linkedGiteaPR: TriStateLinkedIssue,
     linkedWorkItem: WorkspaceLinkedItemSchema.nullable().optional(),
     linkedTaskSourceContext: TaskSourceContextSchema.nullable().optional(),
+    linkedOdooTicket: z.number().int().positive().nullable().optional(),
+    linkedOdooInstanceId: z.string().nullable().optional(),
     comment: OptionalString,
     displayName: OptionalString,
     telemetrySource: z

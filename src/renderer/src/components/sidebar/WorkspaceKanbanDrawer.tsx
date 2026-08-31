@@ -65,7 +65,6 @@ function WorkspaceKanbanDrawerContent({
   const setSyncTaskStatusFromWorkspaceBoard = useAppStore(
     (s) => s.setSyncTaskStatusFromWorkspaceBoard
   )
-  const handleChangeStatusOdooStage = useCallback(
   const workspaceBoardColumnWidth = useAppStore((s) => s.workspaceBoardColumnWidth)
   const setWorkspaceBoardColumnWidth = useAppStore((s) => s.setWorkspaceBoardColumnWidth)
   const sortBy = useAppStore((s) => s.sortBy)
@@ -212,6 +211,24 @@ function WorkspaceKanbanDrawerContent({
     setWorkspaceStatuses,
     updateWorktreeMeta
   })
+  const handleChangeStatusOdooStage = useCallback(
+    (statusId: string, stageName: string) => {
+      const trimmed = stageName.trim()
+      setWorkspaceStatuses(
+        workspaceStatuses.map((status) => {
+          if (status.id !== statusId) {
+            return status
+          }
+          // Clearing the field removes the key entirely, so the column reads as
+          // "not mapped" rather than mapped to an empty stage name.
+          const { odooStageName: _dropped, ...rest } = status
+          return trimmed ? { ...rest, odooStageName: trimmed } : rest
+        })
+      )
+      useAppStore.getState().recordFeatureInteraction('workspace-board-actions')
+    },
+    [setWorkspaceStatuses, workspaceStatuses]
+  )
 
   useWorkspaceStatusDocumentDrop(
     boardRef,
@@ -266,6 +283,7 @@ function WorkspaceKanbanDrawerContent({
         syncTaskStatusFromWorkspaceBoard,
         onSyncTaskStatusFromWorkspaceBoardChange: setSyncTaskStatusFromWorkspaceBoard,
         onRenameStatus: handleRenameStatus,
+        onChangeStatusOdooStage: handleChangeStatusOdooStage,
         onChangeStatusColor: handleChangeStatusColor,
         onChangeStatusIcon: handleChangeStatusIcon,
         onMoveStatus: handleMoveStatus,
