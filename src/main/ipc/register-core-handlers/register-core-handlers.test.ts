@@ -135,8 +135,6 @@ const {
   registerEmulatorFrameStreamHandlersMock: vi.fn(),
   registerEmulatorVideoStreamHandlersMock: vi.fn()
 }))
-  registerOdooHandlers: registerOdooHandlersMock
-vi.mock('./odoo', () => ({
 
 vi.mock('electron', () => ({
   app: {
@@ -377,6 +375,10 @@ vi.mock('../jira', () => ({
 
 vi.mock('../bitbucket', () => ({
   registerBitbucketHandlers: registerBitbucketHandlersMock
+}))
+
+vi.mock('../odoo', () => ({
+  registerOdooHandlers: registerOdooHandlersMock
 }))
 
 vi.mock('../gitlab', () => ({
