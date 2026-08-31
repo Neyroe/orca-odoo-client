@@ -4,9 +4,6 @@ import type {
   WorkspaceStatus,
   WorkspaceStatusDefinition,
   Worktree
-import { getWorkspaceStatus, getWorkspaceStatusGroupKey } from '../workspace-status'
-import type { WorktreeMeta } from '../../../../../shared/worktree/meta-types'
-} from '../../../../../shared/worktree/types'
 } from '../../../../../../shared/worktree/types'
 import type { WorktreeMeta } from '../../../../../../shared/worktree/meta-types'
 import type { WorktreeMetaBatchUpdate } from '../../../../store/slices/worktree-helpers'
@@ -16,15 +13,9 @@ import {
   buildManualOrderUpdatesForVisibleGroups,
   shouldWriteManualOrderForGroupDrop,
   type WorktreeDragGroup
-  groups: readonly WorktreeDragGroup[],
-function buildRankByWorktreeId(
-import type { WorktreeStatusDropAtIndexArgs } from './virtualized-worktree-viewport-props'
-import type { SortBy } from '../smart-sort'
-import { useWorkspaceStatusProviderSync } from '../use-workspace-status-provider-sync'
-import { buildWorkspaceKanbanSidebarDropUpdates } from '../workspace-kanban-sidebar-drop'
-} from '../worktree-manual-order'
 } from '../../worktree-manual-order'
 import { buildWorkspaceKanbanSidebarDropUpdates } from '../../workspace-kanban-sidebar-drop'
+import { useWorkspaceStatusProviderSync } from '../../use-workspace-status-provider-sync'
 import type { SortBy } from '../../smart-sort'
 import type { WorktreeStatusDropAtIndexArgs } from './drop-commit-context'
 import type { WorktreeManualOrderCatalog } from '../../worktree-manual-order-catalog'
@@ -32,15 +23,10 @@ import type { WorktreeManualOrderCatalog } from '../../worktree-manual-order-cat
 // Every write a sidebar drop can make: status changes, pin, manual order, and the board lane drop.
 export function useWorktreeStatusMutations(args: {
   worktreeMap: Map<string, Worktree>
-    for (const worktreeId of group.worktreeIds) {
-  for (const group of groups) {
-  const rankByWorktreeId = new Map<string, number>()
-): Map<string, number> {
   manualOrderCatalog: WorktreeManualOrderCatalog
   workspaceStatuses: readonly WorkspaceStatusDefinition[]
   sortBy: SortBy
 }) {
-  const { worktreeMap, workspaceStatuses, sortBy } = args
   const { manualOrderCatalog, worktreeMap, workspaceStatuses, sortBy } = args
   const updateWorktreeMeta = useAppStore((s) => s.updateWorktreeMeta)
   const updateWorktreesMeta = useAppStore((s) => s.updateWorktreesMeta)
@@ -54,30 +40,17 @@ export function useWorktreeStatusMutations(args: {
       if (!current || getWorkspaceStatus(current, workspaceStatuses) === status) {
         return
       }
-      // Why: only switch to Manual after a real move so accidental click-drags don't change the sort.
-        if (Object.keys(update).length === 0) {
-      for (const [worktreeId, update] of Array.from(updates)) {
-        updates.set(worktreeId, next)
-      if (updates.size > 0) {
-        updates.set(worktreeId, { workspaceStatus: status })
-      void updateWorktreeMeta(worktreeId, { workspaceStatus: status })
-  return rankByWorktreeId
       void updateWorktreeMeta(
         worktreeId,
         { workspaceStatus: status },
         { executionHostId: current.hostId ?? 'local' }
       )
     },
-      setSortBy,
-    [
-    [setSortBy, updateWorktreesMeta, worktreeMap]
-    [setSortBy, updateWorktreesMeta, worktreeMap, workspaceStatuses]
     [updateWorktreeMeta, worktreeMap, workspaceStatuses]
   )
 
   const moveWorktreesToStatus = useCallback(
     (worktreeIds: readonly string[], status: WorkspaceStatus) => {
-      const updates = new Map<string, { workspaceStatus: WorkspaceStatus }>()
       const updates: WorktreeMetaBatchUpdate[] = []
       for (const worktreeId of worktreeIds) {
         const current = worktreeMap.get(worktreeId)
@@ -89,9 +62,6 @@ export function useWorktreeStatusMutations(args: {
           updates: { workspaceStatus: status },
           executionHostId: current.hostId ?? 'local'
         })
-      if (result.updates.size === 0) {
-      if (!result.changed) {
-      const updates = new Map<string, Partial<WorktreeMeta>>()
       }
       if (updates.length > 0) {
         void updateWorktreesMeta(updates)
@@ -108,8 +78,6 @@ export function useWorktreeStatusMutations(args: {
         draggedIds: dropArgs.worktreeIds,
         dropIndex: dropArgs.dropIndex,
         now: Date.now(),
-        rankByWorktreeId: buildRankByWorktreeId(reorderArgs.groups, worktreeMap)
-        rankByWorktreeId: buildRankByWorktreeId(dropArgs.groups, worktreeMap)
         rankByWorktreeId: manualOrderCatalog.rankByWorktreeId,
         allWorktreeIds: manualOrderCatalog.orderedIds
       })
@@ -130,7 +98,6 @@ export function useWorktreeStatusMutations(args: {
         })
       }
       for (const [worktreeId, manualOrder] of order.updates) {
-        updates.set(worktreeId, { ...updates.get(worktreeId), ...manualOrder })
         const entry = updates.get(worktreeId)
         if (entry) {
           entry.updates = { ...entry.updates, ...manualOrder }
@@ -198,18 +165,10 @@ export function useWorktreeStatusMutations(args: {
     (worktreeIds: readonly string[], status: WorkspaceStatus) => {
       const sourceGroupKeys = worktreeIds.flatMap((worktreeId) => {
         const worktree = worktreeMap.get(worktreeId)
-        rankByWorktreeId.set(worktreeId, worktree.manualOrder ?? worktree.sortOrder)
-      if (worktree) {
         return worktree ? [getWorkspaceStatus(worktree, workspaceStatuses)] : []
       })
       return shouldWriteManualOrderForGroupDrop({
         sortBy,
-    ]
-      workspaceStatuses
-      worktreeMap,
-      updateWorktreesMeta,
-      syncWorkspaceStatusToProviders,
-        now: Date.now()
         sourceGroupKeys,
         targetGroupKey: status
       })
@@ -237,15 +196,24 @@ export function useWorktreeStatusMutations(args: {
       }
       useAppStore.getState().recordFeatureInteraction('workspace-board-actions')
       void updateWorktreesMeta(result.updates)
-        syncWorkspaceStatusToProviders(movedIds, dropArgs.status)
-      if (movedIds.length > 0) {
-        .map(([worktreeId]) => worktreeId)
-        .filter(([, update]) => update.workspaceStatus !== undefined)
-      const movedIds = [...result.updates]
-      // actually moved lane are worth pushing to the task providers.
       // Manual-order-only entries carry no status change, so only the ones that
+      // actually moved lane are worth pushing to the task providers.
+      const movedIds = result.updates
+        .filter((entry) => entry.updates.workspaceStatus !== undefined)
+        .map((entry) => entry.worktreeId)
+      if (movedIds.length > 0) {
+        syncWorkspaceStatusToProviders(movedIds, dropArgs.status)
+      }
     },
-    [manualOrderCatalog, setSortBy, sortBy, updateWorktreesMeta, worktreeMap, workspaceStatuses]
+    [
+      manualOrderCatalog,
+      setSortBy,
+      sortBy,
+      syncWorkspaceStatusToProviders,
+      updateWorktreesMeta,
+      worktreeMap,
+      workspaceStatuses
+    ]
   )
 
   return {
