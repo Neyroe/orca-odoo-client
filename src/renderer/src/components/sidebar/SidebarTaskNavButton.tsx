@@ -231,7 +231,6 @@ export function SidebarTaskNavButton(): React.JSX.Element | null {
             ) : null}
             {visibleTaskProviders.includes('odoo') ? (
               <TaskProviderShortcut
-                canBrowseTasks={canBrowseTasks}
                 label={translate(
                   'auto.components.sidebar.SidebarTaskNavButton.844abd8a27',
                   'Open Odoo tasks'
