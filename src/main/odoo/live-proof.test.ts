@@ -10,25 +10,10 @@
  * Opt-in and credential-free: set ODOO_PROOF_URL / _DB / _LOGIN / _KEY against
  * a disposable instance. Unset, the suite skips.
  */
-import { beforeAll, describe, expect, it, vi } from 'vitest'
-
-// Same shape the repo's own main-process tests use: the Odoo transport only
-// touches session.defaultSession to configure a proxy, which a direct
-// localhost call does not need.
-vi.mock('electron', () => ({
-  app: { getPath: () => '/tmp/proof' },
-  session: { defaultSession: undefined },
-  // Electron's net.fetch is API-compatible with the global; a direct call to
-  // localhost needs none of its proxy handling.
-  net: { fetch: (url: string, init?: RequestInit) => globalThis.fetch(url, init) },
-  safeStorage: {
-    isEncryptionAvailable: () => false,
-    encryptString: (v: string) => Buffer.from(v),
-    decryptString: (b: Buffer) => b.toString()
-  }
-}))
+import { beforeAll, describe, expect, it } from 'vitest'
 
 import { connect } from './client'
+import { installOdooLiveProofHostPorts } from './live-proof-host-ports'
 import {
   addTicketComment,
   getTicketComments,
@@ -49,6 +34,8 @@ const LIVE = Boolean(process.env.ODOO_PROOF_URL)
 
 describe.skipIf(!LIVE)('Odoo live round trips', () => {
   beforeAll(async () => {
+    // Inside the skipped describe so a non-live run leaves the process-wide ports alone.
+    installOdooLiveProofHostPorts()
     const result = await connect({
       serverUrl: process.env.ODOO_PROOF_URL as string,
       database: process.env.ODOO_PROOF_DB as string,

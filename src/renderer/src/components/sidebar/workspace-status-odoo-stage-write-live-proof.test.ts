@@ -12,23 +12,13 @@
  * Opt-in and credential-free: set ODOO_PROOF_URL / _DB / _LOGIN / _KEY against a
  * disposable instance. Unset, the suite skips so CI stays green.
  */
-import { beforeAll, describe, expect, it, vi } from 'vitest'
-
-vi.mock('electron', () => ({
-  app: { getPath: () => '/tmp/proof-board' },
-  session: { defaultSession: undefined },
-  net: { fetch: (url: string, init?: RequestInit) => globalThis.fetch(url, init) },
-  safeStorage: {
-    isEncryptionAvailable: () => false,
-    encryptString: (v: string) => Buffer.from(v),
-    decryptString: (b: Buffer) => b.toString()
-  }
-}))
+import { beforeAll, describe, expect, it } from 'vitest'
 
 import { renderHook } from '@testing-library/react'
 
 import { connect, getClients } from '../../../../main/odoo/client'
 import { executeKw, type OdooClientForInstance } from '../../../../main/odoo/json-rpc'
+import { installOdooLiveProofHostPorts } from '../../../../main/odoo/live-proof-host-ports'
 import { getTicket, listStages, updateTicket } from '../../../../main/odoo/tickets'
 import { normalizeInstanceId, normalizeRecordId } from '../../../../main/ipc/odoo-ipc-args'
 import { useWorkspaceStatusProviderSync } from './use-workspace-status-provider-sync'
@@ -152,6 +142,8 @@ function seedStore(status: WorkspaceStatus): void {
 
 describe.skipIf(!LIVE)('Odoo board status sync', () => {
   beforeAll(async () => {
+    // Inside the skipped describe so a non-live run leaves the process-wide ports alone.
+    installOdooLiveProofHostPorts()
     const result = await connect({
       serverUrl: process.env.ODOO_PROOF_URL as string,
       database: process.env.ODOO_PROOF_DB as string,

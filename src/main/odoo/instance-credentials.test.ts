@@ -1,14 +1,5 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { normalizeOdooServerUrl, OdooServerUrlError } from './instance-credentials'
-
-// The module reaches for safeStorage at call time only; this satisfies the import.
-vi.mock('electron', () => ({
-  safeStorage: {
-    isEncryptionAvailable: () => false,
-    encryptString: () => Buffer.alloc(0),
-    decryptString: () => ''
-  }
-}))
 
 describe('normalizeOdooServerUrl', () => {
   it('defaults to https for a bare host and strips trailing path noise', () => {
