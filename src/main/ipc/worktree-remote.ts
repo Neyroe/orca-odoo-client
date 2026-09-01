@@ -38,7 +38,10 @@ import {
 import { getBranchConflictKindViaExec } from '../git/repo-branch-conflict'
 import { resolveLocalGitUsername, getSshGitUsername } from '../git/git-username'
 import { hasCommitObjectViaGitExec } from '../git/commit-object-ref'
-import { probeWorktreeBaseRefPresence } from '../git/worktree-base-ref-probe'
+import {
+  hasLocalWorktreeBaseRef,
+  probeWorktreeBaseRefPresence
+} from '../git/worktree-base-ref-probe'
 import { resolveWorktreeCreateBase } from '../worktree-create-base'
 import { resolveWorktreeAddBaseRef } from '../../shared/worktree/base-ref'
 import { getHostedReviewForBranch } from '../source-control/hosted-review'
@@ -78,7 +81,8 @@ type CreateWorktreeArgsWithSystemProvenance = CreateWorktreeArgs & {
 }
 import {
   sanitizeWorktreeName,
-  sanitizeWorktreeDisplayName,
+  resolveWorktreeCreateDisplayNameRequest,
+  resolveWorktreeCreateDisplayNameMeta,
   computeValidatedBranchName,
   computeWorktreePath,
   computeRemoteWorktreePath,
@@ -87,7 +91,6 @@ import {
   getWorktreeCreationLayout,
   getWorktreePathSettings,
   hasRepoWorktreeBasePath,
-  shouldSetDisplayName,
   mergeWorktree
 } from './worktree-logic'
 import { findCreatedWorktree, resolveCreatedWorktree } from './created-worktree-reconciliation'
@@ -107,6 +110,7 @@ import {
   findRemoteForUrl,
   prepareWorktreePushTargetWithExec
 } from './worktree-push-target-setup'
+import { migrateForkRemoteRefspecs } from './worktree-push-target-refspec-migration'
 import { isENOENT } from './filesystem-path-containment'
 import {
   registerCreatedWorktreeRoot,
@@ -718,46 +722,6 @@ function hasLocalGitOptions(gitOptions: { wslDistro?: string }): boolean {
   return Object.keys(gitOptions).length > 0
 }
 
-function hasLocalCommitObjectWithOptions(
-  repoPath: string,
-  ref: string,
-  gitOptions: { wslDistro?: string }
-): Promise<boolean> {
-  return hasCommitObjectViaGitExec(
-    (gitArgs) => gitExecFileAsync(gitArgs, { cwd: repoPath, ...gitOptions }),
-    ref
-  )
-}
-
-async function hasLocalWorktreeBaseRefWithOptions(
-  repoPath: string,
-  baseRef: string,
-  gitOptions: { wslDistro?: string }
-): Promise<boolean> {
-  const refExists = async (qualifiedRef: string) => {
-    try {
-      const { stdout } = await gitExecFileAsync(
-        ['rev-parse', '--verify', '--quiet', `${qualifiedRef}^{commit}`],
-        {
-          cwd: repoPath,
-          ...gitOptions
-        }
-      )
-      return stdout.trim().length > 0
-    } catch {
-      return false
-    }
-  }
-  const resolvedBaseRef = await resolveWorktreeAddBaseRef(baseRef, refExists)
-  if (resolvedBaseRef !== baseRef) {
-    return true
-  }
-  if (baseRef.startsWith('refs/')) {
-    return refExists(baseRef)
-  }
-  return hasLocalCommitObjectWithOptions(repoPath, baseRef, gitOptions)
-}
-
 function getLocalGitHubPrForBranch(
   repoPath: string,
   branchName: string,
@@ -854,7 +818,10 @@ export function getSshBranchConflictKind(
   allowedBaseRef: string
 ): Promise<'local' | 'remote' | null> {
   return getBranchConflictKindViaExec(
-    (argv) => provider.exec(argv, repoPath),
+    (argv, commandOptions) =>
+      commandOptions?.timeoutMs === undefined
+        ? provider.exec(argv, repoPath)
+        : provider.exec(argv, repoPath, { timeoutMs: commandOptions.timeoutMs }),
     branchName,
     allowedBaseRef
   )
@@ -1000,7 +967,7 @@ export async function prepareWorktreePushTarget(
   gitOptions: { wslDistro?: string } = {}
 ): Promise<GitPushTarget> {
   await validateGitPushTarget(repoPath, target, gitOptions)
-  return prepareWorktreePushTargetWithExec(
+  const prepared = await prepareWorktreePushTargetWithExec(
     (args, cwd) => gitExecFileAsync(args, { cwd, ...gitOptions }),
     repoPath,
     target,
@@ -1013,6 +980,13 @@ export async function prepareWorktreePushTarget(
           )
         : false
   )
+  // Why: opportunistically narrow any other fork remote in this repo still on the old
+  // wide refspec (pre-#17828 mint, or reused before this fix). Rate-limited and
+  // fire-and-forget so a large leaked-remote backlog never slows down this create.
+  if (store && repoId) {
+    void migrateForkRemoteRefspecs(repoPath, repoId, store, gitOptions)
+  }
+  return prepared
 }
 
 function isPushTargetRemoteCreatedByKnownWorktree(
@@ -1546,9 +1520,14 @@ export async function createRemoteWorktree(
   let effectiveRequestedName = args.name
   const sanitizedName = sanitizeWorktreeName(args.name)
   let effectiveSanitizedName = sanitizedName
-  const requestedDisplayName = args.displayName
-    ? sanitizeWorktreeDisplayName(args.displayName)
-    : undefined
+  const displayNameRequest = resolveWorktreeCreateDisplayNameRequest(
+    args.displayName,
+    args.displayNameKind,
+    args.name,
+    args.cliProvenance?.kind === 'created-by-cli',
+    args.nameWasGenerated === true
+  )
+  const requestedDisplayName = displayNameRequest.value
 
   // Why: base resolution probes refs via generic git.exec; register the repo root first so relays don't report a valid base as stale.
   await registerRequiredSshWorktreeCreateRoots(repo.connectionId!, [repo.path])
@@ -1878,11 +1857,12 @@ export async function createRemoteWorktree(
     baseRef: metadataBaseRef,
     ...(checkoutExistingBranch ? { preserveBranchOnDelete: true } : {}),
     ...(configuredPushTarget ? { pushTarget: configuredPushTarget } : {}),
-    ...(requestedDisplayName
-      ? { displayName: requestedDisplayName }
-      : shouldSetDisplayName(effectiveRequestedName, branchName, effectiveSanitizedName)
-        ? { displayName: effectiveRequestedName }
-        : {}),
+    ...resolveWorktreeCreateDisplayNameMeta(
+      requestedDisplayName,
+      branchName,
+      displayNameRequest.kind,
+      { requestedName: effectiveRequestedName, sanitizedName: effectiveSanitizedName }
+    ),
     ...(isTuiAgent(args.createdWithAgent) ? { createdWithAgent: args.createdWithAgent } : {}),
     ...(args.pendingFirstAgentMessageRename === true && isTuiAgent(args.createdWithAgent)
       ? { pendingFirstAgentMessageRename: true }
@@ -2027,9 +2007,14 @@ export async function createLocalWorktree(
 
   const requestedName = args.name
   const sanitizedName = sanitizeWorktreeName(args.name)
-  const requestedDisplayName = args.displayName
-    ? sanitizeWorktreeDisplayName(args.displayName)
-    : undefined
+  const displayNameRequest = resolveWorktreeCreateDisplayNameRequest(
+    args.displayName,
+    args.displayNameKind,
+    args.name,
+    args.cliProvenance?.kind === 'created-by-cli',
+    args.nameWasGenerated === true
+  )
+  const requestedDisplayName = displayNameRequest.value
   // Why: explicit branches and non-username prefix modes never consume this; skipping the probe preserves the exact generated branch name.
   // Username and base resolution are independent read-only probes. Starting
   // both before awaiting removes one serial git/config round trip from create.
@@ -2058,14 +2043,10 @@ export async function createLocalWorktree(
           ) {
             return true
           }
-          return hasLocalWorktreeBaseRefWithOptions(
-            repo.path,
-            baseBranchCandidate,
-            localGitExecOptions
-          )
+          return hasLocalWorktreeBaseRef(repo.path, baseBranchCandidate, localGitExecOptions)
         }
       }
-      return hasLocalWorktreeBaseRefWithOptions(repo.path, baseBranchCandidate, localGitExecOptions)
+      return hasLocalWorktreeBaseRef(repo.path, baseBranchCandidate, localGitExecOptions)
     }
   })
   const [username, resolvedBaseBranch] = await Promise.all([usernamePromise, baseBranchPromise])
@@ -2095,15 +2076,11 @@ export async function createLocalWorktree(
     if (remoteTrackingBase) {
       const [hasRemoteTrackingBaseRef, hasNamedLocalBaseRef] = await Promise.all([
         runtime.hasRemoteTrackingRef(repo.path, remoteTrackingBase, ...localWorktreeGitOptionArgs),
-        hasLocalWorktreeBaseRefWithOptions(repo.path, baseBranch, localGitExecOptions)
+        hasLocalWorktreeBaseRef(repo.path, baseBranch, localGitExecOptions)
       ])
       const hasFallbackLocalBaseRef =
         !hasNamedLocalBaseRef &&
-        (await hasLocalWorktreeBaseRefWithOptions(
-          repo.path,
-          remoteTrackingBase.branch,
-          localGitExecOptions
-        ))
+        (await hasLocalWorktreeBaseRef(repo.path, remoteTrackingBase.branch, localGitExecOptions))
       const hasLocalBaseRef =
         hasRemoteTrackingBaseRef || hasNamedLocalBaseRef || hasFallbackLocalBaseRef
       if (!hasRemoteTrackingBaseRef && hasLocalBaseRef) {
@@ -2128,9 +2105,7 @@ export async function createLocalWorktree(
           )
         }
       }
-    } else if (
-      !(await hasLocalWorktreeBaseRefWithOptions(repo.path, baseBranch, localWorktreeGitOptions))
-    ) {
+    } else if (!(await hasLocalWorktreeBaseRef(repo.path, baseBranch, localWorktreeGitOptions))) {
       // Why: non-remote-prefix bases (plain main/master/local) keep the legacy best-effort fetch; verified PR SHA bases already have the object.
       legacyFetchPromise = runtime
         .fetchRemoteWithCache(repo.path, 'origin', ...localWorktreeGitOptionArgs)
@@ -2139,9 +2114,7 @@ export async function createLocalWorktree(
       emitCreateWorktreeProgress(mainWindow, 'fetching', args.creationId)
     }
   } else {
-    if (
-      !(await hasLocalWorktreeBaseRefWithOptions(repo.path, baseBranch, localWorktreeGitOptions))
-    ) {
+    if (!(await hasLocalWorktreeBaseRef(repo.path, baseBranch, localWorktreeGitOptions))) {
       legacyFetchPromise = gitExecFileAsync(['fetch', 'origin'], {
         ...localGitExecOptions,
         timeout: CREATE_BASE_FALLBACK_FETCH_TIMEOUT_MS
@@ -2557,11 +2530,12 @@ export async function createLocalWorktree(
     baseRef: metadataBaseRef,
     ...(checkoutExistingBranch ? { preserveBranchOnDelete: true } : {}),
     ...(configuredPushTarget ? { pushTarget: configuredPushTarget } : {}),
-    ...(requestedDisplayName
-      ? { displayName: requestedDisplayName }
-      : shouldSetDisplayName(effectiveRequestedName, branchName, effectiveSanitizedName)
-        ? { displayName: effectiveRequestedName }
-        : {}),
+    ...resolveWorktreeCreateDisplayNameMeta(
+      requestedDisplayName,
+      branchName,
+      displayNameRequest.kind,
+      { requestedName: effectiveRequestedName, sanitizedName: effectiveSanitizedName }
+    ),
     ...(sparseDirectories.length > 0
       ? {
           sparseDirectories,

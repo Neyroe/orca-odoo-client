@@ -49,6 +49,7 @@ export const WorktreeCreate = z
     linkedOdooInstanceId: z.string().nullable().optional(),
     comment: OptionalString,
     displayName: OptionalString,
+    displayNameKind: z.enum(['generated', 'user']).optional(),
     telemetrySource: z
       .unknown()
       .transform((value) => {
